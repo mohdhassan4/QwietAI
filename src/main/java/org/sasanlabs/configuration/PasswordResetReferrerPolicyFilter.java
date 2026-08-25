@@ -31,6 +31,10 @@ public class PasswordResetReferrerPolicyFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    private static final int MAX_LEVEL_PARAM_LENGTH = 10;
+    private static final java.util.regex.Pattern LEVEL_PATTERN =
+            java.util.regex.Pattern.compile("^[0-9]{1,10}$");
+
     private boolean shouldApplyUnsafeUrlReferrerPolicy(HttpServletRequest request) {
         String requestUri = request.getRequestURI();
         if (requestUri == null || !requestUri.endsWith(RESET_PAGE_PATH)) {
@@ -38,7 +42,11 @@ public class PasswordResetReferrerPolicyFilter extends OncePerRequestFilter {
         }
 
         String level = request.getParameter("level");
-        if (level == null) {
+        if (level == null || level.length() > MAX_LEVEL_PARAM_LENGTH) {
+            return false;
+        }
+
+        if (!LEVEL_PATTERN.matcher(level).matches()) {
             return false;
         }
 

@@ -1,6 +1,7 @@
 package org.sasanlabs.benchmark.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
@@ -106,6 +107,15 @@ class BenchmarkResultWriterTest {
 
         assertThat(result).hasSize(64);
         assertThat(result).matches("^a+$");
+    }
+
+    @Test
+    void write_withPathTraversal_throwsSecurityException() {
+        BenchmarkResultWriter writer = new BenchmarkResultWriter(MAPPER, "benchmarks");
+
+        assertThatThrownBy(() -> writer.write(sampleResult("ZAP"), "../../etc"))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("Path traversal");
     }
 
     @Test

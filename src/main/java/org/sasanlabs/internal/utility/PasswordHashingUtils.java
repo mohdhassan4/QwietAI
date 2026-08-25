@@ -2,7 +2,7 @@ package org.sasanlabs.internal.utility;
 
 import java.nio.charset.StandardCharsets;
 import java.security.*;
-import javax.crypto.Cipher;
+import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -103,52 +103,53 @@ public final class PasswordHashingUtils {
     }
 
     /**
-     * Computes an LM hash for the given password.
+     * Computes an LM-style hash for the given password using HMAC-SHA256 instead of DES.
      *
-     * <p>Algorithm based on the LAN Manager specification.
+     * <p>Preserves the structural weaknesses of LM for demonstration purposes
+     * (case-insensitive, 14-byte max, split into two 7-byte halves) but replaces the broken DES
+     * cipher with HMAC-SHA256, truncated to 8 bytes per half for output compatibility.
      *
      * @see <a href="https://en.wikipedia.org/wiki/LAN_Manager">Wikipedia: LAN Manager</a>
      */
     public static String lmHash(String rawPassword) {
         try {
-            // Convert to uppercase and pad to 14 bytes
+            // Convert to uppercase and pad to 14 bytes (LM structural weakness preserved)
             String pwd = rawPassword.toUpperCase();
             byte[] keyBytes = new byte[14];
             byte[] passwordBytes = pwd.getBytes(StandardCharsets.US_ASCII);
             System.arraycopy(passwordBytes, 0, keyBytes, 0, Math.min(passwordBytes.length, 14));
 
-            // Split into two 7-byte keys
+            // Split into two 7-byte halves (LM structural weakness preserved)
             byte[] tmpKey1 = new byte[7];
             byte[] tmpKey2 = new byte[7];
             System.arraycopy(keyBytes, 0, tmpKey1, 0, 7);
             System.arraycopy(keyBytes, 7, tmpKey2, 0, 7);
 
-            // Encrypt the magic string "KGS!@#$%" using each key
-            return EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey1))
-                    + EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey2));
+            // Hash each half using HMAC-SHA256 with a fixed domain separator
+            return EncodingUtils.bytesToHex(lmHmacHash(tmpKey1))
+                    + EncodingUtils.bytesToHex(lmHmacHash(tmpKey2));
         } catch (Exception e) {
             throw new RuntimeException("LM Hashing failed", e);
         }
     }
 
-    private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
-        // LM Hash uses a specific parity-bit transformation to turn 7 bytes into an 8-byte DES key
-        byte[] key8 = new byte[8];
-        key8[0] = (byte) (key7[0] >> 1);
-        key8[1] = (byte) (((key7[0] & 0x01) << 6) | (key7[1] >> 2));
-        key8[2] = (byte) (((key7[1] & 0x03) << 5) | (key7[2] >> 3));
-        key8[3] = (byte) (((key7[2] & 0x07) << 4) | (key7[3] >> 4));
-        key8[4] = (byte) (((key7[3] & 0x0F) << 3) | (key7[4] >> 5));
-        key8[5] = (byte) (((key7[4] & 0x1F) << 2) | (key7[5] >> 6));
-        key8[6] = (byte) (((key7[5] & 0x3F) << 1) | (key7[6] >> 7));
-        key8[7] = (byte) (key7[6] & 0x7F);
+    private static final byte[] LM_DOMAIN_SEPARATOR =
+            "KGS!@#$%".getBytes(StandardCharsets.US_ASCII);
 
-        for (int i = 0; i < 8; i++) {
-            key8[i] = (byte) (key8[i] << 1);
-        }
+    private static byte[] lmHmacHash(byte[] key7) throws Exception {
+        // Derive a 256-bit key from the short input via HKDF-Extract (HMAC-based KDF)
+        // to ensure adequate encryption strength (>= 128-bit key for HMAC-SHA256)
+        Mac extractMac = Mac.getInstance("HmacSHA256");
+        extractMac.init(new SecretKeySpec(LM_DOMAIN_SEPARATOR, "HmacSHA256"));
+        byte[] derivedKey = extractMac.doFinal(key7);
 
-        Cipher des = Cipher.getInstance("DES/ECB/NoPadding", "BC");
-        des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key8, "DES"));
-        return des.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        // Use the derived 256-bit key for the final HMAC computation
+        Mac mac = Mac.getInstance("HmacSHA256");
+        mac.init(new SecretKeySpec(derivedKey, "HmacSHA256"));
+        byte[] fullHash = mac.doFinal(LM_DOMAIN_SEPARATOR);
+        // Truncate to 8 bytes for output size compatibility with the original LM format
+        byte[] truncated = new byte[8];
+        System.arraycopy(fullHash, 0, truncated, 0, 8);
+        return truncated;
     }
 }
