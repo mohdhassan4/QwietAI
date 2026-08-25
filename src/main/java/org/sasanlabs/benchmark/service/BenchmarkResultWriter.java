@@ -35,7 +35,15 @@ public class BenchmarkResultWriter {
     }
 
     public Path write(BenchmarkResult result, String benchmarksDir) throws IOException {
-        Path dir = Paths.get(benchmarksDir);
+        Path rawDir = Paths.get(benchmarksDir);
+        Path dir = rawDir.toAbsolutePath().normalize();
+        // Block relative paths that traverse outside the working directory
+        if (!rawDir.isAbsolute()) {
+            Path workingDir = Paths.get("").toAbsolutePath().normalize();
+            if (!dir.startsWith(workingDir)) {
+                throw new SecurityException("Path traversal attempt: output directory must be within the working directory");
+            }
+        }
         Files.createDirectories(dir);
         String fileName = sanitizeToolName(result.getTool()) + "-results.json";
         Path target = dir.resolve(fileName);
