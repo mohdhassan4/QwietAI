@@ -137,8 +137,15 @@ public final class PasswordHashingUtils {
             "KGS!@#$%".getBytes(StandardCharsets.US_ASCII);
 
     private static byte[] lmHmacHash(byte[] key7) throws Exception {
+        // Derive a 256-bit key from the short input via HKDF-Extract (HMAC-based KDF)
+        // to ensure adequate encryption strength (>= 128-bit key for HMAC-SHA256)
+        Mac extractMac = Mac.getInstance("HmacSHA256");
+        extractMac.init(new SecretKeySpec(LM_DOMAIN_SEPARATOR, "HmacSHA256"));
+        byte[] derivedKey = extractMac.doFinal(key7);
+
+        // Use the derived 256-bit key for the final HMAC computation
         Mac mac = Mac.getInstance("HmacSHA256");
-        mac.init(new SecretKeySpec(key7, "HmacSHA256"));
+        mac.init(new SecretKeySpec(derivedKey, "HmacSHA256"));
         byte[] fullHash = mac.doFinal(LM_DOMAIN_SEPARATOR);
         // Truncate to 8 bytes for output size compatibility with the original LM format
         byte[] truncated = new byte[8];
