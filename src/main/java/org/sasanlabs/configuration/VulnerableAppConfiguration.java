@@ -136,8 +136,7 @@ public class VulnerableAppConfiguration {
                         conn -> {
                             try (java.sql.PreparedStatement ps =
                                     conn.prepareStatement(
-                                            "CREATE USER IF NOT EXISTS APPLICATION"
-                                                    + " PASSWORD ?")) {
+                                            "CREATE USER IF NOT EXISTS APPLICATION PASSWORD ?")) {
                                 ps.setString(1, appPassword);
                                 ps.execute();
                             }
