@@ -32,7 +32,11 @@ function sanitizeHTML(html) {
       el.removeAttribute("src");
     }
   });
-  return doc.body.innerHTML;
+  var fragment = document.createDocumentFragment();
+  while (doc.body.firstChild) {
+    fragment.appendChild(document.adoptNode(doc.body.firstChild));
+  }
+  return fragment;
 }
 
 const variantTooltip = {
@@ -165,7 +169,8 @@ function _callbackForInnerMasterOnClickEvent(
         if (requestToken !== thisRequestToken) {
           return;
         }
-        detailTitle.innerHTML = sanitizeHTML(responseText);
+        detailTitle.textContent = "";
+        detailTitle.appendChild(sanitizeHTML(responseText));
         _loadDynamicJSAndCSS(urlToFetchHtmlTemplate, () => {
           // Re-check: the asset load itself is async, so navigation could
           // have moved on again between the AJAX response and now.
