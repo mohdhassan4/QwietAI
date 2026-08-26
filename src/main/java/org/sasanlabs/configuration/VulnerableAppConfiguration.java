@@ -27,7 +27,9 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.init.CompositeDatabasePopulator;
 import org.springframework.jdbc.datasource.init.DataSourceInitializer;
+import org.springframework.jdbc.datasource.init.DatabasePopulator;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.multipart.MultipartResolver;
@@ -147,9 +149,27 @@ public class VulnerableAppConfiguration {
         populator.addScript(new ClassPathResource("scripts/SessionManagement/db/data.sql"));
         populator.setSeparator(";");
 
+        // Compute bcrypt hash at startup rather than storing precomputed hash in SQL
+        DatabasePopulator bcryptPopulator =
+                connection -> {
+                    BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
+                    String bcryptHash = encoder.encode("password123");
+                    try (java.sql.PreparedStatement ps =
+                            connection.prepareStatement(
+                                    "INSERT INTO auth_users VALUES"
+                                            + " (8, 'admin_weak', ?, NULL, 'BCRYPT', 8,"
+                                            + " 'admin_weak@example.com', 'ADMIN')")) {
+                        ps.setString(1, bcryptHash);
+                        ps.executeUpdate();
+                    }
+                };
+
+        CompositeDatabasePopulator composite = new CompositeDatabasePopulator();
+        composite.addPopulators(populator, bcryptPopulator);
+
         DataSourceInitializer initializer = new DataSourceInitializer();
         initializer.setDataSource(adminDataSource);
-        initializer.setDatabasePopulator(populator);
+        initializer.setDatabasePopulator(composite);
         return initializer;
     }
 
