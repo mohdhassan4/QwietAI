@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
+import java.util.regex.Pattern;
 import javax.servlet.http.HttpServletRequest;
 import javax.sql.DataSource;
 import org.sasanlabs.internal.utility.LevelConstants;
@@ -42,6 +43,19 @@ import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
  */
 @Configuration
 public class VulnerableAppConfiguration {
+
+    /** Allowlist for H2 DDL password values: printable ASCII, no single quotes or backslashes. */
+    private static final Pattern SAFE_DDL_VALUE_PATTERN =
+            Pattern.compile("^[a-zA-Z0-9!@#$%^&*()_+\\-={}\\[\\]:\";<>?,./~`| ]{1,128}$");
+
+    private static String validateDdlValue(String value, String name) {
+        if (value == null || !SAFE_DDL_VALUE_PATTERN.matcher(value).matches()) {
+            throw new IllegalArgumentException(
+                    "Unsafe characters in DDL value for " + name
+                            + ". Only printable ASCII (no quotes/backslashes) allowed.");
+        }
+        return value;
+    }
 
     private static final String I18N_MESSAGE_FILE_LOCATION = "classpath:i18n/messages";
     private static final String ATTACK_VECTOR_PAYLOAD_PROPERTY_FILES_LOCATION_PATTERN =
@@ -131,18 +145,26 @@ public class VulnerableAppConfiguration {
             @Value("${spring.datasource.application.password}") String appPassword) {
         ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
         JdbcTemplate adminJdbcTemplate = new JdbcTemplate(adminDataSource);
+        String validatedAppPassword =
+                validateDdlValue(appPassword, "application password");
         adminJdbcTemplate.execute(
-                String.format("CREATE USER application PASSWORD '%s'", appPassword));
+                String.format(
+                        "CREATE USER application PASSWORD '%s'", validatedAppPassword));
         String readonlyUserPassword =
-                System.getenv().getOrDefault("H2_READONLY_USER_PASSWORD", "readonly-dev");
+                validateDdlValue(
+                        System.getenv()
+                                .getOrDefault("H2_READONLY_USER_PASSWORD", "readonly-dev"),
+                        "H2_READONLY_USER_PASSWORD");
         adminJdbcTemplate.execute(
                 String.format(
                         "CREATE USER IF NOT EXISTS readonly_user PASSWORD '%s'",
                         readonlyUserPassword));
         String cryptoUserPassword =
-                System.getenv()
-                        .getOrDefault(
-                                "H2_CRYPTO_USER_PASSWORD", "crypto-failures-dev");
+                validateDdlValue(
+                        System.getenv()
+                                .getOrDefault(
+                                        "H2_CRYPTO_USER_PASSWORD", "crypto-failures-dev"),
+                        "H2_CRYPTO_USER_PASSWORD");
         adminJdbcTemplate.execute(
                 String.format(
                         "CREATE USER IF NOT EXISTS cryptographic_failures_user PASSWORD '%s'",
