@@ -3,6 +3,7 @@ package org.sasanlabs.controller;
 import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.sasanlabs.internal.utility.LogSanitizer;
 import org.sasanlabs.service.email.EmailService;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
@@ -42,7 +43,7 @@ public class EmailTestController {
                 emailService.sendEmail(to, subject, body);
             }
         } catch (IllegalArgumentException ex) {
-            LOGGER.warn("Invalid email input: {}", ex.getMessage());
+            LOGGER.warn("Invalid email input: {}", LogSanitizer.sanitize(ex.getMessage()));
             return ResponseEntity.badRequest()
                     .body(Map.of("status", "failed", "error", "Invalid input"));
         } catch (MailException ex) {
