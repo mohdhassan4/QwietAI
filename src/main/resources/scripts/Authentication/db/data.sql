@@ -1,3 +1,4 @@
+-- NOTE: All passwords below are intentional demo/test credentials for this deliberately vulnerable application. They are NOT production secrets.
 -- Level 1: SQL Injection
 -- Real password: 'not_needed_for_sqli'
 INSERT INTO auth_users VALUES (1, 'admin_sqli', 'not_needed_for_sqli', NULL, 'PLAIN', 1, 'admin_sqli@example.com', 'ADMIN');
