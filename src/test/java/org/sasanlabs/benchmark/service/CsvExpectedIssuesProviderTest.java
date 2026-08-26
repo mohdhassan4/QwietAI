@@ -221,6 +221,16 @@ class CsvExpectedIssuesProviderTest {
                 .hasCauseInstanceOf(IOException.class);
     }
 
+    @Test
+    void pathTraversalInFilesystemPath_throwsIOException() {
+        String traversalPath = "../../../etc/passwd";
+
+        assertThatThrownBy(
+                        () -> new CsvExpectedIssuesProvider(traversalPath).getExpectedIssues())
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("path traversal");
+    }
+
     private static void write(Path path, String content) throws IOException {
         Files.write(path, content.getBytes(StandardCharsets.UTF_8));
     }
