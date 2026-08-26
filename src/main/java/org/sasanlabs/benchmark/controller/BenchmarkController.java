@@ -53,12 +53,14 @@ public class BenchmarkController {
 
         try {
             Path written = benchmarkResultWriter.write(result);
-            LOGGER.info("Wrote benchmark result for tool '{}' to {}", input.getTool(), written);
+            String safeTool = input.getTool().replaceAll("[\\r\\n]", "");
+            LOGGER.info("Wrote benchmark result for tool '{}' to {}", safeTool, written);
         } catch (IOException ioe) {
+            String safeToolErr = input.getTool().replaceAll("[\\r\\n]", "");
             LOGGER.error(
                     "Failed to persist benchmark result for tool '{}'; returning 500 with result"
                             + " in body",
-                    input.getTool(),
+                    safeToolErr,
                     ioe);
             result.setPersistenceError("Failed to persist benchmark result");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
