@@ -116,6 +116,19 @@ class BenchmarkResultWriterTest {
         assertThat(BenchmarkResultWriter.sanitizeToolName("../etc/passwd")).isEqualTo("etcpasswd");
     }
 
+    @Test
+    void write_normalizesDirectoryPath(@TempDir Path tempDir) throws Exception {
+        // Use a path with redundant segments that normalizes to the same directory
+        Path subDir = tempDir.resolve("a/b/../b");
+        BenchmarkResultWriter writer = new BenchmarkResultWriter(MAPPER, subDir.toString());
+
+        Path target = writer.write(sampleResult("ZAP"));
+
+        Path expectedDir = tempDir.resolve("a/b").toAbsolutePath().normalize();
+        assertThat(target.getParent()).isEqualTo(expectedDir);
+        assertThat(Files.exists(target)).isTrue();
+    }
+
     private static BenchmarkResult sampleResult(String tool) {
         return new BenchmarkResult(
                 tool,
