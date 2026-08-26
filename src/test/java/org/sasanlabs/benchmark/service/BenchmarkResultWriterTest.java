@@ -88,6 +88,17 @@ class BenchmarkResultWriterTest {
     }
 
     @Test
+    void write_rejectsPathTraversalInBenchmarksDir(@TempDir Path tempDir) {
+        BenchmarkResultWriter writer = new BenchmarkResultWriter(MAPPER, tempDir.toString());
+        String traversalDir = tempDir.resolve("../../../etc").toString();
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                        () -> writer.write(sampleResult("ZAP"), traversalDir))
+                .isInstanceOf(java.io.IOException.class)
+                .hasMessageContaining("path traversal");
+    }
+
+    @Test
     void sanitizeToolName_handlesNullEmptyAndAllSymbols() {
         assertThat(BenchmarkResultWriter.sanitizeToolName(null)).isEqualTo("unknown");
         assertThat(BenchmarkResultWriter.sanitizeToolName("")).isEqualTo("unknown");
