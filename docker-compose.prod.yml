@@ -14,6 +14,7 @@ services:
       - SMTP_USERNAME=${SMTP_USERNAME:-}
       - SMTP_PASSWORD=${SMTP_PASSWORD:-}
       - APP_BASE_URL=${APP_BASE_URL:-http://localhost}
+      - CRYPTO_LEVEL10_KEY=${CRYPTO_LEVEL10_KEY}
       # - SPRING_H2_CONSOLE_ENABLED=true # set as false or comment it out
       # - SPRING_H2_CONSOLE_SETTINGS_WEB_ALLOW_OTHERS=true # set as false or comment it out
       # - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB=WARN
