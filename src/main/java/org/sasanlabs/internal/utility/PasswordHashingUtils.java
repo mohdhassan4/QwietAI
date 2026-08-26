@@ -12,6 +12,12 @@ public final class PasswordHashingUtils {
 
     private static final String HASH_SEPARATOR = ":";
     private static final int bcryptWorkFactor = 12;
+    private static final byte[] LM_AES_SALT;
+
+    static {
+        LM_AES_SALT = new byte[16];
+        new SecureRandom().nextBytes(LM_AES_SALT);
+    }
 
     private PasswordHashingUtils() {}
 
@@ -164,8 +170,9 @@ public final class PasswordHashingUtils {
     }
 
     private static byte[] lmAesEncrypt(byte[] key7) throws Exception {
-        // Derive a 256-bit AES key from the 7-byte password fragment using SHA-256
+        // Derive a 256-bit AES key from the 7-byte password fragment using SHA-256 with salt
         MessageDigest sha256 = MessageDigest.getInstance("SHA-256", "BC");
+        sha256.update(LM_AES_SALT);
         byte[] aesKey = sha256.digest(key7);
 
         // AES magic constant (16 bytes): "KGS!@#$%" padded with zeros to AES block size
