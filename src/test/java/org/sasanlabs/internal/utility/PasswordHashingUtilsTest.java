@@ -39,12 +39,39 @@ class PasswordHashingUtilsTest {
     void isValidSaltedSha256_CorrectValidation() {
         String salt = "random_salt";
         String rawPassword = "securePassword123";
-        // Manual calculation of SHA-256(salt + password)
+        // Salted SHA-256: salt is fed via digest.update before digest.digest
         String hash = PasswordHashingUtils.sha256Hex(salt, rawPassword);
         String storedValue = salt + ":" + hash;
 
         assertTrue(PasswordHashingUtils.isValidSaltedSha256(rawPassword, storedValue));
         assertFalse(PasswordHashingUtils.isValidSaltedSha256("wrongPass", storedValue));
+    }
+
+    @Test
+    @DisplayName("MD5: Should generate different hashes with different salts")
+    void md5Hash_SaltedDiffers() {
+        String password = "password";
+        String saltA = "saltA";
+        String saltB = "saltB";
+
+        String hashA = PasswordHashingUtils.md5Hex(saltA, password);
+        String hashB = PasswordHashingUtils.md5Hex(saltB, password);
+        String hashNone = PasswordHashingUtils.md5Hex(password);
+
+        assertNotEquals(hashA, hashB);
+        assertNotEquals(hashA, hashNone);
+    }
+
+    @Test
+    @DisplayName("SHA-1: Should generate different hashes with different salts")
+    void sha1Hash_SaltedDiffers() {
+        String password = "password";
+        String salt = "mySalt";
+
+        String salted = PasswordHashingUtils.sha1Hex(salt, password);
+        String unsalted = PasswordHashingUtils.sha1Hex(password);
+
+        assertNotEquals(salted, unsalted);
     }
 
     @Test

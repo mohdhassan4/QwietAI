@@ -40,21 +40,43 @@ public final class PasswordHashingUtils {
         }
     }
 
+    public static String md4Hex(String salt, String rawPassword) {
+        return getHashAsHex(rawPassword, HashAlgorithm.MD4, salt);
+    }
+
+    /** @deprecated Use {@link #md4Hex(String, String)} with a proper salt. */
+    @Deprecated
     public static String md4Hex(String rawPassword) {
-        return getHashAsHex(rawPassword, HashAlgorithm.MD4);
+        return getHashAsHex(rawPassword, HashAlgorithm.MD4, null);
     }
 
+    public static String md5Hex(String salt, String rawPassword) {
+        return getHashAsHex(rawPassword, HashAlgorithm.MD5, salt);
+    }
+
+    /** @deprecated Use {@link #md5Hex(String, String)} with a proper salt. */
+    @Deprecated
     public static String md5Hex(String rawPassword) {
-        return getHashAsHex(rawPassword, HashAlgorithm.MD5);
+        return getHashAsHex(rawPassword, HashAlgorithm.MD5, null);
     }
 
+    public static String sha1Hex(String salt, String rawPassword) {
+        return getHashAsHex(rawPassword, HashAlgorithm.SHA1, salt);
+    }
+
+    /** @deprecated Use {@link #sha1Hex(String, String)} with a proper salt. */
+    @Deprecated
     public static String sha1Hex(String rawPassword) {
-        return getHashAsHex(rawPassword, HashAlgorithm.SHA1);
+        return getHashAsHex(rawPassword, HashAlgorithm.SHA1, null);
     }
 
-    public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
+    public static String getHashAsHex(
+            String rawPassword, HashAlgorithm hashAlgorithm, String salt) {
         try {
             MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
+            if (salt != null && !salt.isEmpty()) {
+                messageDigest.update(salt.getBytes(StandardCharsets.UTF_8));
+            }
             byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
@@ -62,6 +84,14 @@ public final class PasswordHashingUtils {
         } catch (NoSuchProviderException e) {
             throw new RuntimeException("Security Provider Bouncy Castle not found", e);
         }
+    }
+
+    /**
+     * @deprecated Use {@link #getHashAsHex(String, HashAlgorithm, String)} with a proper salt.
+     */
+    @Deprecated
+    public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
+        return getHashAsHex(rawPassword, hashAlgorithm, null);
     }
 
     public static boolean isValidSaltedSha256(String rawPassword, String saltedSha256Hash) {
@@ -80,11 +110,13 @@ public final class PasswordHashingUtils {
     }
 
     public static String sha256Hex(String salt, String rawPassword) {
-        return getHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
+        return getHashAsHex(rawPassword, HashAlgorithm.SHA256, salt);
     }
 
+    /** @deprecated Use {@link #sha256Hex(String, String)} with a proper salt. */
+    @Deprecated
     public static String unsaltedSha256Hex(String rawPassword) {
-        return getHashAsHex(rawPassword, HashAlgorithm.SHA256);
+        return getHashAsHex(rawPassword, HashAlgorithm.SHA256, null);
     }
 
     // BC not used for bcrypt due to extra complexity for BC implementation
