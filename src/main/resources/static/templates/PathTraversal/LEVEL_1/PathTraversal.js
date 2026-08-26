@@ -21,12 +21,17 @@ function appendResponseCallback(data) {
       }
     }
     for (let index in content) {
+      if (!Object.prototype.hasOwnProperty.call(content, index)) continue;
+      let _row = Object.prototype.hasOwnProperty.call(content, index)
+        ? content[index]
+        : {};
       tableInformation = tableInformation + '<tr id="Info">';
-      for (let key in content[index]) {
+      for (let key in _row) {
+        if (!Object.prototype.hasOwnProperty.call(_row, key)) continue;
         tableInformation =
           tableInformation +
           '<td id="InfoColumn">' +
-          content[index][key] +
+          (Object.prototype.hasOwnProperty.call(_row, key) ? _row[key] : "") +
           "</td>";
       }
       tableInformation = tableInformation + "</tr>";
