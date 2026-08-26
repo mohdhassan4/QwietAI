@@ -126,7 +126,7 @@ function _callbackForInnerMasterOnClickEvent(
     let _levelForHtml = _getOwn(_detailedForHtml, key);
     let htmlTemplate = _levelForHtml ? _levelForHtml["HtmlTemplate"] : undefined;
     let _entryForDesc = _getOwn(vulnerableAppEndPointData, id);
-    document.getElementById("vulnerabilityDescription").innerHTML =
+    document.getElementById("vulnerabilityDescription").textContent =
       _entryForDesc ? _entryForDesc["Description"] : "";
     let urlToFetchHtmlTemplate = htmlTemplate
       ? "/VulnerableApp/templates/" + vulnerabilitySelected + "/" + htmlTemplate
@@ -260,13 +260,13 @@ function handleElementAutoSelection(vulnerableAppEndPointData, id = 0) {
 
   let _selEntry = _getOwn(vulnerableAppEndPointData, id);
   if (id === 0) {
-    detailTitle.innerHTML = _selEntry ? _selEntry["Description"] : "";
+    detailTitle.textContent = _selEntry ? _selEntry["Description"] : "";
   } else {
     innerMaster.innerHTML = "";
   }
 
   vulnerabilitySelected = _selEntry ? _selEntry["Name"] : "";
-  detailTitle.innerHTML = _selEntry ? _selEntry["Description"] : "";
+  detailTitle.textContent = _selEntry ? _selEntry["Description"] : "";
   appendNewColumn(vulnerableAppEndPointData, id);
 }
 

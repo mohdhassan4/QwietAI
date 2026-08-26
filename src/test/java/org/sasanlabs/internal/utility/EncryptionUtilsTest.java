@@ -40,11 +40,11 @@ class EncryptionUtilsTest {
     @Test
     @DisplayName("Key Generation: Should derive an AES key from a string password")
     void getKeyFromPassword_ValidKey() throws EncryptionException {
-        SecretKey key = EncryptionUtils.getKeyFromPassword("my-secret-password");
+        byte[] salt = EncryptionUtils.generateSalt();
+        SecretKey key = EncryptionUtils.getKeyFromPassword("my-secret-password", salt);
 
         assertNotNull(key);
         assertEquals("AES", key.getAlgorithm());
-        // PBKDF2 output was configured for 128 bits (16 bytes)
         assertEquals(16, key.getEncoded().length);
     }
 
@@ -52,16 +52,15 @@ class EncryptionUtilsTest {
     @DisplayName(
             "AES Encryption: Should produce different ciphertext on each call (random nonce)")
     void encrypt_GcmNonDeterminism() throws EncryptionException {
-        SecretKey key = EncryptionUtils.getKeyFromPassword("fixed-password");
+        byte[] salt = EncryptionUtils.generateSalt();
+        SecretKey key = EncryptionUtils.getKeyFromPassword("fixed-password", salt);
         String plaintext = "This is a secret message that is exactly 32 bytes";
 
         String ciphertext1 = EncryptionUtils.encrypt(plaintext, key);
         String ciphertext2 = EncryptionUtils.encrypt(plaintext, key);
 
-        // With a random nonce, same inputs produce different output
         assertNotEquals(ciphertext1, ciphertext2);
 
-        // Verify both are valid Base64
         assertDoesNotThrow(() -> Base64.getDecoder().decode(ciphertext1));
         assertDoesNotThrow(() -> Base64.getDecoder().decode(ciphertext2));
     }
@@ -69,7 +68,8 @@ class EncryptionUtilsTest {
     @Test
     @DisplayName("AES Encrypt/Decrypt roundtrip: decrypt should recover the original plaintext")
     void encrypt_decrypt_roundtrip() throws EncryptionException {
-        SecretKey key = EncryptionUtils.getKeyFromPassword("roundtrip-test-key");
+        byte[] salt = EncryptionUtils.generateSalt();
+        SecretKey key = EncryptionUtils.getKeyFromPassword("roundtrip-test-key", salt);
         String plaintext = "Hello, AES-GCM roundtrip test!";
 
         String ciphertext = EncryptionUtils.encrypt(plaintext, key);
@@ -82,25 +82,21 @@ class EncryptionUtilsTest {
     @DisplayName(
             "AES Encryption: GCM mode should NOT leak patterns from identical plaintext blocks")
     void encrypt_GcmNoPatternLeakage() throws EncryptionException {
-        SecretKey key = EncryptionUtils.getKeyFromPassword("vulnerability-test");
+        byte[] salt = EncryptionUtils.generateSalt();
+        SecretKey key = EncryptionUtils.getKeyFromPassword("vulnerability-test", salt);
 
-        // Create two identical 16-byte blocks (AES block size)
-        String block = "identical-block-"; // 16 characters
+        String block = "identical-block-";
         String plaintext = block + block;
 
         String ciphertext = EncryptionUtils.encrypt(plaintext, key);
         byte[] decoded = Base64.getDecoder().decode(ciphertext);
 
-        // GCM output includes 12-byte nonce prefix + ciphertext + 16-byte auth tag
-        // Skip the 12-byte nonce, then check that ciphertext blocks are NOT identical
         int nonceLen = 12;
         byte[] block1 = new byte[16];
         byte[] block2 = new byte[16];
         System.arraycopy(decoded, nonceLen, block1, 0, 16);
         System.arraycopy(decoded, nonceLen + 16, block2, 0, 16);
 
-        // GCM mode does NOT reveal patterns: identical plaintext blocks produce different
-        // ciphertext blocks
         assertFalse(
                 java.util.Arrays.equals(block1, block2),
                 "GCM mode should not produce identical ciphertext for identical plaintext blocks");
@@ -109,12 +105,25 @@ class EncryptionUtilsTest {
     @Test
     @DisplayName("AES Decrypt: Should fail with wrong key")
     void decrypt_wrongKey_shouldFail() throws EncryptionException {
-        SecretKey encryptKey = EncryptionUtils.getKeyFromPassword("correct-key");
-        SecretKey wrongKey = EncryptionUtils.getKeyFromPassword("wrong-key");
+        byte[] salt = EncryptionUtils.generateSalt();
+        SecretKey encryptKey = EncryptionUtils.getKeyFromPassword("correct-key", salt);
+        SecretKey wrongKey = EncryptionUtils.getKeyFromPassword("wrong-key", salt);
         String plaintext = "sensitive data";
 
         String ciphertext = EncryptionUtils.encrypt(plaintext, encryptKey);
 
         assertThrows(EncryptionException.class, () -> EncryptionUtils.decrypt(ciphertext, wrongKey));
+    }
+
+    @Test
+    @DisplayName("Password-based encrypt/decrypt roundtrip with embedded salt")
+    void encryptWithPassword_decryptWithPassword_roundtrip() throws EncryptionException {
+        String plaintext = "password-based roundtrip test";
+        String password = "test-password-123";
+
+        String ciphertext = EncryptionUtils.encryptWithPassword(plaintext, password);
+        String decrypted = EncryptionUtils.decryptWithPassword(ciphertext, password);
+
+        assertEquals(plaintext, decrypted);
     }
 }

@@ -67,21 +67,28 @@ public class EncryptionUtils {
         return EncodingUtils.encodeBase64(reversed);
     }
 
-    private static final byte[] salt = new byte[16];
+    private static final int PBKDF2_ITERATIONS = 600_000;
+    private static final int SALT_LENGTH = 16;
 
-    static {
-        new SecureRandom().nextBytes(salt);
-    }
-
-    public static SecretKey getKeyFromPassword(String password) throws EncryptionException {
+    public static SecretKey getKeyFromPassword(String password, byte[] salt)
+            throws EncryptionException {
         try {
+            if (salt == null || salt.length < SALT_LENGTH) {
+                throw new EncryptionException("Salt must be at least " + SALT_LENGTH + " bytes");
+            }
             SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-            KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 1, 128);
+            KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, PBKDF2_ITERATIONS, 128);
 
             return new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
             throw new EncryptionException("Error generating AES key from password", e);
         }
+    }
+
+    public static byte[] generateSalt() {
+        byte[] salt = new byte[SALT_LENGTH];
+        new SecureRandom().nextBytes(salt);
+        return salt;
     }
 
     private static final int GCM_NONCE_LENGTH = 12;
@@ -126,11 +133,9 @@ public class EncryptionUtils {
                 throw new EncryptionException("Ciphertext too short to contain nonce");
             }
 
-            // Extract nonce from the beginning of the ciphertext
             byte[] nonce = new byte[GCM_NONCE_LENGTH];
             System.arraycopy(decoded, 0, nonce, 0, GCM_NONCE_LENGTH);
 
-            // Extract the encrypted data (after the nonce)
             byte[] encrypted = new byte[decoded.length - GCM_NONCE_LENGTH];
             System.arraycopy(decoded, GCM_NONCE_LENGTH, encrypted, 0, encrypted.length);
 
@@ -151,5 +156,31 @@ public class EncryptionUtils {
             throw new EncryptionException(
                     "AES decryption failed due to block size or padding issues", e);
         }
+    }
+
+    public static String encryptWithPassword(String plaintext, String password)
+            throws EncryptionException {
+        byte[] salt = generateSalt();
+        SecretKey key = getKeyFromPassword(password, salt);
+        String encrypted = encrypt(plaintext, key);
+        byte[] encBytes = java.util.Base64.getDecoder().decode(encrypted);
+        byte[] output = new byte[SALT_LENGTH + encBytes.length];
+        System.arraycopy(salt, 0, output, 0, SALT_LENGTH);
+        System.arraycopy(encBytes, 0, output, SALT_LENGTH, encBytes.length);
+        return java.util.Base64.getEncoder().encodeToString(output);
+    }
+
+    public static String decryptWithPassword(String ciphertext, String password)
+            throws EncryptionException {
+        byte[] decoded = java.util.Base64.getDecoder().decode(ciphertext);
+        if (decoded.length < SALT_LENGTH + GCM_NONCE_LENGTH) {
+            throw new EncryptionException("Ciphertext too short to contain salt and nonce");
+        }
+        byte[] salt = new byte[SALT_LENGTH];
+        System.arraycopy(decoded, 0, salt, 0, SALT_LENGTH);
+        byte[] encBytes = new byte[decoded.length - SALT_LENGTH];
+        System.arraycopy(decoded, SALT_LENGTH, encBytes, 0, encBytes.length);
+        SecretKey key = getKeyFromPassword(password, salt);
+        return decrypt(java.util.Base64.getEncoder().encodeToString(encBytes), key);
     }
 }
