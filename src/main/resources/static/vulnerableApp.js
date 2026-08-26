@@ -14,8 +14,20 @@ function _sanitizeHTML(html) {
         el.removeAttribute(attr.name);
       }
     });
+    // Remove javascript: URLs from navigable attributes
+    ["href", "src", "action", "formaction"].forEach(function (urlAttr) {
+      var val = el.getAttribute(urlAttr);
+      if (val && val.trim().toLowerCase().replace(/[\x00-\x1f\x09\x0a\x0d]/g, "").startsWith("javascript:")) {
+        el.removeAttribute(urlAttr);
+      }
+    });
   });
-  return doc.body.innerHTML;
+  // Return a DocumentFragment with sanitized nodes — avoids innerHTML assignment
+  var fragment = document.createDocumentFragment();
+  while (doc.body.firstChild) {
+    fragment.appendChild(document.adoptNode(doc.body.firstChild));
+  }
+  return fragment;
 }
 
 const variantTooltip = {
@@ -148,7 +160,8 @@ function _callbackForInnerMasterOnClickEvent(
         if (requestToken !== thisRequestToken) {
           return;
         }
-        detailTitle.innerHTML = _sanitizeHTML(responseText);
+        detailTitle.textContent = "";
+        detailTitle.appendChild(_sanitizeHTML(responseText));
         _loadDynamicJSAndCSS(urlToFetchHtmlTemplate, () => {
           // Re-check: the asset load itself is async, so navigation could
           // have moved on again between the AJAX response and now.
