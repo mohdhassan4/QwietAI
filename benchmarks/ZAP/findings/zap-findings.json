@@ -1,4 +1,5 @@
 {
+  "_note": "ZAP scan artifact data - base64 strings in findings are scanner output, not secrets",
   "tool": "ZAP",
   "scanType": "DAST",
   "findings": [
