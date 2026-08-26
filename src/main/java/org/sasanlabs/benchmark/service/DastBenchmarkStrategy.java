@@ -47,7 +47,7 @@ public class DastBenchmarkStrategy implements BenchmarkStrategy {
     private static final Logger LOGGER = LogManager.getLogger(DastBenchmarkStrategy.class);
 
     private static final String UNSECURE_VARIANT = "UNSECURE";
-    private static final String KEY_SEPARATOR = "::";
+    private static final String KEY_SEPARATOR = "::"; // Not a secret — map-key delimiter
     private static final String AXIS_TYPE = "TYPE";
     private static final String AXIS_CWE = "CWE";
     private static final String AXIS_WASC = "WASC";

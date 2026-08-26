@@ -32,7 +32,7 @@ public class SastBenchmarkStrategy implements BenchmarkStrategy {
 
     private static final Logger LOGGER = LogManager.getLogger(SastBenchmarkStrategy.class);
 
-    private static final String KEY_SEPARATOR = "::";
+    private static final String KEY_SEPARATOR = "::"; // Not a secret — map-key delimiter
     private static final String CWE_TAG = "CWE";
     private static final String TYPE_TAG = "TYPE";
 

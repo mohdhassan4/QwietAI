@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 public class EmailServiceImpl implements EmailService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EmailServiceImpl.class);
+    // Not a secret — URL path segment for password-reset links
     private static final String RESET_PASSWORD_PATH = "/reset-password?token=";
     private static final String VERIFY_EMAIL_PATH = "/verify-email?token=";
 
