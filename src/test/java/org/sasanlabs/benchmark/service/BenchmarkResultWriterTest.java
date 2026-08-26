@@ -1,8 +1,10 @@
 package org.sasanlabs.benchmark.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -67,14 +69,24 @@ class BenchmarkResultWriterTest {
     @Test
     void write_withCustomDir_overridesDefault(@TempDir Path tempDir) throws Exception {
         Path defaultDir = tempDir.resolve("default");
-        Path overrideDir = tempDir.resolve("override");
+        Path overrideDir = defaultDir.resolve("subdir");
         BenchmarkResultWriter writer = new BenchmarkResultWriter(MAPPER, defaultDir.toString());
 
         Path target = writer.write(sampleResult("ZAP"), overrideDir.toString());
 
         assertThat(target).isEqualTo(overrideDir.resolve("zap-results.json"));
         assertThat(Files.exists(target)).isTrue();
-        assertThat(Files.exists(defaultDir)).isFalse();
+    }
+
+    @Test
+    void write_rejectsDirectoryOutsideAllowedBase(@TempDir Path tempDir) {
+        Path defaultDir = tempDir.resolve("allowed");
+        Path outsideDir = tempDir.resolve("outside");
+        BenchmarkResultWriter writer = new BenchmarkResultWriter(MAPPER, defaultDir.toString());
+
+        assertThatThrownBy(() -> writer.write(sampleResult("ZAP"), outsideDir.toString()))
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("Path traversal");
     }
 
     @Test

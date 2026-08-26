@@ -18,6 +18,7 @@ import org.apache.commons.csv.CSVRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sasanlabs.benchmark.model.ExpectedIssue;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
@@ -60,13 +61,35 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
                     .build();
 
     private final String csvPath;
+    private final Path allowedBase;
 
     private volatile List<ExpectedIssue> cached;
 
+    @Autowired
     public CsvExpectedIssuesProvider(
             @Value("${benchmark.sast.ground-truth.path:classpath:scanner/sast/expectedIssues.csv}")
-                    String csvPath) {
+                    String csvPath,
+            @Value("${benchmark.sast.ground-truth.allowed-base:}") String allowedBaseDirConfig) {
         this.csvPath = csvPath;
+        if (allowedBaseDirConfig != null && !allowedBaseDirConfig.isEmpty()) {
+            this.allowedBase = Paths.get(allowedBaseDirConfig).toAbsolutePath().normalize();
+        } else {
+            this.allowedBase = Paths.get("").toAbsolutePath().normalize();
+        }
+    }
+
+    /** Package-private constructor for tests that derive the allowed base from the CSV path. */
+    CsvExpectedIssuesProvider(String csvPath) {
+        this.csvPath = csvPath;
+        if (!csvPath.startsWith(CLASSPATH_PREFIX)) {
+            Path resolved = Paths.get(csvPath).toAbsolutePath().normalize();
+            this.allowedBase =
+                    resolved.getParent() != null
+                            ? resolved.getParent()
+                            : Paths.get("").toAbsolutePath().normalize();
+        } else {
+            this.allowedBase = Paths.get("").toAbsolutePath().normalize();
+        }
     }
 
     @PostConstruct
@@ -103,7 +126,12 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
         if (csvPath.startsWith(CLASSPATH_PREFIX)) {
             return parseFromResource(csvPath.substring(CLASSPATH_PREFIX.length()));
         }
-        return parseFromPath(Paths.get(csvPath));
+        Path resolved = Paths.get(csvPath).toAbsolutePath().normalize();
+        if (!resolved.startsWith(allowedBase)) {
+            throw new IOException(
+                    "Path traversal detected: CSV path is outside the allowed base directory");
+        }
+        return parseFromPath(resolved);
     }
 
     private List<ExpectedIssue> parseFromResource(String location) throws IOException {
