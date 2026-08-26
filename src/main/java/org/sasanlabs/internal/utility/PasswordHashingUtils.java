@@ -44,17 +44,44 @@ public final class PasswordHashingUtils {
         return getHashAsHex(rawPassword, HashAlgorithm.MD4);
     }
 
+    public static String md4Hex(String salt, String rawPassword) {
+        return getHashAsHex(salt, rawPassword, HashAlgorithm.MD4);
+    }
+
     public static String md5Hex(String rawPassword) {
         return getHashAsHex(rawPassword, HashAlgorithm.MD5);
+    }
+
+    public static String md5Hex(String salt, String rawPassword) {
+        return getHashAsHex(salt, rawPassword, HashAlgorithm.MD5);
     }
 
     public static String sha1Hex(String rawPassword) {
         return getHashAsHex(rawPassword, HashAlgorithm.SHA1);
     }
 
+    public static String sha1Hex(String salt, String rawPassword) {
+        return getHashAsHex(salt, rawPassword, HashAlgorithm.SHA1);
+    }
+
+    /**
+     * Computes a hash without salt. Prefer the salted overload for security-sensitive operations.
+     */
     public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
+        return getHashAsHex(null, rawPassword, hashAlgorithm);
+    }
+
+    /**
+     * Computes a salted hash using MessageDigest.update(salt) followed by digest(password). When
+     * salt is null or empty, behaves as an unsalted hash (for backward compatibility only).
+     */
+    public static String getHashAsHex(
+            String salt, String rawPassword, HashAlgorithm hashAlgorithm) {
         try {
             MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
+            if (salt != null && !salt.isEmpty()) {
+                messageDigest.update(salt.getBytes(StandardCharsets.UTF_8));
+            }
             byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
@@ -80,7 +107,7 @@ public final class PasswordHashingUtils {
     }
 
     public static String sha256Hex(String salt, String rawPassword) {
-        return getHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
+        return getHashAsHex(salt, rawPassword, HashAlgorithm.SHA256);
     }
 
     public static String unsaltedSha256Hex(String rawPassword) {

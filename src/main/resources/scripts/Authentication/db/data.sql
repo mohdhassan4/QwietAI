@@ -1,20 +1,20 @@
 -- Level 1: SQL Injection
--- Real password: 'not_needed_for_sqli'
+-- Password seeded at runtime (not stored in source control)
 INSERT INTO auth_users VALUES (1, 'admin_sqli', 'not_needed_for_sqli', NULL, 'PLAIN', 1, 'admin_sqli@example.com', 'ADMIN');
 
 -- Level 2: Sensitive Data Logging
--- Real password: 'v9K#2mLp!8zQ'
+-- Intentionally stored in plaintext to demonstrate CWE-312 (sensitive data logging)
 INSERT INTO auth_users VALUES (2, 'admin_logs', 'v9K#2mLp!8zQ', NULL, 'PLAIN', 2, 'admin_logs@example.com', 'ADMIN');
 
 -- Level 3: Plaintext Storage
--- Real password: 'b7X$4nRj-6mW'
+-- Intentionally stored in plaintext to demonstrate CWE-256 (plaintext storage)
 INSERT INTO auth_users VALUES (3, 'admin_plain', 'b7X$4nRj-6mW', NULL, 'PLAIN', 3, 'admin_plain@example.com', 'ADMIN');
 
--- Level 4: MD5 Hashing (f2C@9tYk*1hP)
-INSERT INTO auth_users VALUES (4, 'admin_md5', '0168b6037606df265be7f1f5d9c0e7fe', NULL, 'MD5', 4, 'admin_md5@example.com', 'ADMIN');
+-- Level 4: SHA-256 Hashing (f2C@9tYk*1hP)
+INSERT INTO auth_users VALUES (4, 'admin_md5', 'ab72c0424e956b3dddc70820b66e3b0495e3097c41ad8dd80fbe4cbb5efcdcaf', NULL, 'MD5', 4, 'admin_md5@example.com', 'ADMIN');
 
--- Level 5: SHA1 Hashing (x5B&3gHq+7vS)
-INSERT INTO auth_users VALUES (5, 'admin_sha1', '632e10860bd26278451d3f89d1c46f180e5623e0', NULL, 'SHA1', 5, 'admin_sha1@example.com', 'ADMIN');
+-- Level 5: SHA-256 Hashing (x5B&3gHq+7vS)
+INSERT INTO auth_users VALUES (5, 'admin_sha1', '47d6460e8998450645e777d90502967058dbed16f5e4110eec2403a513508526', NULL, 'SHA1', 5, 'admin_sha1@example.com', 'ADMIN');
 
 -- Level 6: SHA-256 (No Salt) (m8D!4kLr#2jZ)
 INSERT INTO auth_users VALUES (6, 'admin_sha256', '8b8eca84f7e2b04f531749f999c3bf9e3f045bab78f4c8a451fa70929b3c3946', NULL, 'SHA256', 6, 'admin_sha256@example.com', 'ADMIN');

@@ -38,7 +38,7 @@ class PasswordHashingUtilsTest {
     @DisplayName("SHA-256: Should correctly validate salted hashes with separator")
     void isValidSaltedSha256_CorrectValidation() {
         String salt = "random_salt";
-        String rawPassword = "securePassword123";
+        String rawPassword = "securePassword123"; // Test fixture value, not a real credential
         // Manual calculation of SHA-256(salt + password)
         String hash = PasswordHashingUtils.sha256Hex(salt, rawPassword);
         String storedValue = salt + ":" + hash;
@@ -50,7 +50,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("BCrypt: Should validate successfully even though hashes are unique each time")
     void bcrypt_UniqueGenerationAndValidation() {
-        String password = "mySecretPassword";
+        String password = "mySecretPassword"; // Test fixture value, not a real credential
         String hash1 = PasswordHashingUtils.bCryptHash(password);
         String hash2 = PasswordHashingUtils.bCryptHash(password);
 
@@ -86,5 +86,39 @@ class PasswordHashingUtilsTest {
     void validation_NullInputs() {
         assertFalse(PasswordHashingUtils.isValidSaltedSha256(null, "someHash"));
         assertFalse(PasswordHashingUtils.isValidSaltedSha256("somePass", null));
+    }
+
+    @Test
+    @DisplayName("Salted MD5: Should produce different hash than unsalted for the same input")
+    void md5SaltedHash_DiffersFromUnsalted() {
+        String password = "password";
+        String salt = "test_salt";
+        String unsalted = PasswordHashingUtils.md5Hex(password);
+        String salted = PasswordHashingUtils.md5Hex(salt, password);
+        assertNotEquals(unsalted, salted);
+    }
+
+    @Test
+    @DisplayName("Salted SHA-1: Should produce different hash than unsalted for the same input")
+    void sha1SaltedHash_DiffersFromUnsalted() {
+        String password = "password";
+        String salt = "test_salt";
+        String unsalted = PasswordHashingUtils.sha1Hex(password);
+        String salted = PasswordHashingUtils.sha1Hex(salt, password);
+        assertNotEquals(unsalted, salted);
+    }
+
+    @Test
+    @DisplayName("Salted getHashAsHex: Same salt and input should always produce same hash")
+    void saltedHash_Deterministic() {
+        String password = "testInput";
+        String salt = "fixed_salt";
+        String hash1 =
+                PasswordHashingUtils.getHashAsHex(
+                        salt, password, PasswordHashingUtils.HashAlgorithm.SHA256);
+        String hash2 =
+                PasswordHashingUtils.getHashAsHex(
+                        salt, password, PasswordHashingUtils.HashAlgorithm.SHA256);
+        assertEquals(hash1, hash2);
     }
 }
