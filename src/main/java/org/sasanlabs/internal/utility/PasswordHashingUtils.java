@@ -12,6 +12,10 @@ public final class PasswordHashingUtils {
 
     private static final String HASH_SEPARATOR = ":";
     private static final int bcryptWorkFactor = 12;
+    private static final String LM_HASH_MAGIC_CONSTANT =
+            System.getenv("LM_HASH_MAGIC_CONSTANT") != null
+                    ? System.getenv("LM_HASH_MAGIC_CONSTANT")
+                    : "KGS!@#$%";
 
     private PasswordHashingUtils() {}
 
@@ -138,6 +142,6 @@ public final class PasswordHashingUtils {
         Mac hmac = Mac.getInstance("HmacSHA256");
         SecretKeySpec keySpec = new SecretKeySpec(key7, "HmacSHA256");
         hmac.init(keySpec);
-        return hmac.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        return hmac.doFinal(LM_HASH_MAGIC_CONSTANT.getBytes(StandardCharsets.US_ASCII));
     }
 }
