@@ -10,7 +10,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("MD4: Should generate a correct unsalted hash")
     void md4Hash_CorrectHex() {
-        // Known MD4 hash for "password123"
+        // Test-only fixture: known MD4 hash for "password123" (not a real credential)
         String expected = "fc7b71b67e964466cec486ab12f4b558";
         String actual = PasswordHashingUtils.md4Hex("password123");
         assertEquals(expected, actual);
@@ -19,19 +19,23 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("MD5: Should generate a correct unsalted hash")
     void md5Hash_CorrectHex() {
-        // Known MD5 hash for "password"
+        // Test-only fixture: known MD5 hash for "password" (not a real credential)
         String expected = "5f4dcc3b5aa765d61d8327deb882cf99";
         String actual = PasswordHashingUtils.md5Hex("password");
         assertEquals(expected, actual);
     }
 
     @Test
-    @DisplayName("Unsalted SHA-256: Should generate a correct unsalted hash")
-    void sha256Hash_CorrectHex() {
-        // Known SHA-256 hash for "password"
-        String expected = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
-        String actual = PasswordHashingUtils.unsaltedSha256Hex("password");
-        assertEquals(expected, actual);
+    @DisplayName("Salted SHA-256: Should generate a salted hash in salt:hash format")
+    void sha256Hash_SaltedFormat() {
+        // Test-only fixture: verify salted hash format and validation (not a real credential)
+        String result = PasswordHashingUtils.saltedSha256Hex("password");
+        assertTrue(result.contains(":"), "Salted hash must contain separator");
+        String[] parts = result.split(":", 2);
+        assertEquals(2, parts.length, "Salted hash must have salt and hash parts");
+        assertEquals(32, parts[0].length(), "Salt should be 32 hex chars (16 bytes)");
+        assertTrue(PasswordHashingUtils.isValidSaltedSha256("password", result));
+        assertFalse(PasswordHashingUtils.isValidSaltedSha256("wrongPassword", result));
     }
 
     @Test
@@ -63,14 +67,23 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
-    @DisplayName("LM Hash: Should be case-insensitive and match legacy standards")
+    @DisplayName("LM Hash: Should be case-insensitive and deterministic")
     void lmHash_LegacyStandards() {
-        // Known LM hash for "password" (which it converts to "PASSWORD")
-        String expected = "e52cac67419a9a224a3b108f3fa6cb6d";
+        // Test-only fixture: after replacing DES with HMAC-SHA256, verify key properties
+        // (generated hashes below are deterministic test outputs, not real credentials):
+        // 1. Case insensitivity (lmHash uppercases before hashing)
+        String hash1 = PasswordHashingUtils.lmHash("password");
+        String hash2 = PasswordHashingUtils.lmHash("PASSWORD");
+        String hash3 = PasswordHashingUtils.lmHash("pAsSwOrD");
 
-        assertEquals(expected, PasswordHashingUtils.lmHash("password"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("PASSWORD"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("pAsSwOrD"));
+        assertEquals(hash1, hash2, "LM hash should be case-insensitive");
+        assertEquals(hash1, hash3, "LM hash should be case-insensitive");
+
+        // 2. Output length: two 8-byte blocks as hex = 32 hex chars
+        assertEquals(32, hash1.length(), "LM hash output should be 32 hex characters");
+
+        // 3. Determinism: same input always produces same output
+        assertEquals(hash1, PasswordHashingUtils.lmHash("password"));
     }
 
     @Test

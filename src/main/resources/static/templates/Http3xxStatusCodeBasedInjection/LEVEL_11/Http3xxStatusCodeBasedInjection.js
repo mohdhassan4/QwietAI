@@ -23,16 +23,28 @@ function testLevel11Redirect(value) {
 
       if (response.status === 403) {
         return response.text().then(function (message) {
-          resultTitle.innerHTML =
-            '<span class="resultIcon">!</span><span>Redirect Blocked</span>';
+          resultTitle.textContent = "";
+          var icon = document.createElement("span");
+          icon.className = "resultIcon";
+          icon.textContent = "!";
+          var label = document.createElement("span");
+          label.textContent = "Redirect Blocked";
+          resultTitle.appendChild(icon);
+          resultTitle.appendChild(label);
           resultMessage.textContent = message + ": " + value;
           resultBox.style.display = "block";
         });
       }
     })
     .catch(function () {
-      resultTitle.innerHTML =
-        '<span class="resultIcon">!</span><span>Redirect Blocked</span>';
+      resultTitle.textContent = "";
+      var icon = document.createElement("span");
+      icon.className = "resultIcon";
+      icon.textContent = "!";
+      var label = document.createElement("span");
+      label.textContent = "Redirect Blocked";
+      resultTitle.appendChild(icon);
+      resultTitle.appendChild(label);
       resultMessage.textContent = "Unable to test redirect right now.";
       resultBox.style.display = "block";
     });

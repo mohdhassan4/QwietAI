@@ -48,16 +48,16 @@ export function getHeadersWithForwardedHost(inputId = "forwardedHostInput") {
 
 export function setDemoUserCookie(value) {
   if (value) {
-    document.cookie = `demo_user=${value}; path=/; SameSite=Lax`;
+    document.cookie = `demo_user=${value}; path=/; Secure; SameSite=Strict`;
   } else {
     document.cookie =
-      "demo_user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+      "demo_user=; path=/; Secure; SameSite=Strict; expires=Thu, 01 Jan 1970 00:00:00 GMT";
   }
 }
 
 export function fetchDataCallback(data, request) {
   updateDiagnostics(request);
-  document.getElementById("cachePoisoningResponse").innerHTML = data.content;
+  document.getElementById("cachePoisoningResponse").textContent = data.content;
 }
 
 function updateDiagnostics(request) {

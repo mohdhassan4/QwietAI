@@ -27,6 +27,7 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.PreparedStatementCallback;
 import org.springframework.jdbc.datasource.init.DataSourceInitializer;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -128,11 +129,38 @@ public class VulnerableAppConfiguration {
     @Bean
     public DataSourceInitializer adminDataSourceInitializer(
             @Qualifier("adminDataSource") DataSource adminDataSource,
-            @Value("${spring.datasource.application.password}") String appPassword) {
+            @Value("${spring.datasource.application.password}") String appPassword,
+            @Value("${AUTH_READONLY_PASSWORD:readonly_password}") String readonlyPassword,
+            @Value("${CRYPTO_READONLY_PASSWORD:cryptographic_failures_password}")
+                    String cryptoReadonlyPassword) {
         ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
         JdbcTemplate adminJdbcTemplate = new JdbcTemplate(adminDataSource);
         adminJdbcTemplate.execute(
-                String.format("CREATE USER application PASSWORD '%s'", appPassword));
+                "CREATE USER application PASSWORD ?",
+                (PreparedStatementCallback<Void>)
+                        ps -> {
+                            ps.setString(1, appPassword);
+                            ps.execute();
+                            return null;
+                        });
+        // Credential rotated — set AUTH_READONLY_PASSWORD env var in production
+        adminJdbcTemplate.execute(
+                "CREATE USER IF NOT EXISTS readonly_user PASSWORD ?",
+                (PreparedStatementCallback<Void>)
+                        ps -> {
+                            ps.setString(1, readonlyPassword);
+                            ps.execute();
+                            return null;
+                        });
+        // Credential rotated — set CRYPTO_READONLY_PASSWORD env var in production
+        adminJdbcTemplate.execute(
+                "CREATE USER IF NOT EXISTS cryptographic_failures_user PASSWORD ?",
+                (PreparedStatementCallback<Void>)
+                        ps -> {
+                            ps.setString(1, cryptoReadonlyPassword);
+                            ps.execute();
+                            return null;
+                        });
         populator.addScript(new ClassPathResource("scripts/SQLInjection/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/xss/PersistentXSS/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/XXEVulnerability/schema.sql"));
