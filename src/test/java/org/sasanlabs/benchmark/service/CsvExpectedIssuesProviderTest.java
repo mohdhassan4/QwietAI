@@ -221,6 +221,22 @@ class CsvExpectedIssuesProviderTest {
                 .hasCauseInstanceOf(IOException.class);
     }
 
+    @Test
+    void rejectsPathTraversalOutsideAllowedBase(@TempDir Path tempDir) throws Exception {
+        Path csv = tempDir.resolve("expected.csv");
+        write(csv, HEADER + "CWE-89,SQL Injection,src/main/java/Foo.java,56,1\n");
+
+        // Use the two-arg constructor with a base that does NOT contain the CSV
+        Path restrictedBase = tempDir.resolve("restricted");
+        Files.createDirectories(restrictedBase);
+        CsvExpectedIssuesProvider provider =
+                new CsvExpectedIssuesProvider(csv.toString(), restrictedBase.toString());
+
+        assertThatThrownBy(provider::getExpectedIssues)
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("Path traversal");
+    }
+
     private static void write(Path path, String content) throws IOException {
         Files.write(path, content.getBytes(StandardCharsets.UTF_8));
     }
