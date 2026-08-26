@@ -176,6 +176,7 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    environment 'KEY_STORE_PASSWORD', System.getenv('KEY_STORE_PASSWORD') ?: 'changeIt'
     finalizedBy jacocoTestReport
 }
 
