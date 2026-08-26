@@ -9,6 +9,8 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+    security_opt:
+      - no-new-privileges:true
     environment:
       - DB_ADMIN_USERNAME=${DB_ADMIN_USERNAME}
       - DB_ADMIN_PASSWORD=${DB_ADMIN_PASSWORD}
@@ -32,6 +34,8 @@ services:
       - /tmp
       - /var/run
       - /var/cache/nginx
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - ./templates:/etc/nginx/templates:ro
     ports:
