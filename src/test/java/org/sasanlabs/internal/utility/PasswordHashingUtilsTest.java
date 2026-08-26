@@ -87,4 +87,38 @@ class PasswordHashingUtilsTest {
         assertFalse(PasswordHashingUtils.isValidSaltedSha256(null, "someHash"));
         assertFalse(PasswordHashingUtils.isValidSaltedSha256("somePass", null));
     }
+
+    @Test
+    @DisplayName("Salted MD5: Should produce different hash than unsalted for the same input")
+    void md5SaltedHash_DiffersFromUnsalted() {
+        String password = "password";
+        String salt = "test_salt";
+        String unsalted = PasswordHashingUtils.md5Hex(password);
+        String salted = PasswordHashingUtils.md5Hex(salt, password);
+        assertNotEquals(unsalted, salted);
+    }
+
+    @Test
+    @DisplayName("Salted SHA-1: Should produce different hash than unsalted for the same input")
+    void sha1SaltedHash_DiffersFromUnsalted() {
+        String password = "password";
+        String salt = "test_salt";
+        String unsalted = PasswordHashingUtils.sha1Hex(password);
+        String salted = PasswordHashingUtils.sha1Hex(salt, password);
+        assertNotEquals(unsalted, salted);
+    }
+
+    @Test
+    @DisplayName("Salted getHashAsHex: Same salt and input should always produce same hash")
+    void saltedHash_Deterministic() {
+        String password = "testInput";
+        String salt = "fixed_salt";
+        String hash1 =
+                PasswordHashingUtils.getHashAsHex(
+                        salt, password, PasswordHashingUtils.HashAlgorithm.SHA256);
+        String hash2 =
+                PasswordHashingUtils.getHashAsHex(
+                        salt, password, PasswordHashingUtils.HashAlgorithm.SHA256);
+        assertEquals(hash1, hash2);
+    }
 }
