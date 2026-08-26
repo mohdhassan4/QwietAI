@@ -159,6 +159,16 @@ class CsvExpectedIssuesProviderTest {
     }
 
     @Test
+    void pathTraversal_throwsIOException() {
+        String traversalPath = "../../etc/passwd";
+
+        assertThatThrownBy(
+                        () -> new CsvExpectedIssuesProvider(traversalPath).getExpectedIssues())
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("directory traversal");
+    }
+
+    @Test
     void classpathPrefix_readsFromTheClasspath() throws Exception {
         List<ExpectedIssue> issues =
                 new CsvExpectedIssuesProvider("classpath:scanner/sast/test-expectedIssues.csv")
