@@ -45,6 +45,42 @@ function sanitizeHtml(html) {
   return doc.body.innerHTML;
 }
 
+/**
+ * Safely sets sanitized HTML content on an element without assigning to innerHTML.
+ * Parses the HTML via DOMParser, removes dangerous elements/attributes,
+ * then appends the sanitized DOM nodes directly.
+ */
+function _safeSetHtml(element, html) {
+  element.textContent = "";
+  if (html == null) return;
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(String(html), "text/html");
+  var all = doc.body.querySelectorAll("*");
+  for (var i = 0; i < all.length; i++) {
+    var el = all[i];
+    var tag = el.tagName.toLowerCase();
+    if (tag === "script" || tag === "iframe" || tag === "object" || tag === "embed") {
+      el.remove();
+      continue;
+    }
+    var attrs = Array.prototype.slice.call(el.attributes);
+    for (var j = 0; j < attrs.length; j++) {
+      var name = attrs[j].name.toLowerCase();
+      var value = (attrs[j].value || "").trim().toLowerCase();
+      if (
+        name.indexOf("on") === 0 ||
+        value.indexOf("javascript:") === 0 ||
+        value.indexOf("data:text/html") === 0
+      ) {
+        el.removeAttribute(attrs[j].name);
+      }
+    }
+  }
+  while (doc.body.firstChild) {
+    element.appendChild(document.importNode(doc.body.firstChild, true));
+  }
+}
+
 const detail = document.querySelector(".detail");
 const detailTitle = document.querySelector(".detail-title");
 const master = document.querySelector(".master");
@@ -157,8 +193,8 @@ function _callbackForInnerMasterOnClickEvent(
       vulnerableAppEndPointData[id]["Detailed Information"][key][
         "HtmlTemplate"
       ];
-    document.getElementById("vulnerabilityDescription").innerHTML =
-      sanitizeHtml(vulnerableAppEndPointData[id]["Description"]);
+    _safeSetHtml(document.getElementById("vulnerabilityDescription"),
+      vulnerableAppEndPointData[id]["Description"]);
     let urlToFetchHtmlTemplate = htmlTemplate
       ? "/VulnerableApp/templates/" + vulnerabilitySelected + "/" + htmlTemplate
       : "error";
@@ -180,7 +216,7 @@ function _callbackForInnerMasterOnClickEvent(
         if (requestToken !== thisRequestToken) {
           return;
         }
-        detailTitle.innerHTML = sanitizeHtml(responseText);
+        _safeSetHtml(detailTitle, responseText);
         _loadDynamicJSAndCSS(urlToFetchHtmlTemplate, () => {
           // Re-check: the asset load itself is async, so navigation could
           // have moved on again between the AJAX response and now.
@@ -288,13 +324,13 @@ function handleElementAutoSelection(vulnerableAppEndPointData, id = 0) {
   }
 
   if (id === 0) {
-    detailTitle.innerHTML = sanitizeHtml(vulnerableAppEndPointData[id]["Description"]);
+    _safeSetHtml(detailTitle, vulnerableAppEndPointData[id]["Description"]);
   } else {
-    innerMaster.innerHTML = "";
+    innerMaster.textContent = "";
   }
 
   vulnerabilitySelected = vulnerableAppEndPointData[id]["Name"];
-  detailTitle.innerHTML = sanitizeHtml(vulnerableAppEndPointData[id]["Description"]);
+  _safeSetHtml(detailTitle, vulnerableAppEndPointData[id]["Description"]);
   appendNewColumn(vulnerableAppEndPointData, id);
 }
 
