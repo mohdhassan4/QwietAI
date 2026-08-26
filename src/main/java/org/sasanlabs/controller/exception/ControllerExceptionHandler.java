@@ -33,8 +33,7 @@ public class ControllerExceptionHandler extends ResponseEntityExceptionHandler {
             ControllerException ex, WebRequest request) {
         LOGGER.error("Controller Exception Occurred :-", ex);
         return new ResponseEntity<String>(
-                ex.getExceptionStatusCode().getMessage(ex.getArgs(), messageBundle),
-                HttpStatus.INTERNAL_SERVER_ERROR);
+                "An internal error occurred", HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @ExceptionHandler(Exception.class)
