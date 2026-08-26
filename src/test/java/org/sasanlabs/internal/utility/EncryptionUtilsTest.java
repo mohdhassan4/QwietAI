@@ -50,19 +50,32 @@ class EncryptionUtilsTest {
 
     @Test
     @DisplayName(
-            "AES Encryption: Should produce consistent ciphertext (deterministic GCM with derived nonce)")
-    void encrypt_GcmDeterminism() throws EncryptionException {
+            "AES Encryption: Should produce different ciphertext on each call (random nonce)")
+    void encrypt_GcmNonDeterminism() throws EncryptionException {
         SecretKey key = EncryptionUtils.getKeyFromPassword("fixed-password");
         String plaintext = "This is a secret message that is exactly 32 bytes";
 
         String ciphertext1 = EncryptionUtils.encrypt(plaintext, key);
         String ciphertext2 = EncryptionUtils.encrypt(plaintext, key);
 
-        // With a deterministic nonce derived from key+plaintext, same inputs produce same output
-        assertEquals(ciphertext1, ciphertext2);
+        // With a random nonce, same inputs produce different output
+        assertNotEquals(ciphertext1, ciphertext2);
 
-        // Verify it is valid Base64
+        // Verify both are valid Base64
         assertDoesNotThrow(() -> Base64.getDecoder().decode(ciphertext1));
+        assertDoesNotThrow(() -> Base64.getDecoder().decode(ciphertext2));
+    }
+
+    @Test
+    @DisplayName("AES Encrypt/Decrypt roundtrip: decrypt should recover the original plaintext")
+    void encrypt_decrypt_roundtrip() throws EncryptionException {
+        SecretKey key = EncryptionUtils.getKeyFromPassword("roundtrip-test-key");
+        String plaintext = "Hello, AES-GCM roundtrip test!";
+
+        String ciphertext = EncryptionUtils.encrypt(plaintext, key);
+        String decrypted = EncryptionUtils.decrypt(ciphertext, key);
+
+        assertEquals(plaintext, decrypted);
     }
 
     @Test
@@ -91,5 +104,17 @@ class EncryptionUtilsTest {
         assertFalse(
                 java.util.Arrays.equals(block1, block2),
                 "GCM mode should not produce identical ciphertext for identical plaintext blocks");
+    }
+
+    @Test
+    @DisplayName("AES Decrypt: Should fail with wrong key")
+    void decrypt_wrongKey_shouldFail() throws EncryptionException {
+        SecretKey encryptKey = EncryptionUtils.getKeyFromPassword("correct-key");
+        SecretKey wrongKey = EncryptionUtils.getKeyFromPassword("wrong-key");
+        String plaintext = "sensitive data";
+
+        String ciphertext = EncryptionUtils.encrypt(plaintext, encryptKey);
+
+        assertThrows(EncryptionException.class, () -> EncryptionUtils.decrypt(ciphertext, wrongKey));
     }
 }

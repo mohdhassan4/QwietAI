@@ -3,7 +3,6 @@ package org.sasanlabs.internal.utility;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
@@ -90,15 +89,9 @@ public class EncryptionUtils {
 
     public static String encrypt(String plaintext, SecretKey key) throws EncryptionException {
         try {
-            // Derive a deterministic nonce from key + plaintext using SHA-256
-            // This ensures same key+plaintext produces same ciphertext (needed by callers)
-            // while avoiding ECB mode weaknesses.
-            MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
-            sha256.update(key.getEncoded());
-            sha256.update(plaintext.getBytes(StandardCharsets.UTF_8));
-            byte[] nonceSource = sha256.digest();
+            // Generate a cryptographically random nonce for each encryption operation
             byte[] nonce = new byte[GCM_NONCE_LENGTH];
-            System.arraycopy(nonceSource, 0, nonce, 0, GCM_NONCE_LENGTH);
+            SecureRandom.getInstanceStrong().nextBytes(nonce);
 
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
             GCMParameterSpec gcmSpec = new GCMParameterSpec(GCM_TAG_LENGTH_BITS, nonce);
@@ -122,6 +115,41 @@ public class EncryptionUtils {
         } catch (IllegalBlockSizeException | BadPaddingException e) {
             throw new EncryptionException(
                     "AES encryption failed due to block size or padding issues", e);
+        }
+    }
+
+    public static String decrypt(String ciphertext, SecretKey key) throws EncryptionException {
+        try {
+            byte[] decoded = java.util.Base64.getDecoder().decode(ciphertext);
+
+            if (decoded.length < GCM_NONCE_LENGTH) {
+                throw new EncryptionException("Ciphertext too short to contain nonce");
+            }
+
+            // Extract nonce from the beginning of the ciphertext
+            byte[] nonce = new byte[GCM_NONCE_LENGTH];
+            System.arraycopy(decoded, 0, nonce, 0, GCM_NONCE_LENGTH);
+
+            // Extract the encrypted data (after the nonce)
+            byte[] encrypted = new byte[decoded.length - GCM_NONCE_LENGTH];
+            System.arraycopy(decoded, GCM_NONCE_LENGTH, encrypted, 0, encrypted.length);
+
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            GCMParameterSpec gcmSpec = new GCMParameterSpec(GCM_TAG_LENGTH_BITS, nonce);
+            cipher.init(Cipher.DECRYPT_MODE, key, gcmSpec);
+
+            byte[] decrypted = cipher.doFinal(encrypted);
+            return new String(decrypted, StandardCharsets.UTF_8);
+
+        } catch (NoSuchPaddingException | NoSuchAlgorithmException e) {
+            throw new EncryptionException("AES configuration not found ", e);
+        } catch (InvalidKeyException e) {
+            throw new EncryptionException("The provided key is invalid for AES decryption", e);
+        } catch (InvalidAlgorithmParameterException e) {
+            throw new EncryptionException("Invalid GCM parameters for AES decryption", e);
+        } catch (IllegalBlockSizeException | BadPaddingException e) {
+            throw new EncryptionException(
+                    "AES decryption failed due to block size or padding issues", e);
         }
     }
 }
