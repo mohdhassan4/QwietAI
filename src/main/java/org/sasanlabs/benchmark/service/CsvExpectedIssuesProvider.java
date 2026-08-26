@@ -107,7 +107,14 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
     }
 
     private List<ExpectedIssue> parseFromResource(String location) throws IOException {
-        try (InputStream in = new ClassPathResource(location).getInputStream();
+        // Normalize the classpath location and reject path traversal
+        Path normalized = Path.of(location).normalize();
+        if (normalized.isAbsolute() || normalized.startsWith("..")) {
+            throw new IOException(
+                    "Classpath resource location contains path traversal: " + location);
+        }
+        String safePath = normalized.toString().replace('\\', '/');
+        try (InputStream in = new ClassPathResource(safePath).getInputStream();
                 Reader reader = new InputStreamReader(in, StandardCharsets.UTF_8);
                 CSVParser parser = FORMAT.parse(reader)) {
             return parseAll(parser);

@@ -116,6 +116,19 @@ class BenchmarkResultWriterTest {
         assertThat(BenchmarkResultWriter.sanitizeToolName("../etc/passwd")).isEqualTo("etcpasswd");
     }
 
+    @Test
+    void write_normalizesOutputDir(@TempDir Path tempDir) throws Exception {
+        // A benchmarks dir with redundant path segments should still resolve correctly
+        Path nested = tempDir.resolve("sub/../sub");
+        BenchmarkResultWriter writer = new BenchmarkResultWriter(MAPPER, nested.toString());
+
+        Path target = writer.write(sampleResult("ZAP"));
+
+        Path expectedDir = tempDir.resolve("sub");
+        assertThat(target).isEqualTo(expectedDir.resolve("zap-results.json"));
+        assertThat(Files.exists(target)).isTrue();
+    }
+
     private static BenchmarkResult sampleResult(String tool) {
         return new BenchmarkResult(
                 tool,
