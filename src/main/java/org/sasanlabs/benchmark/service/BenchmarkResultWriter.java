@@ -35,7 +35,13 @@ public class BenchmarkResultWriter {
     }
 
     public Path write(BenchmarkResult result, String benchmarksDir) throws IOException {
-        Path dir = Paths.get(benchmarksDir);
+        Path dir = Paths.get(benchmarksDir).normalize();
+        for (int i = 0; i < dir.getNameCount(); i++) {
+            if ("..".equals(dir.getName(i).toString())) {
+                throw new IOException(
+                        "Path traversal detected: benchmarksDir contains '..' segments");
+            }
+        }
         Files.createDirectories(dir);
         String fileName = sanitizeToolName(result.getTool()) + "-results.json";
         Path target = dir.resolve(fileName);
