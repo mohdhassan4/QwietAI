@@ -13,6 +13,8 @@ public final class PasswordHashingUtils {
 
     private static final String HASH_SEPARATOR = ":";
     private static final int bcryptWorkFactor = 12;
+    private static final byte[] APPLICATION_SALT =
+            "VulnerableApp-Hash-Salt-v1".getBytes(StandardCharsets.UTF_8);
 
     private PasswordHashingUtils() {}
 
@@ -56,6 +58,7 @@ public final class PasswordHashingUtils {
     public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
         try {
             MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
+            messageDigest.update(APPLICATION_SALT);
             byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
