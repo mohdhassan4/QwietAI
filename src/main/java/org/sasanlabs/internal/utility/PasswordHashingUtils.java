@@ -82,7 +82,16 @@ public final class PasswordHashingUtils {
     }
 
     public static String sha256Hex(String salt, String rawPassword) {
-        return getHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
+        try {
+            MessageDigest messageDigest = MessageDigest.getInstance(HashAlgorithm.SHA256.label(), "BC");
+            messageDigest.update(salt.getBytes(StandardCharsets.UTF_8));
+            byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
+            return EncodingUtils.bytesToHex(digest);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 Hash Algorithm Not Found", e);
+        } catch (NoSuchProviderException e) {
+            throw new RuntimeException("Security Provider Bouncy Castle not found", e);
+        }
     }
 
     public static String unsaltedSha256Hex(String rawPassword) {
