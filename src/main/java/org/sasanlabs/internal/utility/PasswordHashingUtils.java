@@ -51,9 +51,8 @@ public final class PasswordHashingUtils {
             String rawInput, HashAlgorithm hashAlgorithm, byte[] salt) {
         try {
             MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
-            if (salt != null && salt.length > 0) {
-                messageDigest.update(salt);
-            }
+            byte[] effectiveSalt = (salt != null && salt.length > 0) ? salt : generateFallbackSalt();
+            messageDigest.update(effectiveSalt);
             byte[] digest = messageDigest.digest(rawInput.getBytes(StandardCharsets.UTF_8));
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
@@ -61,6 +60,12 @@ public final class PasswordHashingUtils {
         } catch (NoSuchProviderException e) {
             throw new RuntimeException("Security Provider Bouncy Castle not found", e);
         }
+    }
+
+    private static byte[] generateFallbackSalt() {
+        byte[] fallback = new byte[SALT_LENGTH_BYTES];
+        SECURE_RANDOM.nextBytes(fallback);
+        return fallback;
     }
 
     public static String md4Hex(String rawPassword) {
