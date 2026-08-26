@@ -5,7 +5,10 @@ function loadChallenge() {
 
 function displayChallenge(data) {
   let challengeDiv = document.getElementById("challenge");
-  challengeDiv.innerHTML = "<strong>" + data.content + "</strong>";
+  challengeDiv.innerHTML = "";
+  let strong = document.createElement("strong");
+  strong.textContent = data.content;
+  challengeDiv.appendChild(strong);
   if (data.isValid) {
     challengeDiv.className = "challenge-secure";
   } else {
