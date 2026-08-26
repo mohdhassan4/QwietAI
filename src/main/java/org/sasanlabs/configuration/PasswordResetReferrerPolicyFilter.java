@@ -20,6 +20,9 @@ public class PasswordResetReferrerPolicyFilter extends OncePerRequestFilter {
 
     private static final String RESET_PAGE_PATH = "/password-reset/reset.html";
     private static final int REFERRER_LEAK_LEVEL = 7;
+    private static final int MAX_LEVEL_PARAM_LENGTH = 10;
+    private static final java.util.regex.Pattern DIGIT_PATTERN =
+            java.util.regex.Pattern.compile("^[0-9]{1,10}$");
 
     @Override
     protected void doFilterInternal(
@@ -38,12 +41,18 @@ public class PasswordResetReferrerPolicyFilter extends OncePerRequestFilter {
         }
 
         String level = request.getParameter("level");
-        if (level == null) {
+        if (level == null || level.length() > MAX_LEVEL_PARAM_LENGTH) {
+            return false;
+        }
+
+        // Validate input format: only non-negative integers are acceptable
+        if (!DIGIT_PATTERN.matcher(level).matches()) {
             return false;
         }
 
         try {
-            return Integer.parseInt(level) == REFERRER_LEAK_LEVEL;
+            int parsedLevel = Integer.parseInt(level);
+            return parsedLevel == REFERRER_LEAK_LEVEL;
         } catch (NumberFormatException exception) {
             return false;
         }
