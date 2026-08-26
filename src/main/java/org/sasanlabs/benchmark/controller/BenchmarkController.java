@@ -60,7 +60,7 @@ public class BenchmarkController {
                             + " in body",
                     input.getTool(),
                     ioe);
-            result.setPersistenceError("Failed to persist benchmark result: " + ioe.getMessage());
+            result.setPersistenceError("Failed to persist benchmark result");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
         }
 

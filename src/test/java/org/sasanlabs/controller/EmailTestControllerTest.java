@@ -59,7 +59,7 @@ class EmailTestControllerTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertEquals("failed", response.getBody().get("status"));
-        assertEquals("Invalid email address: invalid-address", response.getBody().get("error"));
+        assertEquals("Invalid input", response.getBody().get("error"));
     }
 
     @Test
