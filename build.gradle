@@ -176,6 +176,8 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    environment 'JWT_KEYSTORE_PASSWORD', 'changeIt'
+    environment 'CRYPTO_LEVEL10_SECRET', 'aa123456'
     finalizedBy jacocoTestReport
 }
 
