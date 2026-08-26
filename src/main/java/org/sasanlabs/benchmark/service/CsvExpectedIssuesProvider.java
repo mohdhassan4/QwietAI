@@ -103,7 +103,16 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
         if (csvPath.startsWith(CLASSPATH_PREFIX)) {
             return parseFromResource(csvPath.substring(CLASSPATH_PREFIX.length()));
         }
-        return parseFromPath(Paths.get(csvPath));
+        Path path = Paths.get(csvPath).normalize();
+        if (!path.isAbsolute()) {
+            Path baseDir = Paths.get("").toAbsolutePath().normalize();
+            path = baseDir.resolve(path).normalize();
+            if (!path.startsWith(baseDir)) {
+                throw new IOException(
+                        "Path traversal attempt detected in ground-truth path: " + csvPath);
+            }
+        }
+        return parseFromPath(path);
     }
 
     private List<ExpectedIssue> parseFromResource(String location) throws IOException {
