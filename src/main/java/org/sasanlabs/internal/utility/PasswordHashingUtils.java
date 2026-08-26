@@ -11,6 +11,12 @@ public final class PasswordHashingUtils {
     private static final String HASH_SEPARATOR = ":";
     private static final int bcryptWorkFactor = 12;
 
+    /**
+     * LM hash magic constant loaded from the {@code LM_HASH_MAGIC_CONSTANT} environment variable.
+     * Falls back to the well-known protocol value when the variable is not set.
+     */
+    private static final byte[] LM_MAGIC_BYTES;
+
     private PasswordHashingUtils() {}
 
     // Available Hashing Algorithms
@@ -31,11 +37,14 @@ public final class PasswordHashingUtils {
         }
     }
 
-    // Registers Bouncy Castle as provider
+    // Registers Bouncy Castle as provider and loads externalized crypto constants
     static {
         if (Security.getProvider("BC") == null) {
             Security.addProvider(new BouncyCastleProvider());
         }
+        String lmMagicConstant =
+                System.getenv().getOrDefault("LM_HASH_MAGIC_CONSTANT", "KGS!@#$%");
+        LM_MAGIC_BYTES = lmMagicConstant.getBytes(StandardCharsets.US_ASCII);
     }
 
     public static String md4Hex(String rawPassword) {
@@ -133,10 +142,10 @@ public final class PasswordHashingUtils {
     }
 
     private static byte[] lmSecureHash(byte[] key) throws NoSuchAlgorithmException {
-        // Use SHA-256 keyed with the password half and the original magic constant
+        // Use SHA-256 keyed with the password half and the externally-configured magic constant
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         digest.update(key);
-        digest.update("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        digest.update(LM_MAGIC_BYTES);
         byte[] hash = digest.digest();
         // Truncate to 8 bytes to preserve the output format (16 hex chars per half)
         byte[] truncated = new byte[8];
