@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
+import java.util.regex.Pattern;
 import javax.servlet.http.HttpServletRequest;
 import javax.sql.DataSource;
 import org.sasanlabs.internal.utility.LevelConstants;
@@ -43,6 +44,8 @@ import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 @Configuration
 public class VulnerableAppConfiguration {
 
+    private static final Pattern SAFE_PASSWORD_PATTERN =
+            Pattern.compile("^[a-zA-Z0-9!@#$%^&*()_+=.\\-]+$");
     private static final String I18N_MESSAGE_FILE_LOCATION = "classpath:i18n/messages";
     private static final String ATTACK_VECTOR_PAYLOAD_PROPERTY_FILES_LOCATION_PATTERN =
             "classpath:/attackvectors/*.properties";
@@ -131,10 +134,13 @@ public class VulnerableAppConfiguration {
             @Value("${spring.datasource.application.password}") String appPassword) {
         ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
         JdbcTemplate adminJdbcTemplate = new JdbcTemplate(adminDataSource);
-        // Sanitize appPassword to prevent SQL injection in DDL statement
-        String sanitizedPassword = appPassword.replace("'", "''");
+        // Validate appPassword against allowlist to prevent SQL injection in DDL statement
+        if (!SAFE_PASSWORD_PATTERN.matcher(appPassword).matches()) {
+            throw new IllegalArgumentException(
+                    "Application password contains invalid characters");
+        }
         adminJdbcTemplate.execute(
-                String.format("CREATE USER application PASSWORD '%s'", sanitizedPassword));
+                "CREATE USER application PASSWORD '" + appPassword + "'");
         populator.addScript(new ClassPathResource("scripts/SQLInjection/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/xss/PersistentXSS/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/XXEVulnerability/schema.sql"));
