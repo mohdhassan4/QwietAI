@@ -86,4 +86,70 @@ class EncryptionUtilsTest {
         // The core vulnerability of ECB: identical input blocks = identical output blocks
         assertArrayEquals(block1, block2, "ECB mode failed to leak identical blocks");
     }
+
+    @Test
+    @DisplayName("HMAC-SHA256: Should produce consistent keyed hash")
+    void hmacSha256_Consistent() throws EncryptionException {
+        String data = "testPassword";
+        String key = "externalizedSecretKey";
+
+        String hmac1 = EncryptionUtils.hmacSha256(data, key);
+        String hmac2 = EncryptionUtils.hmacSha256(data, key);
+
+        assertNotNull(hmac1);
+        assertEquals(hmac1, hmac2, "HMAC should be deterministic");
+        assertEquals(64, hmac1.length(), "HMAC-SHA256 hex should be 64 characters");
+    }
+
+    @Test
+    @DisplayName("HMAC-SHA256: Different keys should produce different results")
+    void hmacSha256_DifferentKeys() throws EncryptionException {
+        String data = "testPassword";
+
+        String hmac1 = EncryptionUtils.hmacSha256(data, "key1");
+        String hmac2 = EncryptionUtils.hmacSha256(data, "key2");
+
+        assertNotEquals(hmac1, hmac2, "Different keys should produce different HMACs");
+    }
+
+    @Test
+    @DisplayName("deriveShift: Should return a value between 1 and 25")
+    void deriveShift_ValidRange() {
+        int shift = EncryptionUtils.deriveShift("someSecretKey");
+
+        assertTrue(shift >= 1 && shift <= 25, "Shift should be between 1 and 25");
+    }
+
+    @Test
+    @DisplayName("deriveShift: Should be deterministic for the same key")
+    void deriveShift_Deterministic() {
+        int shift1 = EncryptionUtils.deriveShift("myKey");
+        int shift2 = EncryptionUtils.deriveShift("myKey");
+
+        assertEquals(shift1, shift2, "Same key should produce same shift");
+    }
+
+    @Test
+    @DisplayName("Custom Cipher (keyed): Should produce consistent output with same key")
+    void customCipher_Keyed_Consistent() throws EncryptionException {
+        String input = "password";
+        String key = "externalizedKey";
+
+        String result1 = EncryptionUtils.customCipher(input, key);
+        String result2 = EncryptionUtils.customCipher(input, key);
+
+        assertNotNull(result1);
+        assertEquals(result1, result2, "Same input and key should produce same output");
+    }
+
+    @Test
+    @DisplayName("Custom Cipher (keyed): Different keys should produce different output")
+    void customCipher_Keyed_DifferentKeys() throws EncryptionException {
+        String input = "password";
+
+        String result1 = EncryptionUtils.customCipher(input, "key1");
+        String result2 = EncryptionUtils.customCipher(input, "key2");
+
+        assertNotEquals(result1, result2, "Different keys should produce different ciphertexts");
+    }
 }
