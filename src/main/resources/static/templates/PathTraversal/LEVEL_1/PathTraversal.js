@@ -17,7 +17,7 @@ function appendResponseCallback(data) {
     if (content.length > 0) {
       for (let key in content[0]) {
         tableInformation =
-          tableInformation + '<th id="InfoColumn">' + key + "</th>";
+          tableInformation + '<th id="InfoColumn">' + _escapeHtml(key) + "</th>";
       }
     }
     for (let index in content) {
@@ -26,14 +26,14 @@ function appendResponseCallback(data) {
         tableInformation =
           tableInformation +
           '<td id="InfoColumn">' +
-          content[index][key] +
+          _escapeHtml(content[index][key]) +
           "</td>";
       }
       tableInformation = tableInformation + "</tr>";
     }
     tableInformation = tableInformation + "</table>";
-    document.getElementById("Information").innerHTML = tableInformation;
+    document.getElementById("Information").innerHTML = _sanitizeHtml(tableInformation);
   } else {
-    document.getElementById("Information").innerHTML = "Unable to Load Users";
+    document.getElementById("Information").textContent = "Unable to Load Users";
   }
 }

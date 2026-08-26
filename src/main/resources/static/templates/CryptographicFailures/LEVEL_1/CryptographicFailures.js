@@ -5,7 +5,7 @@ function loadChallenge() {
 
 function displayChallenge(data) {
   let challengeDiv = document.getElementById("challenge");
-  challengeDiv.innerHTML = "<strong>" + data.content + "</strong>";
+  challengeDiv.innerHTML = "<strong>" + _escapeHtml(data.content) + "</strong>";
   if (data.isValid) {
     challengeDiv.className = "challenge-secure";
   } else {
@@ -22,7 +22,7 @@ function addingEventListenerToSubmitButton() {
 
       if (!password) {
         let resultDiv = document.getElementById("result");
-        resultDiv.innerHTML = "<strong>Please enter a password guess.</strong>";
+        resultDiv.textContent = "Please enter a password guess.";
         resultDiv.style.color = "red";
         return;
       }
@@ -41,10 +41,10 @@ function addingEventListenerToSubmitButton() {
 function appendResponseCallback(data) {
   let resultDiv = document.getElementById("result");
   if (data.isValid) {
-    resultDiv.innerHTML = "<strong>Result:</strong> " + data.content;
+    resultDiv.innerHTML = "<strong>Result:</strong> " + _escapeHtml(data.content);
     resultDiv.className = "result-success";
   } else {
-    resultDiv.innerHTML = "<strong>Result:</strong> " + data.content;
+    resultDiv.innerHTML = "<strong>Result:</strong> " + _escapeHtml(data.content);
     resultDiv.className = "result-failure";
   }
 }
