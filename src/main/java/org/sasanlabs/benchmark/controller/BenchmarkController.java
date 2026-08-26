@@ -37,7 +37,13 @@ public class BenchmarkController {
 
     @PostMapping("/scanner/benchmark")
     public ResponseEntity<?> benchmark(@RequestBody ScannerFindings input) throws IOException {
-        if (input == null || input.getTool() == null || input.getTool().trim().isEmpty()) {
+        if (input == null) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Field 'tool' is required and must be non-empty"));
+        }
+        String rawTool = input.getTool();
+        String safeTool = sanitizeForLog(rawTool);
+        if (rawTool == null || rawTool.trim().isEmpty()) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Field 'tool' is required and must be non-empty"));
         }
@@ -48,8 +54,6 @@ public class BenchmarkController {
                                     "error",
                                     "Field 'findings' is required (use [] for an empty list)"));
         }
-
-        String safeTool = sanitizeForLog(input.getTool());
 
         BenchmarkResult result = benchmarkService.compare(input);
 
