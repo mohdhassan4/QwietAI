@@ -160,12 +160,12 @@ def main() -> None:
     input_path  = Path(args.input)
     output_path = Path(args.output)
 
-    if not input_path.exists():
+    try:
+        with input_path.open(encoding="utf-8") as fh:
+            zap_report = json.load(fh)
+    except FileNotFoundError:
         print(f"ERROR: input file not found: {input_path}", file=sys.stderr)
         sys.exit(1)
-
-    with input_path.open(encoding="utf-8") as fh:
-        zap_report = json.load(fh)
 
     benchmark_input = convert(zap_report)
 
