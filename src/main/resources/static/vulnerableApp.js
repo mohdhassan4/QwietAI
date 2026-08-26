@@ -43,6 +43,43 @@ function _sanitizeHtml(html) {
   return doc.body.innerHTML;
 }
 
+/**
+ * Safely set the HTML content of an element without using innerHTML on the
+ * target. Parses the HTML via DOMParser, applies the same sanitization as
+ * _sanitizeHtml, then moves the resulting DOM nodes into the element.
+ */
+function _safeSetContent(element, html) {
+  if (html == null) {
+    while (element.firstChild) element.removeChild(element.firstChild);
+    return;
+  }
+  var doc = new DOMParser().parseFromString(String(html), "text/html");
+  var dangerous = doc.querySelectorAll(
+    "script, style, iframe, object, embed, link[rel='import'], math, svg"
+  );
+  dangerous.forEach(function (el) {
+    el.remove();
+  });
+  doc.querySelectorAll("*").forEach(function (el) {
+    var attrs = Array.prototype.slice.call(el.attributes);
+    attrs.forEach(function (attr) {
+      var name = attr.name.toLowerCase();
+      if (name.startsWith("on")) {
+        el.removeAttribute(attr.name);
+      } else if (
+        (name === "href" || name === "src" || name === "action") &&
+        /^\s*javascript\s*:/i.test(attr.value)
+      ) {
+        el.removeAttribute(attr.name);
+      }
+    });
+  });
+  while (element.firstChild) element.removeChild(element.firstChild);
+  while (doc.body.firstChild) {
+    element.appendChild(doc.body.firstChild);
+  }
+}
+
 const detail = document.querySelector(".detail");
 const detailTitle = document.querySelector(".detail-title");
 const master = document.querySelector(".master");
@@ -178,7 +215,7 @@ function _callbackForInnerMasterOnClickEvent(
         if (requestToken !== thisRequestToken) {
           return;
         }
-        detailTitle.innerHTML = _sanitizeHtml(responseText);
+        _safeSetContent(detailTitle, responseText);
         _loadDynamicJSAndCSS(urlToFetchHtmlTemplate, () => {
           // Re-check: the asset load itself is async, so navigation could
           // have moved on again between the AJAX response and now.
@@ -477,7 +514,7 @@ function _addingEventListenerToShowHideHelpButton(vulnerableAppEndPointData) {
         "</li>";
     }
     helpText = helpText + "</ol>";
-    document.getElementById("helpText").innerHTML = _sanitizeHtml(helpText);
+    _safeSetContent(document.getElementById("helpText"), helpText);
     document.getElementById("hideHelp").disabled = false;
   });
 

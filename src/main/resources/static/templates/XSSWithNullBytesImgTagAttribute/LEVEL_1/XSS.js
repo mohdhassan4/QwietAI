@@ -11,5 +11,5 @@ function addingEventListenerToLoadImageButton() {
 addingEventListenerToLoadImageButton();
 
 function appendResponseCallback(data) {
-  document.getElementById("image").innerHTML = _sanitizeHtml(data);
+  _safeSetContent(document.getElementById("image"), data);
 }
