@@ -181,6 +181,17 @@ class CsvExpectedIssuesProviderTest {
     }
 
     @Test
+    void classpathPathTraversal_throwsIOException() {
+        assertThatThrownBy(
+                        () ->
+                                new CsvExpectedIssuesProvider(
+                                                "classpath:../../etc/passwd")
+                                        .getExpectedIssues())
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("path traversal");
+    }
+
+    @Test
     void getExpectedIssues_returnsTheCachedInstance(@TempDir Path tempDir) throws Exception {
         Path csv = tempDir.resolve("expected.csv");
         write(csv, HEADER + "CWE-89,SQL Injection,src/main/java/Foo.java,56,1\n");
