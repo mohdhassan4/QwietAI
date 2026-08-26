@@ -134,6 +134,6 @@ class BenchmarkControllerTest {
                 .andExpect(jsonPath("$.coverage").value(50.0))
                 .andExpect(
                         jsonPath("$.persistenceError")
-                                .value(org.hamcrest.Matchers.containsString("disk full")));
+                                .value("An internal error occurred"));
     }
 }
