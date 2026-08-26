@@ -103,7 +103,16 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
         if (csvPath.startsWith(CLASSPATH_PREFIX)) {
             return parseFromResource(csvPath.substring(CLASSPATH_PREFIX.length()));
         }
-        return parseFromPath(Paths.get(csvPath));
+        Path resolved = Paths.get(csvPath).toAbsolutePath().normalize();
+        // Reject paths that contain traversal sequences after normalization.
+        // For relative inputs, ".." segments remain only when the path escapes above cwd.
+        for (int i = 0; i < resolved.getNameCount(); i++) {
+            if ("..".equals(resolved.getName(i).toString())) {
+                throw new IOException(
+                        "Path traversal is not allowed in the ground truth CSV path");
+            }
+        }
+        return parseFromPath(resolved);
     }
 
     private List<ExpectedIssue> parseFromResource(String location) throws IOException {
