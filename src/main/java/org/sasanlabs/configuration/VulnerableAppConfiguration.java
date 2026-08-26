@@ -2,7 +2,6 @@ package org.sasanlabs.configuration;
 
 import com.zaxxer.hikari.HikariDataSource;
 import java.io.IOException;
-import java.sql.PreparedStatement;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -132,13 +131,7 @@ public class VulnerableAppConfiguration {
             @Value("${spring.datasource.application.password}") String appPassword) {
         ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
         JdbcTemplate adminJdbcTemplate = new JdbcTemplate(adminDataSource);
-        adminJdbcTemplate.execute(
-                "CREATE USER application PASSWORD ?",
-                (PreparedStatement ps) -> {
-                    ps.setString(1, appPassword);
-                    ps.execute();
-                    return null;
-                });
+        adminJdbcTemplate.update("CREATE USER application PASSWORD ?", appPassword);
         populator.addScript(new ClassPathResource("scripts/SQLInjection/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/xss/PersistentXSS/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/XXEVulnerability/schema.sql"));
