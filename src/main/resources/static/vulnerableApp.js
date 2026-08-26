@@ -121,7 +121,7 @@ function _callbackForInnerMasterOnClickEvent(
       _getOwnProperty(_getOwnProperty(vulnerableAppEndPointData, id)["Detailed Information"], key)[
         "HtmlTemplate"
       ];
-    document.getElementById("vulnerabilityDescription").innerHTML =
+    document.getElementById("vulnerabilityDescription").textContent =
       _getOwnProperty(vulnerableAppEndPointData, id)["Description"];
     let urlToFetchHtmlTemplate = htmlTemplate
       ? "/VulnerableApp/templates/" + vulnerabilitySelected + "/" + htmlTemplate
@@ -252,13 +252,13 @@ function handleElementAutoSelection(vulnerableAppEndPointData, id = 0) {
   }
 
   if (id === 0) {
-    detailTitle.innerHTML = _getOwnProperty(vulnerableAppEndPointData, id)["Description"];
+    detailTitle.textContent = _getOwnProperty(vulnerableAppEndPointData, id)["Description"];
   } else {
     innerMaster.innerHTML = "";
   }
 
   vulnerabilitySelected = _getOwnProperty(vulnerableAppEndPointData, id)["Name"];
-  detailTitle.innerHTML = _getOwnProperty(vulnerableAppEndPointData, id)["Description"];
+  detailTitle.textContent = _getOwnProperty(vulnerableAppEndPointData, id)["Description"];
   appendNewColumn(vulnerableAppEndPointData, id);
 }
 
