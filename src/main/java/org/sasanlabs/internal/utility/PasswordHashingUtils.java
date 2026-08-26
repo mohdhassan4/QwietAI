@@ -2,7 +2,7 @@ package org.sasanlabs.internal.utility;
 
 import java.nio.charset.StandardCharsets;
 import java.security.*;
-import javax.crypto.Cipher;
+import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -147,8 +147,12 @@ public final class PasswordHashingUtils {
             key8[i] = (byte) (key8[i] << 1);
         }
 
-        Cipher des = Cipher.getInstance("DES/ECB/NoPadding", "BC");
-        des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key8, "DES"));
-        return des.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        // Use HMAC-SHA256 instead of insecure DES/ECB (CWE-327)
+        Mac mac = Mac.getInstance("HmacSHA256", "BC");
+        mac.init(new SecretKeySpec(key8, "HmacSHA256"));
+        byte[] fullHash = mac.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        byte[] result = new byte[8];
+        System.arraycopy(fullHash, 0, result, 0, 8);
+        return result;
     }
 }
