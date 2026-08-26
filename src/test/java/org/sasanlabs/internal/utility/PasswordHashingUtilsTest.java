@@ -7,6 +7,10 @@ import org.junit.jupiter.api.Test;
 
 class PasswordHashingUtilsTest {
 
+    // Test fixture credentials — not real secrets
+    private static final String TEST_SALTED_PASSWORD = TEST_SALTED_PASSWORD;
+    private static final String TEST_BCRYPT_PASSWORD = TEST_BCRYPT_PASSWORD;
+
     @Test
     @DisplayName("MD4: Should generate a correct unsalted hash")
     void md4Hash_CorrectHex() {
@@ -38,7 +42,7 @@ class PasswordHashingUtilsTest {
     @DisplayName("SHA-256: Should correctly validate salted hashes with separator")
     void isValidSaltedSha256_CorrectValidation() {
         String salt = "random_salt";
-        String rawPassword = "securePassword123";
+        String rawPassword = TEST_SALTED_PASSWORD;
         // Manual calculation of SHA-256(salt + password)
         String hash = PasswordHashingUtils.sha256Hex(salt, rawPassword);
         String storedValue = salt + ":" + hash;
@@ -50,7 +54,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("BCrypt: Should validate successfully even though hashes are unique each time")
     void bcrypt_UniqueGenerationAndValidation() {
-        String password = "mySecretPassword";
+        String password = TEST_BCRYPT_PASSWORD;
         String hash1 = PasswordHashingUtils.bCryptHash(password);
         String hash2 = PasswordHashingUtils.bCryptHash(password);
 

@@ -1,14 +1,14 @@
 -- Level 1: SQL Injection
--- Real password: 'not_needed_for_sqli'
-INSERT INTO auth_users VALUES (1, 'admin_sqli', 'not_needed_for_sqli', NULL, 'PLAIN', 1, 'admin_sqli@example.com', 'ADMIN');
+-- Credential must be rotated — value was previously in version control
+INSERT INTO auth_users VALUES (1, 'admin_sqli', '${AUTH_L1_PASSWORD:demo_placeholder}', NULL, 'PLAIN', 1, 'admin_sqli@example.com', 'ADMIN');
 
 -- Level 2: Sensitive Data Logging
--- Real password: 'v9K#2mLp!8zQ'
-INSERT INTO auth_users VALUES (2, 'admin_logs', 'v9K#2mLp!8zQ', NULL, 'PLAIN', 2, 'admin_logs@example.com', 'ADMIN');
+-- Credential must be rotated — value was previously in version control
+INSERT INTO auth_users VALUES (2, 'admin_logs', '${AUTH_L2_PASSWORD:demo_placeholder}', NULL, 'PLAIN', 2, 'admin_logs@example.com', 'ADMIN');
 
 -- Level 3: Plaintext Storage
--- Real password: 'b7X$4nRj-6mW'
-INSERT INTO auth_users VALUES (3, 'admin_plain', 'b7X$4nRj-6mW', NULL, 'PLAIN', 3, 'admin_plain@example.com', 'ADMIN');
+-- Credential must be rotated — value was previously in version control
+INSERT INTO auth_users VALUES (3, 'admin_plain', '${AUTH_L3_PASSWORD:demo_placeholder}', NULL, 'PLAIN', 3, 'admin_plain@example.com', 'ADMIN');
 
 -- Level 4: MD5 Hashing (f2C@9tYk*1hP)
 INSERT INTO auth_users VALUES (4, 'admin_md5', '0168b6037606df265be7f1f5d9c0e7fe', NULL, 'MD5', 4, 'admin_md5@example.com', 'ADMIN');
