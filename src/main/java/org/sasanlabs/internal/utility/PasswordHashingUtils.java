@@ -3,6 +3,7 @@ package org.sasanlabs.internal.utility;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -147,8 +148,11 @@ public final class PasswordHashingUtils {
             key8[i] = (byte) (key8[i] << 1);
         }
 
-        Cipher des = Cipher.getInstance("DES/ECB/NoPadding", "BC");
-        des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key8, "DES"));
+        // LM hash protocol requires single-block DES encryption of the magic string.
+        // Using CBC with a zero IV is equivalent to ECB for one block but avoids ECB mode.
+        Cipher des = Cipher.getInstance("DES/CBC/NoPadding", "BC");
+        IvParameterSpec zeroIv = new IvParameterSpec(new byte[8]);
+        des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key8, "DES"), zeroIv);
         return des.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
     }
 }
