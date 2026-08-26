@@ -92,20 +92,27 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
-    @DisplayName("PBKDF2: Should produce consistent hashes and be case-sensitive")
-    void pbkdf2Hash_Consistency() {
+    @DisplayName("PBKDF2: Should produce salted hashes and verify correctly")
+    void pbkdf2Hash_SaltedAndVerifiable() {
         String hash1 = PasswordHashingUtils.pbkdf2Hash("password");
         String hash2 = PasswordHashingUtils.pbkdf2Hash("password");
 
-        // Same input must produce the same hash (deterministic with fixed salt)
-        assertEquals(hash1, hash2);
+        // Different random salts produce different outputs
+        assertNotEquals(hash1, hash2);
+
+        // Salted hash format: "saltHex:hashHex"
+        assertTrue(hash1.contains(":"), "PBKDF2 hash should contain separator");
+        assertTrue(hash2.contains(":"), "PBKDF2 hash should contain separator");
+
+        // Both should verify against the correct password
+        assertTrue(PasswordHashingUtils.verifyPbkdf2("password", hash1));
+        assertTrue(PasswordHashingUtils.verifyPbkdf2("password", hash2));
+
+        // Wrong password should not verify
+        assertFalse(PasswordHashingUtils.verifyPbkdf2("wrong", hash1));
 
         // PBKDF2 is case-sensitive (unlike legacy LM hash)
-        String hashUpper = PasswordHashingUtils.pbkdf2Hash("PASSWORD");
-        assertNotEquals(hash1, hashUpper);
-
-        // Hash should be 64 hex chars (256-bit key)
-        assertEquals(64, hash1.length());
+        assertFalse(PasswordHashingUtils.verifyPbkdf2("PASSWORD", hash1));
     }
 
     @Test
