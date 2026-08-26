@@ -42,6 +42,41 @@ function _sanitizeHtml(html) {
   return doc.body.innerHTML;
 }
 
+/**
+ * Sanitizes an HTML string and returns a DocumentFragment of the safe
+ * DOM nodes, avoiding the need for innerHTML assignment at the call site.
+ */
+function _sanitizeHtmlToNodes(html) {
+  var doc = new DOMParser().parseFromString(html, "text/html");
+  doc.querySelectorAll("script").forEach(function (el) {
+    el.remove();
+  });
+  doc.querySelectorAll("*").forEach(function (el) {
+    Array.from(el.attributes).forEach(function (attr) {
+      if (attr.name.toLowerCase().startsWith("on")) {
+        el.removeAttribute(attr.name);
+      }
+    });
+    if (
+      el.hasAttribute("href") &&
+      el.getAttribute("href").trim().toLowerCase().startsWith("javascript:")
+    ) {
+      el.removeAttribute("href");
+    }
+    if (
+      el.hasAttribute("src") &&
+      el.getAttribute("src").trim().toLowerCase().startsWith("javascript:")
+    ) {
+      el.removeAttribute("src");
+    }
+  });
+  var fragment = document.createDocumentFragment();
+  while (doc.body.firstChild) {
+    fragment.appendChild(document.adoptNode(doc.body.firstChild));
+  }
+  return fragment;
+}
+
 const detail = document.querySelector(".detail");
 const detailTitle = document.querySelector(".detail-title");
 const master = document.querySelector(".master");
@@ -177,7 +212,8 @@ function _callbackForInnerMasterOnClickEvent(
         if (requestToken !== thisRequestToken) {
           return;
         }
-        detailTitle.innerHTML = _sanitizeHtml(responseText);
+        detailTitle.textContent = "";
+        detailTitle.appendChild(_sanitizeHtmlToNodes(responseText));
         _loadDynamicJSAndCSS(urlToFetchHtmlTemplate, () => {
           // Re-check: the asset load itself is async, so navigation could
           // have moved on again between the AJAX response and now.
