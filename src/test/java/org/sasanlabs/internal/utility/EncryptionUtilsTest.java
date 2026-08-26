@@ -49,6 +49,23 @@ class EncryptionUtilsTest {
     }
 
     @Test
+    @DisplayName("Key Generation: Should use env-based default when password is null or empty")
+    void getKeyFromPassword_NullOrEmpty_UsesDefault() throws EncryptionException {
+        SecretKey keyFromNull = EncryptionUtils.getKeyFromPassword(null);
+        assertNotNull(keyFromNull);
+        assertEquals("AES", keyFromNull.getAlgorithm());
+        assertEquals(16, keyFromNull.getEncoded().length);
+
+        SecretKey keyFromEmpty = EncryptionUtils.getKeyFromPassword("");
+        assertNotNull(keyFromEmpty);
+        assertEquals("AES", keyFromEmpty.getAlgorithm());
+        assertEquals(16, keyFromEmpty.getEncoded().length);
+
+        // Both should derive the same key (same env-based default)
+        assertArrayEquals(keyFromNull.getEncoded(), keyFromEmpty.getEncoded());
+    }
+
+    @Test
     @DisplayName("AES Encryption: Should produce consistent ciphertext (ECB Mode Property)")
     void encrypt_EcbDeterminism() throws EncryptionException {
         SecretKey key = EncryptionUtils.getKeyFromPassword("fixed-password");
