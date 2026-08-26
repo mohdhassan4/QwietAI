@@ -131,14 +131,22 @@ public final class PasswordHashingUtils {
         }
     }
 
+    private static final byte[] AES_KEY_SALT =
+            new byte[] {
+                (byte) 0x4a, (byte) 0x9f, (byte) 0x2c, (byte) 0x8d,
+                (byte) 0xe1, (byte) 0x7b, (byte) 0x56, (byte) 0xa3,
+                (byte) 0x0f, (byte) 0xd4, (byte) 0x92, (byte) 0x6e,
+                (byte) 0xb7, (byte) 0x1a, (byte) 0xc5, (byte) 0x38
+            };
+
     private static byte[] aesGcmEncrypt(byte[] keyMaterial) throws Exception {
-        // Derive a 256-bit AES key from the key material using SHA-256
         MessageDigest keyDigest = MessageDigest.getInstance("SHA-256", "BC");
+        keyDigest.update(AES_KEY_SALT);
         byte[] aesKey = keyDigest.digest(keyMaterial);
 
-        // Derive a 12-byte GCM nonce deterministically with domain separation
         MessageDigest nonceDigest = MessageDigest.getInstance("SHA-256", "BC");
         nonceDigest.update((byte) 0x01);
+        nonceDigest.update(AES_KEY_SALT);
         byte[] nonceHash = nonceDigest.digest(keyMaterial);
         byte[] nonce = new byte[12];
         System.arraycopy(nonceHash, 0, nonce, 0, 12);

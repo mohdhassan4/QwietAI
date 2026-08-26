@@ -147,28 +147,24 @@ public class VulnerableAppConfiguration {
         JdbcTemplate adminJdbcTemplate = new JdbcTemplate(adminDataSource);
         String validatedAppPassword =
                 validateDdlValue(appPassword, "application password");
-        adminJdbcTemplate.execute(
-                String.format(
-                        "CREATE USER application PASSWORD '%s'", validatedAppPassword));
+        adminJdbcTemplate.update(
+                "CREATE USER IF NOT EXISTS application PASSWORD ?", validatedAppPassword);
         String readonlyUserPassword =
                 validateDdlValue(
                         System.getenv()
                                 .getOrDefault("H2_READONLY_USER_PASSWORD", "readonly-dev"),
                         "H2_READONLY_USER_PASSWORD");
-        adminJdbcTemplate.execute(
-                String.format(
-                        "CREATE USER IF NOT EXISTS readonly_user PASSWORD '%s'",
-                        readonlyUserPassword));
+        adminJdbcTemplate.update(
+                "CREATE USER IF NOT EXISTS readonly_user PASSWORD ?", readonlyUserPassword);
         String cryptoUserPassword =
                 validateDdlValue(
                         System.getenv()
                                 .getOrDefault(
                                         "H2_CRYPTO_USER_PASSWORD", "crypto-failures-dev"),
                         "H2_CRYPTO_USER_PASSWORD");
-        adminJdbcTemplate.execute(
-                String.format(
-                        "CREATE USER IF NOT EXISTS cryptographic_failures_user PASSWORD '%s'",
-                        cryptoUserPassword));
+        adminJdbcTemplate.update(
+                "CREATE USER IF NOT EXISTS cryptographic_failures_user PASSWORD ?",
+                cryptoUserPassword);
         populator.addScript(new ClassPathResource("scripts/SQLInjection/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/xss/PersistentXSS/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/XXEVulnerability/schema.sql"));
