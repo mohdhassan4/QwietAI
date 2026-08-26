@@ -2,8 +2,9 @@ package org.sasanlabs.internal.utility;
 
 import java.nio.charset.StandardCharsets;
 import java.security.*;
-import javax.crypto.Cipher;
-import javax.crypto.spec.SecretKeySpec;
+import java.security.spec.InvalidKeySpecException;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
@@ -12,6 +13,8 @@ public final class PasswordHashingUtils {
 
     private static final String HASH_SEPARATOR = ":";
     private static final int bcryptWorkFactor = 12;
+    private static final int SALT_LENGTH_BYTES = 16;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private PasswordHashingUtils() {}
 
@@ -40,6 +43,24 @@ public final class PasswordHashingUtils {
         }
     }
 
+    /**
+     * Internal helper that computes the raw digest hex with an explicit salt fed via
+     * MessageDigest.update before the input bytes.
+     */
+    private static String computeDigestHex(
+            String rawInput, HashAlgorithm hashAlgorithm, byte[] salt) {
+        try {
+            MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
+            messageDigest.update(salt);
+            byte[] digest = messageDigest.digest(rawInput.getBytes(StandardCharsets.UTF_8));
+            return EncodingUtils.bytesToHex(digest);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(hashAlgorithm + " Hash Algorithm Not Found", e);
+        } catch (NoSuchProviderException e) {
+            throw new RuntimeException("Security Provider Bouncy Castle not found", e);
+        }
+    }
+
     public static String md4Hex(String rawPassword) {
         return getHashAsHex(rawPassword, HashAlgorithm.MD4);
     }
@@ -52,16 +73,44 @@ public final class PasswordHashingUtils {
         return getHashAsHex(rawPassword, HashAlgorithm.SHA1);
     }
 
+    /**
+     * Generates a salted hash using a random salt. Returns the result in the format
+     * {@code hexSalt:hexHash}.
+     */
     public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
-        try {
-            MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
-            byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
-            return EncodingUtils.bytesToHex(digest);
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(hashAlgorithm + "Hash Algorithm Not Found", e);
-        } catch (NoSuchProviderException e) {
-            throw new RuntimeException("Security Provider Bouncy Castle not found", e);
+        byte[] salt = new byte[SALT_LENGTH_BYTES];
+        SECURE_RANDOM.nextBytes(salt);
+        return getHashAsHex(rawPassword, hashAlgorithm, salt);
+    }
+
+    /**
+     * Generates a salted hash using the provided salt. Returns the result in the format
+     * {@code hexSalt:hexHash}.
+     */
+    public static String getHashAsHex(
+            String rawPassword, HashAlgorithm hashAlgorithm, byte[] salt) {
+        String hexHash = computeDigestHex(rawPassword, hashAlgorithm, salt);
+        String hexSalt = EncodingUtils.bytesToHex(salt);
+        return hexSalt + HASH_SEPARATOR + hexHash;
+    }
+
+    /**
+     * Verifies a raw password against a stored salted hash in the format {@code hexSalt:hexHash}.
+     */
+    public static boolean verifyHash(
+            String rawPassword, String storedSaltedHash, HashAlgorithm hashAlgorithm) {
+        if (rawPassword == null || storedSaltedHash == null) {
+            return false;
         }
+        String[] parts = storedSaltedHash.split(HASH_SEPARATOR, 2);
+        if (parts.length != 2 || parts[0].isEmpty()) {
+            return false;
+        }
+        byte[] salt = EncodingUtils.hexToBytes(parts[0]);
+        String computedHex = computeDigestHex(rawPassword, hashAlgorithm, salt);
+        return MessageDigest.isEqual(
+                computedHex.getBytes(StandardCharsets.US_ASCII),
+                parts[1].toLowerCase().getBytes(StandardCharsets.US_ASCII));
     }
 
     public static boolean isValidSaltedSha256(String rawPassword, String saltedSha256Hash) {
@@ -79,11 +128,20 @@ public final class PasswordHashingUtils {
         return saltAndHash[1].equalsIgnoreCase(calculatedHash);
     }
 
+    /**
+     * Computes SHA-256 of (salt + rawPassword) using the salt bytes fed via MessageDigest.update.
+     * Returns only the hex hash (not the salt:hash format). Used by isValidSaltedSha256.
+     */
     public static String sha256Hex(String salt, String rawPassword) {
-        return getHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
+        byte[] saltBytes =
+                (salt != null) ? salt.getBytes(StandardCharsets.UTF_8) : new byte[0];
+        return computeDigestHex(rawPassword, HashAlgorithm.SHA256, saltBytes);
     }
 
-    public static String unsaltedSha256Hex(String rawPassword) {
+    /**
+     * Generates a salted SHA-256 hash with a random salt. Returns {@code hexSalt:hexHash} format.
+     */
+    public static String saltedSha256Hex(String rawPassword) {
         return getHashAsHex(rawPassword, HashAlgorithm.SHA256);
     }
 
@@ -102,53 +160,62 @@ public final class PasswordHashingUtils {
         return encoder.matches(rawPassword, bcryptHash);
     }
 
+    private static final int PBKDF2_ITERATIONS = 600_000;
+    private static final int PBKDF2_KEY_LENGTH_BITS = 128;
+
     /**
-     * Computes an LM hash for the given password.
+     * Computes a password hash using PBKDF2WithHmacSHA256 with a unique random salt per
+     * invocation.
      *
-     * <p>Algorithm based on the LAN Manager specification.
-     *
-     * @see <a href="https://en.wikipedia.org/wiki/LAN_Manager">Wikipedia: LAN Manager</a>
+     * <p>Replaces legacy LM/DES-based hashing with a modern key-derivation function. Preserves
+     * case-insensitive behaviour (input is upper-cased before hashing). Returns {@code
+     * hexSalt:hexHash}.
      */
     public static String lmHash(String rawPassword) {
         try {
-            // Convert to uppercase and pad to 14 bytes
+            byte[] salt = new byte[SALT_LENGTH_BYTES];
+            SECURE_RANDOM.nextBytes(salt);
+            // Preserve case-insensitive behaviour from the legacy LM approach
             String pwd = rawPassword.toUpperCase();
-            byte[] keyBytes = new byte[14];
-            byte[] passwordBytes = pwd.getBytes(StandardCharsets.US_ASCII);
-            System.arraycopy(passwordBytes, 0, keyBytes, 0, Math.min(passwordBytes.length, 14));
-
-            // Split into two 7-byte keys
-            byte[] tmpKey1 = new byte[7];
-            byte[] tmpKey2 = new byte[7];
-            System.arraycopy(keyBytes, 0, tmpKey1, 0, 7);
-            System.arraycopy(keyBytes, 7, tmpKey2, 0, 7);
-
-            // Encrypt the magic string "KGS!@#$%" using each key
-            return EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey1))
-                    + EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey2));
-        } catch (Exception e) {
-            throw new RuntimeException("LM Hashing failed", e);
+            PBEKeySpec spec =
+                    new PBEKeySpec(
+                            pwd.toCharArray(), salt, PBKDF2_ITERATIONS, PBKDF2_KEY_LENGTH_BITS);
+            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+            byte[] hash = factory.generateSecret(spec).getEncoded();
+            spec.clearPassword();
+            return EncodingUtils.bytesToHex(salt) + HASH_SEPARATOR + EncodingUtils.bytesToHex(hash);
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+            throw new RuntimeException("PBKDF2 Hashing failed", e);
         }
     }
 
-    private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
-        // LM Hash uses a specific parity-bit transformation to turn 7 bytes into an 8-byte DES key
-        byte[] key8 = new byte[8];
-        key8[0] = (byte) (key7[0] >> 1);
-        key8[1] = (byte) (((key7[0] & 0x01) << 6) | (key7[1] >> 2));
-        key8[2] = (byte) (((key7[1] & 0x03) << 5) | (key7[2] >> 3));
-        key8[3] = (byte) (((key7[2] & 0x07) << 4) | (key7[3] >> 4));
-        key8[4] = (byte) (((key7[3] & 0x0F) << 3) | (key7[4] >> 5));
-        key8[5] = (byte) (((key7[4] & 0x1F) << 2) | (key7[5] >> 6));
-        key8[6] = (byte) (((key7[5] & 0x3F) << 1) | (key7[6] >> 7));
-        key8[7] = (byte) (key7[6] & 0x7F);
-
-        for (int i = 0; i < 8; i++) {
-            key8[i] = (byte) (key8[i] << 1);
+    /**
+     * Verifies a raw password against a stored PBKDF2 hash in the format {@code hexSalt:hexHash}.
+     * Preserves case-insensitive behaviour (input is upper-cased before hashing).
+     */
+    public static boolean verifyLmHash(String rawPassword, String storedHash) {
+        if (rawPassword == null || storedHash == null) {
+            return false;
         }
-
-        Cipher des = Cipher.getInstance("DES/ECB/NoPadding", "BC");
-        des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key8, "DES"));
-        return des.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        String[] parts = storedHash.split(HASH_SEPARATOR, 2);
+        if (parts.length != 2 || parts[0].isEmpty()) {
+            return false;
+        }
+        try {
+            byte[] salt = EncodingUtils.hexToBytes(parts[0]);
+            String pwd = rawPassword.toUpperCase();
+            PBEKeySpec spec =
+                    new PBEKeySpec(
+                            pwd.toCharArray(), salt, PBKDF2_ITERATIONS, PBKDF2_KEY_LENGTH_BITS);
+            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+            byte[] hash = factory.generateSecret(spec).getEncoded();
+            spec.clearPassword();
+            String computedHex = EncodingUtils.bytesToHex(hash);
+            return MessageDigest.isEqual(
+                    computedHex.getBytes(StandardCharsets.US_ASCII),
+                    parts[1].toLowerCase().getBytes(StandardCharsets.US_ASCII));
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+            throw new RuntimeException("PBKDF2 Verification failed", e);
+        }
     }
 }
