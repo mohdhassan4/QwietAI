@@ -166,18 +166,29 @@ public class VulnerableAppConfiguration {
         initializer.setDatabasePopulator(
                 connection -> {
                     populator.populate(connection);
-                    try (PreparedStatement ps =
-                            connection.prepareStatement(
-                                    "UPDATE auth_users SET password = ? WHERE id = ?")) {
-                        ps.setString(1, defaultEncoder.encode(level8Password));
-                        ps.setInt(2, 8);
-                        ps.executeUpdate();
-                        ps.setString(1, defaultEncoder.encode(level9Password));
-                        ps.setInt(2, 9);
-                        ps.executeUpdate();
-                        ps.setString(1, lowCostEncoder.encode(level10Password));
-                        ps.setInt(2, 10);
-                        ps.executeUpdate();
+                    // Only update seed passwords when env vars are configured (non-empty).
+                    if (level8Password != null && !level8Password.isEmpty()
+                            || level9Password != null && !level9Password.isEmpty()
+                            || level10Password != null && !level10Password.isEmpty()) {
+                        try (PreparedStatement ps =
+                                connection.prepareStatement(
+                                        "UPDATE auth_users SET password = ? WHERE id = ?")) {
+                            if (level8Password != null && !level8Password.isEmpty()) {
+                                ps.setString(1, defaultEncoder.encode(level8Password));
+                                ps.setInt(2, 8);
+                                ps.executeUpdate();
+                            }
+                            if (level9Password != null && !level9Password.isEmpty()) {
+                                ps.setString(1, defaultEncoder.encode(level9Password));
+                                ps.setInt(2, 9);
+                                ps.executeUpdate();
+                            }
+                            if (level10Password != null && !level10Password.isEmpty()) {
+                                ps.setString(1, lowCostEncoder.encode(level10Password));
+                                ps.setInt(2, 10);
+                                ps.executeUpdate();
+                            }
+                        }
                     }
                 });
         return initializer;
