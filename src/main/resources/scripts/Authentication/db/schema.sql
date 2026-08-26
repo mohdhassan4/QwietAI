@@ -15,5 +15,6 @@ CREATE TABLE auth_users (
 GRANT ALL ON auth_users TO application;
 
 -- A read-only user for exploration by the attacker/user
+-- NOTE: Password below is for H2 in-memory DB only (destroyed on shutdown); rotate if migrated to a persistent store
 CREATE USER IF NOT EXISTS readonly_user PASSWORD 'readonly_password';
 GRANT SELECT ON auth_users TO readonly_user;

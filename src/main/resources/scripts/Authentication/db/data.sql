@@ -1,3 +1,7 @@
+-- SECURITY NOTE: Passwords below are intentional security-training challenge fixtures for the
+-- in-memory H2 database. They demonstrate weak storage patterns students must identify/crack.
+-- They are NOT production credentials and do not require rotation.
+
 -- Level 1: SQL Injection
 -- Real password: 'not_needed_for_sqli'
 INSERT INTO auth_users VALUES (1, 'admin_sqli', 'not_needed_for_sqli', NULL, 'PLAIN', 1, 'admin_sqli@example.com', 'ADMIN');
