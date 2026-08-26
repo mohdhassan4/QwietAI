@@ -121,7 +121,7 @@ function _callbackForInnerMasterOnClickEvent(
       safeAccess(safeAccess(vulnerableAppEndPointData, id)["Detailed Information"], key)[
         "HtmlTemplate"
       ];
-    document.getElementById("vulnerabilityDescription").innerHTML =
+    document.getElementById("vulnerabilityDescription").textContent =
       safeAccess(vulnerableAppEndPointData, id)["Description"];
     let urlToFetchHtmlTemplate = htmlTemplate
       ? "/VulnerableApp/templates/" + vulnerabilitySelected + "/" + htmlTemplate
@@ -252,13 +252,13 @@ function handleElementAutoSelection(vulnerableAppEndPointData, id = 0) {
   }
 
   if (id === 0) {
-    detailTitle.innerHTML = safeAccess(vulnerableAppEndPointData, id)["Description"];
+    detailTitle.textContent = safeAccess(vulnerableAppEndPointData, id)["Description"];
   } else {
     innerMaster.innerHTML = "";
   }
 
   vulnerabilitySelected = safeAccess(vulnerableAppEndPointData, id)["Name"];
-  detailTitle.innerHTML = safeAccess(vulnerableAppEndPointData, id)["Description"];
+  detailTitle.textContent = safeAccess(vulnerableAppEndPointData, id)["Description"];
   appendNewColumn(vulnerableAppEndPointData, id);
 }
 
