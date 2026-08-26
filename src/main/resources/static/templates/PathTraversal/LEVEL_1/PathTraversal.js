@@ -10,6 +10,16 @@ function addingEventListenerToLoadImageButton() {
 }
 addingEventListenerToLoadImageButton();
 
+function escapeHtml(str) {
+  if (str == null) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 function appendResponseCallback(data) {
   if (data.isValid) {
     let tableInformation = '<table id="InfoTable">';
@@ -17,7 +27,7 @@ function appendResponseCallback(data) {
     if (content.length > 0) {
       for (let key in content[0]) {
         tableInformation =
-          tableInformation + '<th id="InfoColumn">' + key + "</th>";
+          tableInformation + '<th id="InfoColumn">' + escapeHtml(key) + "</th>";
       }
     }
     for (let index in content) {
@@ -26,7 +36,7 @@ function appendResponseCallback(data) {
         tableInformation =
           tableInformation +
           '<td id="InfoColumn">' +
-          content[index][key] +
+          escapeHtml(content[index][key]) +
           "</td>";
       }
       tableInformation = tableInformation + "</tr>";
@@ -34,6 +44,6 @@ function appendResponseCallback(data) {
     tableInformation = tableInformation + "</table>";
     document.getElementById("Information").innerHTML = tableInformation;
   } else {
-    document.getElementById("Information").innerHTML = "Unable to Load Users";
+    document.getElementById("Information").textContent = "Unable to Load Users";
   }
 }
