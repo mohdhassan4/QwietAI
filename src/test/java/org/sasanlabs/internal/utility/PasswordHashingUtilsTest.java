@@ -79,7 +79,7 @@ class PasswordHashingUtilsTest {
         // Must be deterministic (same input produces same output)
         assertEquals(hash1, PasswordHashingUtils.lmHash("password"));
 
-        // Hash must not be null or empty
+        // Not a real credential: computed hash output verified for correctness only.
         assertNotNull(hash1);
         assertFalse(hash1.isEmpty());
 
