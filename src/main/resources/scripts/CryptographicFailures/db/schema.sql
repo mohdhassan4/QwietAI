@@ -12,5 +12,6 @@ CREATE TABLE cryptographic_failures_vault (
 GRANT ALL ON cryptographic_failures_vault TO application;
 
 -- A read-only user for exploration by the attacker/user
+-- Not a real credential - placeholder for in-memory H2 demo database
 CREATE USER IF NOT EXISTS cryptographic_failures_user PASSWORD 'cryptographic_failures_password';
 GRANT SELECT ON cryptographic_failures_vault TO cryptographic_failures_user;
