@@ -4,6 +4,7 @@ import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.util.Optional;
 
 /**
  * Validates URL hosts to prevent SSRF (Server-Side Request Forgery) attacks by rejecting URLs that
@@ -12,6 +13,36 @@ import java.net.UnknownHostException;
 public final class UrlHostValidator {
 
     private UrlHostValidator() {}
+
+    /**
+     * Validates the URL string and, if safe, returns the parsed URL object. This breaks the taint
+     * chain by returning a validated URL rather than requiring callers to re-parse the raw input.
+     *
+     * @param url the URL string to validate
+     * @return an Optional containing the parsed URL if the host is safe, or empty otherwise
+     */
+    public static Optional<URL> validateAndParse(String url) {
+        if (url == null || url.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            URL parsedUrl = new URL(url);
+            String protocol = parsedUrl.getProtocol();
+            if (!"http".equalsIgnoreCase(protocol) && !"https".equalsIgnoreCase(protocol)) {
+                return Optional.empty();
+            }
+            String host = parsedUrl.getHost();
+            if (host == null || host.isBlank()) {
+                return Optional.empty();
+            }
+            if (isPrivateOrReserved(host)) {
+                return Optional.empty();
+            }
+            return Optional.of(parsedUrl);
+        } catch (MalformedURLException e) {
+            return Optional.empty();
+        }
+    }
 
     /**
      * Returns true if the URL host is safe to connect to (not a private/reserved/link-local
