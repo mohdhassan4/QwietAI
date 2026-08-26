@@ -65,10 +65,19 @@ public class EncryptionUtils {
         return EncodingUtils.encodeBase64(reversed);
     }
 
-    private static final String DEFAULT_ENCRYPTION_SECRET =
-            System.getenv("ENCRYPTION_SECRET") != null
-                    ? System.getenv("ENCRYPTION_SECRET")
-                    : "changeit-dev-only";
+    private static final String DEFAULT_ENCRYPTION_SECRET = resolveEncryptionSecret();
+
+    private static String resolveEncryptionSecret() {
+        String envSecret = System.getenv("ENCRYPTION_SECRET");
+        if (envSecret != null && !envSecret.isEmpty()) {
+            return envSecret;
+        }
+        // Generate a random secret at startup when env var is not set (dev mode).
+        // This avoids hardcoded credentials while allowing the app to start.
+        byte[] randomBytes = new byte[32];
+        new SecureRandom().nextBytes(randomBytes);
+        return java.util.Base64.getEncoder().encodeToString(randomBytes);
+    }
 
     private static final byte[] salt = new byte[16];
 
