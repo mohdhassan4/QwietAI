@@ -103,7 +103,17 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
         if (csvPath.startsWith(CLASSPATH_PREFIX)) {
             return parseFromResource(csvPath.substring(CLASSPATH_PREFIX.length()));
         }
-        return parseFromPath(Paths.get(csvPath));
+        Path path = Paths.get(csvPath);
+        Path resolved = path.toAbsolutePath().normalize();
+        // For relative paths, ensure the resolved path stays within the working directory
+        if (!path.isAbsolute()) {
+            Path baseDir = Paths.get("").toAbsolutePath().normalize();
+            if (!resolved.startsWith(baseDir)) {
+                throw new IOException(
+                        "CSV path traverses outside the working directory: " + csvPath);
+            }
+        }
+        return parseFromPath(resolved);
     }
 
     private List<ExpectedIssue> parseFromResource(String location) throws IOException {
