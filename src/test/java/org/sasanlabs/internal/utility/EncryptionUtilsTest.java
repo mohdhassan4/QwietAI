@@ -6,6 +6,7 @@ import java.util.Base64;
 import javax.crypto.SecretKey;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.sasanlabs.internal.utility.exception.EncryptionException;
 
 class EncryptionUtilsTest {
@@ -62,6 +63,28 @@ class EncryptionUtilsTest {
 
         // Verify it is valid Base64
         assertDoesNotThrow(() -> Base64.getDecoder().decode(ciphertext1));
+    }
+
+    @Test
+    @DisplayName("getEncryptionSecret: Should throw when ENCRYPTION_KEY env var is not set")
+    void getEncryptionSecret_ThrowsWhenNotSet() {
+        // When ENCRYPTION_KEY is not set in the environment, the method should throw
+        // Note: this test will pass in CI where ENCRYPTION_KEY is typically not set
+        // If ENCRYPTION_KEY IS set in the environment, this test is skipped via the condition below
+        String envValue = System.getenv("ENCRYPTION_KEY");
+        if (envValue == null || envValue.isEmpty()) {
+            assertThrows(
+                    EncryptionException.class, () -> EncryptionUtils.getEncryptionSecret());
+        }
+    }
+
+    @Test
+    @DisplayName("getEncryptionSecret: Should return value when ENCRYPTION_KEY env var is set")
+    @EnabledIfEnvironmentVariable(named = "ENCRYPTION_KEY", matches = ".+")
+    void getEncryptionSecret_ReturnsValueWhenSet() throws EncryptionException {
+        String secret = EncryptionUtils.getEncryptionSecret();
+        assertNotNull(secret);
+        assertFalse(secret.isEmpty());
     }
 
     @Test

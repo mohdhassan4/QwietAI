@@ -65,16 +65,33 @@ public class EncryptionUtils {
         return EncodingUtils.encodeBase64(reversed);
     }
 
+    private static final String ENV_ENCRYPTION_KEY = "ENCRYPTION_KEY";
+
     private static final byte[] salt = new byte[16];
 
     static {
         new SecureRandom().nextBytes(salt);
     }
 
+    /**
+     * Retrieves the encryption secret from the ENCRYPTION_KEY environment variable.
+     *
+     * @return the encryption secret from the environment
+     * @throws EncryptionException if the environment variable is not set or empty
+     */
+    public static String getEncryptionSecret() throws EncryptionException {
+        String secret = System.getenv(ENV_ENCRYPTION_KEY);
+        if (secret == null || secret.isEmpty()) {
+            throw new EncryptionException(
+                    "Environment variable " + ENV_ENCRYPTION_KEY + " is not set");
+        }
+        return secret;
+    }
+
     public static SecretKey getKeyFromPassword(String password) throws EncryptionException {
         try {
             SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-            KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 1, 128);
+            KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 600000, 128);
 
             return new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
