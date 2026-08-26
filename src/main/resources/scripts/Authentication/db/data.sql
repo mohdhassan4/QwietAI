@@ -8,17 +8,17 @@ INSERT INTO auth_users VALUES (2, 'admin_logs', 'v9K#2mLp!8zQ', NULL, 'PLAIN', 2
 -- Level 3: Plaintext Storage
 INSERT INTO auth_users VALUES (3, 'admin_plain', 'b7X$4nRj-6mW', NULL, 'PLAIN', 3, 'admin_plain@example.com', 'ADMIN');
 
--- Level 4: MD5 Hashing (f2C@9tYk*1hP) — now stored as PBKDF2WithHmacSHA256 (600000 iterations)
-INSERT INTO auth_users VALUES (4, 'admin_md5', 'f4b6e20f8a88ba48b72dcb1dc420d59c32d20d70fc4e50b33adb0591a77d5ee8', NULL, 'MD5', 4, 'admin_md5@example.com', 'ADMIN');
+-- Level 4: MD5 Hashing (f2C@9tYk*1hP) — PBKDF2WithHmacSHA256 (600000 iterations, per-user salt: username+algorithm)
+INSERT INTO auth_users VALUES (4, 'admin_md5', 'b3e106dd03b597c31f885c29ab5b1da31f8e6e356e9902a2e34d6e49d909a009', NULL, 'MD5', 4, 'admin_md5@example.com', 'ADMIN');
 
--- Level 5: SHA1 Hashing (x5B&3gHq+7vS) — now stored as PBKDF2WithHmacSHA256 (600000 iterations)
-INSERT INTO auth_users VALUES (5, 'admin_sha1', '66e010aed2be67c1a49cd1bbcd307789f1230d35f4d7fd562a57bfdfd75e9d90', NULL, 'SHA1', 5, 'admin_sha1@example.com', 'ADMIN');
+-- Level 5: SHA1 Hashing (x5B&3gHq+7vS) — PBKDF2WithHmacSHA256 (600000 iterations, per-user salt: username+algorithm)
+INSERT INTO auth_users VALUES (5, 'admin_sha1', '95475dac41992c82fc8a9f8ce8a4531f624df4deedb3143f17f312cecf4622ba', NULL, 'SHA1', 5, 'admin_sha1@example.com', 'ADMIN');
 
--- Level 6: SHA-256 (No Salt) (m8D!4kLr#2jZ) — now stored as PBKDF2WithHmacSHA256 (600000 iterations)
-INSERT INTO auth_users VALUES (6, 'admin_sha256', 'ba9338f7b00e44ccb75e5322625e0fd8158abb2e17e2bb7f379bb62fe93a28ad', NULL, 'SHA256', 6, 'admin_sha256@example.com', 'ADMIN');
+-- Level 6: SHA-256 (m8D!4kLr#2jZ) — PBKDF2WithHmacSHA256 (600000 iterations, per-user salt: username+algorithm)
+INSERT INTO auth_users VALUES (6, 'admin_sha256', '58847c9987c5c10cfa4e486468615f70a671952243f69352ebdaf163debbaafe', NULL, 'SHA256', 6, 'admin_sha256@example.com', 'ADMIN');
 
--- Level 7: Salted SHA-256 (q1W%6nTp^8vM with Salt s9A#2zLk) — now stored as PBKDF2WithHmacSHA256 (600000 iterations)
-INSERT INTO auth_users VALUES (7, 'admin_enum', '8e5dc3dd91b85b417db35318752ddc6e4b8a4c52e92327dedbbefa99a7ed0912', 's9A#2zLk', 'SHA256', 7, 'admin_enum@example.com', 'ADMIN');
+-- Level 7: Salted SHA-256 (q1W%6nTp^8vM with Salt s9A#2zLk) — PBKDF2WithHmacSHA256 (600000 iterations, per-user salt: username+algorithm)
+INSERT INTO auth_users VALUES (7, 'admin_enum', '257fcf71c11055ad318e4b96fc04d4ab0fc88909ee52797c6b8973adf13d6fde', 's9A#2zLk', 'SHA256', 7, 'admin_enum@example.com', 'ADMIN');
 
 -- Level 8: Weak Password + Bcrypt (password123)
 -- Bcrypt hash for 'password123'
