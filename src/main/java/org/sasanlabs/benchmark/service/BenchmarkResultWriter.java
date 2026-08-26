@@ -35,7 +35,18 @@ public class BenchmarkResultWriter {
     }
 
     public Path write(BenchmarkResult result, String benchmarksDir) throws IOException {
-        Path dir = Paths.get(benchmarksDir);
+        Path rawDir = Paths.get(benchmarksDir);
+        Path dir = rawDir.toAbsolutePath().normalize();
+        // For relative paths, verify they do not traverse outside the working directory
+        if (!rawDir.isAbsolute()) {
+            Path baseDir = Paths.get("").toAbsolutePath().normalize();
+            if (!dir.startsWith(baseDir)) {
+                throw new IOException(
+                        "Benchmark output directory traverses outside the application base"
+                                + " directory: "
+                                + benchmarksDir);
+            }
+        }
         Files.createDirectories(dir);
         String fileName = sanitizeToolName(result.getTool()) + "-results.json";
         Path target = dir.resolve(fileName);
