@@ -32,19 +32,21 @@ function updatePlaceholderDiv() {
     boxSizing: "border-box",
   });
 
-  overlay.innerHTML =
+  sanitizeAndSetHTML(
+    overlay,
     '<div class="redirect-modal-card">' +
-    '<div class="redirect-modal-icon-wrap">' +
-    '<span class="redirect-modal-icon">&#9888;</span>' +
-    "</div>" +
-    '<h2 class="redirect-modal-title">You are leaving VulnerableApp</h2>' +
-    '<p class="redirect-modal-subtitle">You are about to be redirected to an external site. Please review the destination before continuing.</p>' +
-    '<div class="redirect-url-box"><span class="redirect-dest-url"></span></div>' +
-    '<div class="redirect-modal-actions">' +
-    '<button class="btn-redirect-close">Close</button>' +
-    '<button class="btn-redirect-continue">Continue</button>' +
-    "</div>" +
-    "</div>";
+      '<div class="redirect-modal-icon-wrap">' +
+      '<span class="redirect-modal-icon">&#9888;</span>' +
+      "</div>" +
+      '<h2 class="redirect-modal-title">You are leaving VulnerableApp</h2>' +
+      '<p class="redirect-modal-subtitle">You are about to be redirected to an external site. Please review the destination before continuing.</p>' +
+      '<div class="redirect-url-box"><span class="redirect-dest-url"></span></div>' +
+      '<div class="redirect-modal-actions">' +
+      '<button class="btn-redirect-close">Close</button>' +
+      '<button class="btn-redirect-continue">Continue</button>' +
+      "</div>" +
+      "</div>"
+  );
 
   document.body.appendChild(overlay);
 

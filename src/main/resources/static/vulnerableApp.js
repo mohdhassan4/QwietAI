@@ -1,3 +1,49 @@
+/**
+ * Escapes HTML special characters to prevent XSS when inserting
+ * untrusted data into HTML contexts.
+ */
+function escapeHtml(str) {
+  if (str == null) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
+ * Safely sets HTML content by parsing with DOMParser and stripping
+ * scripts and inline event handlers.
+ */
+function sanitizeAndSetHTML(element, html) {
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(html, "text/html");
+  var scripts = doc.querySelectorAll("script");
+  for (var i = 0; i < scripts.length; i++) {
+    scripts[i].remove();
+  }
+  var allEls = doc.body.querySelectorAll("*");
+  for (var j = 0; j < allEls.length; j++) {
+    var attrs = allEls[j].attributes;
+    for (var k = attrs.length - 1; k >= 0; k--) {
+      if (attrs[k].name.toLowerCase().indexOf("on") === 0) {
+        allEls[j].removeAttribute(attrs[k].name);
+      }
+    }
+    if (allEls[j].tagName === "A" || allEls[j].tagName === "AREA") {
+      var href = allEls[j].getAttribute("href") || "";
+      if (href.toLowerCase().trim().indexOf("javascript:") === 0) {
+        allEls[j].removeAttribute("href");
+      }
+    }
+  }
+  element.innerHTML = "";
+  while (doc.body.firstChild) {
+    element.appendChild(doc.body.firstChild);
+  }
+}
+
 const detail = document.querySelector(".detail");
 const detailTitle = document.querySelector(".detail-title");
 const master = document.querySelector(".master");
@@ -110,7 +156,7 @@ function _callbackForInnerMasterOnClickEvent(
       vulnerableAppEndPointData[id]["Detailed Information"][key][
         "HtmlTemplate"
       ];
-    document.getElementById("vulnerabilityDescription").innerHTML =
+    document.getElementById("vulnerabilityDescription").textContent =
       vulnerableAppEndPointData[id]["Description"];
     let urlToFetchHtmlTemplate = htmlTemplate
       ? "/VulnerableApp/templates/" + vulnerabilitySelected + "/" + htmlTemplate
@@ -133,7 +179,7 @@ function _callbackForInnerMasterOnClickEvent(
         if (requestToken !== thisRequestToken) {
           return;
         }
-        detailTitle.innerHTML = responseText;
+        sanitizeAndSetHTML(detailTitle, responseText);
         _loadDynamicJSAndCSS(urlToFetchHtmlTemplate, () => {
           // Re-check: the asset load itself is async, so navigation could
           // have moved on again between the AJAX response and now.
@@ -187,7 +233,7 @@ function createColumn(detailedInformationArray, key) {
   span.classList.add(
     isSecure ? "secure-variant-tooltip-text" : "unsecure-variant-tooltip-text"
   );
-  span.innerHTML = isSecure ? variantTooltip.secure : variantTooltip.unsecure;
+  span.textContent = isSecure ? variantTooltip.secure : variantTooltip.unsecure;
   svgWithTooltip.appendChild(span);
   svgWithTooltip.appendChild(_getSvgElementForVariant(isSecure));
   column.appendChild(svgWithTooltip);
@@ -241,13 +287,13 @@ function handleElementAutoSelection(vulnerableAppEndPointData, id = 0) {
   }
 
   if (id === 0) {
-    detailTitle.innerHTML = vulnerableAppEndPointData[id]["Description"];
+    detailTitle.textContent = vulnerableAppEndPointData[id]["Description"];
   } else {
-    innerMaster.innerHTML = "";
+    innerMaster.textContent = "";
   }
 
   vulnerabilitySelected = vulnerableAppEndPointData[id]["Name"];
-  detailTitle.innerHTML = vulnerableAppEndPointData[id]["Description"];
+  detailTitle.textContent = vulnerableAppEndPointData[id]["Description"];
   appendNewColumn(vulnerableAppEndPointData, id);
 }
 
@@ -406,14 +452,16 @@ function generateMasterDetail(vulnerableAppEndPointData) {
 
 function _clearHelp() {
   document.getElementById("showHelp").disabled = false;
-  document.getElementById("helpText").innerHTML = "";
+  document.getElementById("helpText").textContent = "";
   document.getElementById("hideHelp").disabled = true;
 }
 
 function _addingEventListenerToShowHideHelpButton(vulnerableAppEndPointData) {
   document.getElementById("showHelp").addEventListener("click", function () {
     document.getElementById("showHelp").disabled = true;
-    let helpText = "<ol>";
+    let helpTextEl = document.getElementById("helpText");
+    helpTextEl.textContent = "";
+    let ol = document.createElement("ol");
     for (let index in vulnerableAppEndPointData[currentId][
       "Detailed Information"
     ][currentKey]["AttackVectors"]) {
@@ -423,16 +471,19 @@ function _addingEventListenerToShowHideHelpButton(vulnerableAppEndPointData) {
         ]["AttackVectors"][index];
       let curlPayload = attackVector["CurlPayload"];
       let description = attackVector["Description"];
-      helpText =
-        helpText +
-        "<li><b>Description about the attack:</b> " +
-        description +
-        "<br/><b>Payload:</b> " +
-        curlPayload +
-        "</li>";
+      let li = document.createElement("li");
+      let descLabel = document.createElement("b");
+      descLabel.textContent = "Description about the attack:";
+      li.appendChild(descLabel);
+      li.appendChild(document.createTextNode(" " + description));
+      li.appendChild(document.createElement("br"));
+      let payloadLabel = document.createElement("b");
+      payloadLabel.textContent = "Payload:";
+      li.appendChild(payloadLabel);
+      li.appendChild(document.createTextNode(" " + curlPayload));
+      ol.appendChild(li);
     }
-    helpText = helpText + "</ol>";
-    document.getElementById("helpText").innerHTML = helpText;
+    helpTextEl.appendChild(ol);
     document.getElementById("hideHelp").disabled = false;
   });
 
