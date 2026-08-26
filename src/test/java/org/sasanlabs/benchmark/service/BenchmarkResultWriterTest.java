@@ -66,15 +66,24 @@ class BenchmarkResultWriterTest {
 
     @Test
     void write_withCustomDir_overridesDefault(@TempDir Path tempDir) throws Exception {
-        Path defaultDir = tempDir.resolve("default");
-        Path overrideDir = tempDir.resolve("override");
-        BenchmarkResultWriter writer = new BenchmarkResultWriter(MAPPER, defaultDir.toString());
+        BenchmarkResultWriter writer = new BenchmarkResultWriter(MAPPER, tempDir.toString());
+        Path overrideDir = tempDir.resolve("subdir");
 
         Path target = writer.write(sampleResult("ZAP"), overrideDir.toString());
 
         assertThat(target).isEqualTo(overrideDir.resolve("zap-results.json"));
         assertThat(Files.exists(target)).isTrue();
-        assertThat(Files.exists(defaultDir)).isFalse();
+    }
+
+    @Test
+    void write_rejectsDirectoryOutsideAllowedBase(@TempDir Path tempDir) throws Exception {
+        BenchmarkResultWriter writer = new BenchmarkResultWriter(MAPPER, tempDir.toString());
+        String escapedDir = tempDir.resolve("../escape").toString();
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                        () -> writer.write(sampleResult("ZAP"), escapedDir))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("configured base");
     }
 
     @Test
