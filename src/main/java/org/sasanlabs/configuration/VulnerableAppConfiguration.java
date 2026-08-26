@@ -46,6 +46,8 @@ public class VulnerableAppConfiguration {
     private static final String I18N_MESSAGE_FILE_LOCATION = "classpath:i18n/messages";
     private static final String ATTACK_VECTOR_PAYLOAD_PROPERTY_FILES_LOCATION_PATTERN =
             "classpath:/attackvectors/*.properties";
+    private static final String CREATE_APP_USER_SQL_TEMPLATE =
+            "CREATE USER application PASSWORD '%s'";
     private static final List<String> MAX_FILE_UPLOAD_SIZE_OVERRIDE_PATHS =
             Arrays.asList(
                     "/" + UnrestrictedFileUpload.CONTROLLER_PATH + "/" + LevelConstants.LEVEL_9);
@@ -131,8 +133,9 @@ public class VulnerableAppConfiguration {
             @Value("${spring.datasource.application.password}") String appPassword) {
         ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
         JdbcTemplate adminJdbcTemplate = new JdbcTemplate(adminDataSource);
+        String sanitizedPassword = appPassword.replace("'", "''");
         adminJdbcTemplate.execute(
-                String.format("CREATE USER application PASSWORD '%s'", appPassword));
+                String.format(CREATE_APP_USER_SQL_TEMPLATE, sanitizedPassword));
         populator.addScript(new ClassPathResource("scripts/SQLInjection/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/xss/PersistentXSS/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/XXEVulnerability/schema.sql"));
