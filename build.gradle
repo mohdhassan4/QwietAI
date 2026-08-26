@@ -176,6 +176,8 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    // Provide keystore password for test keystore (sasanlabs.p12) via environment
+    environment 'JWT_KEYSTORE_PASSWORD', 'changeIt'
     finalizedBy jacocoTestReport
 }
 
