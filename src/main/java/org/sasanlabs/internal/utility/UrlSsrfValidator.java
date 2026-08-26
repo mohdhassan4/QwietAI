@@ -5,16 +5,12 @@ import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 /**
  * Utility class to validate URLs against Server-Side Request Forgery (SSRF) attacks. Validates
  * scheme, resolves hostname and checks resolved IP addresses against private/internal ranges.
  */
 public final class UrlSsrfValidator {
-
-    private static final transient Logger LOGGER = LogManager.getLogger(UrlSsrfValidator.class);
 
     private UrlSsrfValidator() {}
 
@@ -34,49 +30,71 @@ public final class UrlSsrfValidator {
      * @return true if the URL is safe, false otherwise
      */
     public static boolean isUrlSafeFromSsrf(String urlString) {
+        return validateAndGetSafeUrl(urlString) != null;
+    }
+
+    /**
+     * Validates the URL and returns a URL object with the host replaced by the resolved IP address
+     * to prevent DNS rebinding attacks. Returns null if the URL is not safe.
+     *
+     * @param urlString the URL string to validate
+     * @return a safe URL using the resolved IP, or null if validation fails
+     */
+    public static URL validateAndGetSafeUrl(String urlString) {
         URL url;
         try {
             url = new URL(urlString);
             url.toURI();
         } catch (MalformedURLException | URISyntaxException e) {
-            LOGGER.error("Provided URL: {} is not valid", urlString, e);
-            return false;
+            return null;
         }
 
         String scheme = url.getProtocol();
         if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
-            LOGGER.warn("Rejected URL with disallowed scheme: {}", scheme);
-            return false;
+            return null;
         }
 
         String host = url.getHost();
         if (host == null || host.isEmpty()) {
-            LOGGER.warn("Rejected URL with empty host");
-            return false;
+            return null;
         }
 
         if (isLocalhostName(host)) {
-            LOGGER.warn("Rejected URL targeting localhost: {}", host);
-            return false;
+            return null;
         }
 
+        InetAddress safeAddress;
         try {
             InetAddress[] addresses = InetAddress.getAllByName(host);
+            safeAddress = null;
             for (InetAddress address : addresses) {
                 if (isPrivateOrInternalAddress(address)) {
-                    LOGGER.warn(
-                            "Rejected URL targeting internal IP: {} (resolved from {})",
-                            address.getHostAddress(),
-                            host);
-                    return false;
+                    return null;
+                }
+                if (safeAddress == null) {
+                    safeAddress = address;
                 }
             }
         } catch (UnknownHostException e) {
-            LOGGER.warn("Unable to resolve host: {}", host, e);
-            return false;
+            return null;
         }
 
-        return true;
+        if (safeAddress == null) {
+            return null;
+        }
+
+        // Build a URL using the resolved IP to prevent DNS rebinding
+        try {
+            String resolvedHost = safeAddress.getHostAddress();
+            int port = url.getPort();
+            String path = url.getPath();
+            String query = url.getQuery();
+            String portStr = (port == -1) ? "" : ":" + port;
+            String queryStr = (query == null) ? "" : "?" + query;
+            return new URL(scheme + "://" + resolvedHost + portStr + path + queryStr);
+        } catch (MalformedURLException e) {
+            return null;
+        }
     }
 
     private static boolean isLocalhostName(String host) {

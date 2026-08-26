@@ -25,7 +25,10 @@ function addingEventListenerToSubmitButton() {
 
       if (!password) {
         let resultDiv = document.getElementById("result");
-        resultDiv.innerHTML = "<strong>Please enter a password guess.</strong>";
+        resultDiv.textContent = "";
+        let strongEl = document.createElement("strong");
+        strongEl.textContent = "Please enter a password guess.";
+        resultDiv.appendChild(strongEl);
         resultDiv.style.color = "red";
         return;
       }
@@ -43,11 +46,14 @@ function addingEventListenerToSubmitButton() {
 
 function appendResponseCallback(data) {
   let resultDiv = document.getElementById("result");
+  resultDiv.textContent = "";
+  let strong = document.createElement("strong");
+  strong.textContent = "Result:";
+  resultDiv.appendChild(strong);
+  resultDiv.appendChild(document.createTextNode(" " + (data.content || "")));
   if (data.isValid) {
-    resultDiv.innerHTML = "<strong>Result:</strong> " + data.content;
     resultDiv.className = "result-success";
   } else {
-    resultDiv.innerHTML = "<strong>Result:</strong> " + data.content;
     resultDiv.className = "result-failure";
   }
 }

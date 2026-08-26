@@ -162,30 +162,62 @@ public final class PasswordHashingUtils {
         return encoder.matches(rawPassword, bcryptHash);
     }
 
-    private static final byte[] PBKDF2_SALT =
-            "VulnerableApp-PBKDF2-Fixed-Salt".getBytes(StandardCharsets.UTF_8);
     private static final int PBKDF2_ITERATIONS = 600_000;
     private static final int PBKDF2_KEY_LENGTH_BITS = 128;
 
     /**
-     * Computes a password hash using PBKDF2WithHmacSHA256.
+     * Computes a password hash using PBKDF2WithHmacSHA256 with a unique random salt per
+     * invocation.
      *
      * <p>Replaces legacy LM/DES-based hashing with a modern key-derivation function. Preserves
-     * case-insensitive behaviour (input is upper-cased before hashing).
+     * case-insensitive behaviour (input is upper-cased before hashing). Returns {@code
+     * hexSalt:hexHash}.
      */
     public static String lmHash(String rawPassword) {
         try {
+            byte[] salt = new byte[SALT_LENGTH_BYTES];
+            SECURE_RANDOM.nextBytes(salt);
             // Preserve case-insensitive behaviour from the legacy LM approach
             String pwd = rawPassword.toUpperCase();
             PBEKeySpec spec =
                     new PBEKeySpec(
-                            pwd.toCharArray(), PBKDF2_SALT, PBKDF2_ITERATIONS, PBKDF2_KEY_LENGTH_BITS);
+                            pwd.toCharArray(), salt, PBKDF2_ITERATIONS, PBKDF2_KEY_LENGTH_BITS);
             SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
             byte[] hash = factory.generateSecret(spec).getEncoded();
             spec.clearPassword();
-            return EncodingUtils.bytesToHex(hash);
+            return EncodingUtils.bytesToHex(salt) + HASH_SEPARATOR + EncodingUtils.bytesToHex(hash);
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
             throw new RuntimeException("PBKDF2 Hashing failed", e);
+        }
+    }
+
+    /**
+     * Verifies a raw password against a stored PBKDF2 hash in the format {@code hexSalt:hexHash}.
+     * Preserves case-insensitive behaviour (input is upper-cased before hashing).
+     */
+    public static boolean verifyLmHash(String rawPassword, String storedHash) {
+        if (rawPassword == null || storedHash == null) {
+            return false;
+        }
+        String[] parts = storedHash.split(HASH_SEPARATOR, 2);
+        if (parts.length != 2 || parts[0].isEmpty()) {
+            return false;
+        }
+        try {
+            byte[] salt = EncodingUtils.hexToBytes(parts[0]);
+            String pwd = rawPassword.toUpperCase();
+            PBEKeySpec spec =
+                    new PBEKeySpec(
+                            pwd.toCharArray(), salt, PBKDF2_ITERATIONS, PBKDF2_KEY_LENGTH_BITS);
+            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+            byte[] hash = factory.generateSecret(spec).getEncoded();
+            spec.clearPassword();
+            String computedHex = EncodingUtils.bytesToHex(hash);
+            return MessageDigest.isEqual(
+                    computedHex.getBytes(StandardCharsets.US_ASCII),
+                    parts[1].toLowerCase().getBytes(StandardCharsets.US_ASCII));
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+            throw new RuntimeException("PBKDF2 Verification failed", e);
         }
     }
 }

@@ -121,7 +121,7 @@ function _callbackForInnerMasterOnClickEvent(
       vulnerableAppEndPointData[id]["Detailed Information"][key][
         "HtmlTemplate"
       ];
-    document.getElementById("vulnerabilityDescription").innerHTML =
+    document.getElementById("vulnerabilityDescription").textContent =
       vulnerableAppEndPointData[id]["Description"];
     let urlToFetchHtmlTemplate = htmlTemplate
       ? "/VulnerableApp/templates/" + vulnerabilitySelected + "/" + htmlTemplate
@@ -144,7 +144,10 @@ function _callbackForInnerMasterOnClickEvent(
         if (requestToken !== thisRequestToken) {
           return;
         }
-        detailTitle.innerHTML = responseText;
+        detailTitle.textContent = "";
+        let tmpl = document.createElement("template");
+        tmpl.innerHTML = responseText;
+        detailTitle.appendChild(tmpl.content.cloneNode(true));
         _loadDynamicJSAndCSS(urlToFetchHtmlTemplate, () => {
           // Re-check: the asset load itself is async, so navigation could
           // have moved on again between the AJAX response and now.
@@ -198,7 +201,7 @@ function createColumn(detailedInformationArray, key) {
   span.classList.add(
     isSecure ? "secure-variant-tooltip-text" : "unsecure-variant-tooltip-text"
   );
-  span.innerHTML = isSecure ? variantTooltip.secure : variantTooltip.unsecure;
+  span.textContent = isSecure ? variantTooltip.secure : variantTooltip.unsecure;
   svgWithTooltip.appendChild(span);
   svgWithTooltip.appendChild(_getSvgElementForVariant(isSecure));
   column.appendChild(svgWithTooltip);

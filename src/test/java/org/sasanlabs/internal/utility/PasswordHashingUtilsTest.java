@@ -97,22 +97,30 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
-    @DisplayName("LM Hash (PBKDF2): Should be deterministic and case-insensitive")
-    void lmHash_Pbkdf2Deterministic() {
-        // PBKDF2-based replacement: same input must always produce the same output
+    @DisplayName("LM Hash (PBKDF2): Should use random salt and verify correctly (case-insensitive)")
+    void lmHash_Pbkdf2SaltedAndVerifiable() {
+        // Each call produces a different hash due to random salt
         String hash1 = PasswordHashingUtils.lmHash("password");
         String hash2 = PasswordHashingUtils.lmHash("password");
-        assertEquals(hash1, hash2, "Hash must be deterministic");
+        assertNotEquals(hash1, hash2, "Each hash should use a unique random salt");
+
+        // Salted format: hexSalt:hexHash
+        assertTrue(hash1.contains(":"), "Hash should contain salt separator");
+
+        // Verification works for correct password
+        assertTrue(PasswordHashingUtils.verifyLmHash("password", hash1));
+        assertTrue(PasswordHashingUtils.verifyLmHash("password", hash2));
 
         // Case insensitivity is preserved (input is upper-cased internally)
-        assertEquals(hash1, PasswordHashingUtils.lmHash("PASSWORD"));
-        assertEquals(hash1, PasswordHashingUtils.lmHash("pAsSwOrD"));
+        assertTrue(PasswordHashingUtils.verifyLmHash("PASSWORD", hash1));
+        assertTrue(PasswordHashingUtils.verifyLmHash("pAsSwOrD", hash1));
 
-        // Output should be 32 hex chars (128-bit key)
-        assertEquals(32, hash1.length());
+        // Wrong password should not verify
+        assertFalse(PasswordHashingUtils.verifyLmHash("different", hash1));
 
-        // Different passwords must produce different hashes
-        assertNotEquals(hash1, PasswordHashingUtils.lmHash("different"));
+        // Null checks
+        assertFalse(PasswordHashingUtils.verifyLmHash(null, hash1));
+        assertFalse(PasswordHashingUtils.verifyLmHash("password", null));
     }
 
     @Test
