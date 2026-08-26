@@ -11,6 +11,6 @@ CREATE TABLE cryptographic_failures_vault (
 -- Application user has full access (for functional purposes)
 GRANT ALL ON cryptographic_failures_vault TO application;
 
--- A read-only user for exploration by the attacker/user
+-- A read-only user for exploration by the attacker/user (demo-only H2 in-memory credential, not a production secret)
 CREATE USER IF NOT EXISTS cryptographic_failures_user PASSWORD 'cryptographic_failures_password';
 GRANT SELECT ON cryptographic_failures_vault TO cryptographic_failures_user;

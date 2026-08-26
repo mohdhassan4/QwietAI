@@ -1,13 +1,10 @@
--- Level 1: SQL Injection
--- Real password: 'not_needed_for_sqli'
+-- Level 1: SQL Injection (demo seed credential for in-memory H2 DB - not a production secret)
 INSERT INTO auth_users VALUES (1, 'admin_sqli', 'not_needed_for_sqli', NULL, 'PLAIN', 1, 'admin_sqli@example.com', 'ADMIN');
 
--- Level 2: Sensitive Data Logging
--- Real password: 'v9K#2mLp!8zQ'
+-- Level 2: Sensitive Data Logging (demo seed credential for in-memory H2 DB - not a production secret)
 INSERT INTO auth_users VALUES (2, 'admin_logs', 'v9K#2mLp!8zQ', NULL, 'PLAIN', 2, 'admin_logs@example.com', 'ADMIN');
 
--- Level 3: Plaintext Storage
--- Real password: 'b7X$4nRj-6mW'
+-- Level 3: Plaintext Storage (demo seed credential for in-memory H2 DB - not a production secret)
 INSERT INTO auth_users VALUES (3, 'admin_plain', 'b7X$4nRj-6mW', NULL, 'PLAIN', 3, 'admin_plain@example.com', 'ADMIN');
 
 -- Level 4: MD5 Hashing (f2C@9tYk*1hP)
