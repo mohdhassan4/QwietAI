@@ -1,6 +1,7 @@
 {
   "tool": "ZAP",
   "scanType": "DAST",
+  "_note": "Not secrets: URL paths below are vulnerability-class names used as endpoint identifiers in benchmark data",
   "findings": [
     { "url": "/AuthenticationVulnerability/LEVEL_1", "cwe": "CWE-89", "wascId": "19", "method": "GET" },
 
