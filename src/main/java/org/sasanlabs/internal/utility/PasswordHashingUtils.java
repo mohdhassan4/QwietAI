@@ -188,27 +188,32 @@ public final class PasswordHashingUtils {
         }
     }
 
-    private static final byte[] LM_KEY_SALT =
-            "VulnApp-LM-Key-Salt-v1".getBytes(StandardCharsets.UTF_8);
-    private static final byte[] LM_NONCE_SALT =
-            "VulnApp-LM-Nonce-Salt-v1".getBytes(StandardCharsets.UTF_8);
-
     private static byte[] lmAesEncrypt(byte[] key7) throws Exception {
-        MessageDigest keyDigest = MessageDigest.getInstance("SHA-256", "BC");
-        keyDigest.update(LM_KEY_SALT);
-        byte[] aesKey = keyDigest.digest(key7);
+        byte[] salt = new byte[16];
+        new SecureRandom().nextBytes(salt);
 
-        MessageDigest nonceDigest = MessageDigest.getInstance("SHA-256", "BC");
-        nonceDigest.update(LM_NONCE_SALT);
-        byte[] nonceSource = nonceDigest.digest(key7);
+        javax.crypto.SecretKeyFactory skf =
+                javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+        javax.crypto.spec.PBEKeySpec pbeSpec =
+                new javax.crypto.spec.PBEKeySpec(
+                        new String(key7, StandardCharsets.ISO_8859_1).toCharArray(),
+                        salt, 600000, 256);
+        byte[] aesKey = skf.generateSecret(pbeSpec).getEncoded();
+
         byte[] nonce = new byte[12];
-        System.arraycopy(nonceSource, 0, nonce, 0, 12);
+        new SecureRandom().nextBytes(nonce);
 
         Cipher aes = Cipher.getInstance("AES/GCM/NoPadding", "BC");
         aes.init(
                 Cipher.ENCRYPT_MODE,
                 new SecretKeySpec(aesKey, "AES"),
                 new GCMParameterSpec(128, nonce));
-        return aes.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        byte[] ciphertext = aes.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+
+        byte[] result = new byte[salt.length + nonce.length + ciphertext.length];
+        System.arraycopy(salt, 0, result, 0, salt.length);
+        System.arraycopy(nonce, 0, result, salt.length, nonce.length);
+        System.arraycopy(ciphertext, 0, result, salt.length + nonce.length, ciphertext.length);
+        return result;
     }
 }
