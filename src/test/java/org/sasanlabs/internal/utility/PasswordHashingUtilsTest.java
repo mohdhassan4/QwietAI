@@ -63,14 +63,31 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
-    @DisplayName("LM Hash: Should be case-insensitive and match legacy standards")
-    void lmHash_LegacyStandards() {
-        // Known LM hash for "password" (which it converts to "PASSWORD")
-        String expected = "e52cac67419a9a224a3b108f3fa6cb6d";
+    @DisplayName("PBKDF2: Should produce unique salted hashes and verify correctly")
+    void pbkdf2Hash_RandomSaltAndVerification() {
+        // Two hashes of the same password must differ (random salt)
+        String hash1 = PasswordHashingUtils.pbkdf2Hash("password");
+        String hash2 = PasswordHashingUtils.pbkdf2Hash("password");
+        assertNotEquals(hash1, hash2);
 
-        assertEquals(expected, PasswordHashingUtils.lmHash("password"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("PASSWORD"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("pAsSwOrD"));
+        // Both must verify against the original password
+        assertTrue(PasswordHashingUtils.isValidPbkdf2("password", hash1));
+        assertTrue(PasswordHashingUtils.isValidPbkdf2("password", hash2));
+
+        // Wrong password must not verify
+        assertFalse(PasswordHashingUtils.isValidPbkdf2("wrong", hash1));
+
+        // Hash format is hex(salt):hex(hash) => 32 (16-byte salt) + 1 (:) + 64 (256-bit key)
+        assertEquals(97, hash1.length());
+        assertTrue(hash1.contains(":"));
+    }
+
+    @Test
+    @DisplayName("PBKDF2: isValidPbkdf2 handles null and malformed inputs")
+    void pbkdf2Verify_NullAndMalformed() {
+        assertFalse(PasswordHashingUtils.isValidPbkdf2(null, "abc:def"));
+        assertFalse(PasswordHashingUtils.isValidPbkdf2("password", null));
+        assertFalse(PasswordHashingUtils.isValidPbkdf2("password", "nocolon"));
     }
 
     @Test
