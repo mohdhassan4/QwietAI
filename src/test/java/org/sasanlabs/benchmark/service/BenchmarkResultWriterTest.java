@@ -1,8 +1,10 @@
 package org.sasanlabs.benchmark.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -114,6 +116,16 @@ class BenchmarkResultWriterTest {
         assertThat(BenchmarkResultWriter.sanitizeToolName("OWASP-ZAP_v2"))
                 .isEqualTo("owasp-zap_v2");
         assertThat(BenchmarkResultWriter.sanitizeToolName("../etc/passwd")).isEqualTo("etcpasswd");
+    }
+
+    @Test
+    void write_rejectsPathTraversalInDirectory(@TempDir Path tempDir) {
+        String traversalDir = tempDir.resolve("legit/../../../etc/cron.d").toString();
+        BenchmarkResultWriter writer = new BenchmarkResultWriter(MAPPER, tempDir.toString());
+
+        assertThatThrownBy(() -> writer.write(sampleResult("ZAP"), traversalDir))
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("path traversal");
     }
 
     private static BenchmarkResult sampleResult(String tool) {
