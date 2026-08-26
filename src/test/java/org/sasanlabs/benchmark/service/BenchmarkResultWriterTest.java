@@ -116,6 +116,17 @@ class BenchmarkResultWriterTest {
         assertThat(BenchmarkResultWriter.sanitizeToolName("../etc/passwd")).isEqualTo("etcpasswd");
     }
 
+    @Test
+    void write_rejectsPathTraversalInBenchmarksDir(@TempDir Path tempDir) {
+        BenchmarkResultWriter writer = new BenchmarkResultWriter(MAPPER, tempDir.toString());
+        String traversalDir = "../../etc";
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                        () -> writer.write(sampleResult("ZAP"), traversalDir))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("Path traversal");
+    }
+
     private static BenchmarkResult sampleResult(String tool) {
         return new BenchmarkResult(
                 tool,
