@@ -115,6 +115,28 @@ class BenchmarkControllerTest {
     }
 
     @Test
+    void toolWithNewlines_returns200_logForgingPrevented() throws Exception {
+        BenchmarkResult mockResult =
+                new BenchmarkResult(
+                        "ZAP\r\nFake", 100.0, 1, 1, 0, 0, Collections.emptyList(),
+                        Collections.emptyList());
+        when(benchmarkService.compare(any(ScannerFindings.class))).thenReturn(mockResult);
+        when(benchmarkResultWriter.write(any(BenchmarkResult.class)))
+                .thenReturn(Paths.get("benchmarks/zap-results.json"));
+
+        String body =
+                "{\"tool\":\"ZAP\\r\\nFake\",\"findings\":["
+                        + "{\"url\":\"/SQLInjection/LEVEL_1\",\"type\":\"BLIND_SQL_INJECTION\"}]}";
+
+        mockMvc.perform(
+                        post("/scanner/benchmark")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tool").value("ZAP\r\nFake"));
+    }
+
+    @Test
     void writerFailure_returns500WithResultAndPersistenceError() throws Exception {
         BenchmarkResult mockResult =
                 new BenchmarkResult(
