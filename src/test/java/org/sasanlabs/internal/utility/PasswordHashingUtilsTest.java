@@ -63,14 +63,25 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
-    @DisplayName("LM Hash: Should be case-insensitive and match legacy standards")
-    void lmHash_LegacyStandards() {
-        // Known LM hash for "password" (which it converts to "PASSWORD")
-        String expected = "e52cac67419a9a224a3b108f3fa6cb6d";
+    @DisplayName("LM Hash: Should produce unique salted hashes and validate correctly")
+    void lmHash_UniqueSaltAndValidation() {
+        String password = "password";
+        String hash1 = PasswordHashingUtils.lmHash(password);
+        String hash2 = PasswordHashingUtils.lmHash(password);
 
-        assertEquals(expected, PasswordHashingUtils.lmHash("password"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("PASSWORD"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("pAsSwOrD"));
+        // Each call uses a unique salt, so hashes differ
+        assertNotEquals(hash1, hash2);
+
+        // Both should validate correctly
+        assertTrue(PasswordHashingUtils.isValidLmHash(password, hash1));
+        assertTrue(PasswordHashingUtils.isValidLmHash(password, hash2));
+
+        // Wrong password should not validate
+        assertFalse(PasswordHashingUtils.isValidLmHash("wrong", hash1));
+
+        // Null inputs should be handled gracefully
+        assertFalse(PasswordHashingUtils.isValidLmHash(null, hash1));
+        assertFalse(PasswordHashingUtils.isValidLmHash(password, null));
     }
 
     @Test
