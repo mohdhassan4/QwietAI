@@ -26,6 +26,10 @@ public class BenchmarkController {
 
     private static final Logger LOGGER = LogManager.getLogger(BenchmarkController.class);
 
+    private static String sanitizeForLog(String input) {
+        return input == null ? "null" : input.replaceAll("[\\r\\n]", "_");
+    }
+
     private final BenchmarkService benchmarkService;
     private final BenchmarkResultWriter benchmarkResultWriter;
 
@@ -53,12 +57,15 @@ public class BenchmarkController {
 
         try {
             Path written = benchmarkResultWriter.write(result);
-            LOGGER.info("Wrote benchmark result for tool '{}' to {}", input.getTool(), written);
+            LOGGER.info(
+                    "Wrote benchmark result for tool '{}' to {}",
+                    sanitizeForLog(input.getTool()),
+                    written);
         } catch (IOException ioe) {
             LOGGER.error(
                     "Failed to persist benchmark result for tool '{}'; returning 500 with result"
                             + " in body",
-                    input.getTool(),
+                    sanitizeForLog(input.getTool()),
                     ioe);
             result.setPersistenceError("Failed to persist benchmark result");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
