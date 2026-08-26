@@ -14,6 +14,6 @@ CREATE TABLE auth_users (
 -- Application user has full access (for functional purposes)
 GRANT ALL ON auth_users TO application;
 
--- A read-only user for exploration by the attacker/user
+-- A read-only user for exploration by the attacker/user (demo credential for in-memory H2, not production)
 CREATE USER IF NOT EXISTS readonly_user PASSWORD 'readonly_password';
 GRANT SELECT ON auth_users TO readonly_user;

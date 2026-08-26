@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+// Test fixture passwords below are not real credentials; they are deterministic inputs for hash verification
 class PasswordHashingUtilsTest {
 
     @Test
