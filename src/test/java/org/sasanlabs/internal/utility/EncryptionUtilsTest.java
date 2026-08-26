@@ -49,19 +49,24 @@ class EncryptionUtilsTest {
     }
 
     @Test
-    @DisplayName("AES Encryption: Should produce consistent ciphertext (deterministic GCM)")
-    void encrypt_GcmDeterminism() throws EncryptionException {
+    @DisplayName("AES Encryption: Each call produces unique ciphertext (random IV)")
+    void encrypt_GcmRandomIv() throws EncryptionException {
         SecretKey key = EncryptionUtils.getKeyFromPassword("fixed-password");
         String plaintext = "This is a secret message that is exactly 32 bytes";
 
         String ciphertext1 = EncryptionUtils.encrypt(plaintext, key);
         String ciphertext2 = EncryptionUtils.encrypt(plaintext, key);
 
-        // Deterministic IV derivation: same key+plaintext produces the same ciphertext
-        assertEquals(ciphertext1, ciphertext2);
+        // Random IV: same key+plaintext produces different ciphertexts each time
+        assertNotEquals(ciphertext1, ciphertext2);
 
-        // Verify it is valid Base64
+        // Verify both are valid Base64
         assertDoesNotThrow(() -> Base64.getDecoder().decode(ciphertext1));
+        assertDoesNotThrow(() -> Base64.getDecoder().decode(ciphertext2));
+
+        // Verify both decrypt to the original plaintext
+        assertEquals(plaintext, EncryptionUtils.decrypt(ciphertext1, key));
+        assertEquals(plaintext, EncryptionUtils.decrypt(ciphertext2, key));
     }
 
     @Test

@@ -7,11 +7,9 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
-import java.util.Arrays;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.Mac;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
@@ -91,13 +89,9 @@ public class EncryptionUtils {
 
     public static String encrypt(String plaintext, SecretKey key) throws EncryptionException {
         try {
-            // Derive a deterministic IV via HMAC-SHA256(key, plaintext) truncated to 12 bytes.
-            // This keeps encryption deterministic for the same key+plaintext pair (required by
-            // callers that compare ciphertexts) while using AES/GCM for authenticated encryption.
-            Mac mac = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(key.getEncoded(), "HmacSHA256"));
-            byte[] ivFull = mac.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
-            byte[] iv = Arrays.copyOf(ivFull, GCM_IV_LENGTH_BYTES);
+            // Generate a fresh random 12-byte nonce for each encryption call (CWE-329 fix).
+            byte[] iv = new byte[GCM_IV_LENGTH_BYTES];
+            new SecureRandom().nextBytes(iv);
 
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
             cipher.init(
@@ -123,6 +117,42 @@ public class EncryptionUtils {
         } catch (IllegalBlockSizeException | BadPaddingException e) {
             throw new EncryptionException(
                     "AES encryption failed due to block size or padding issues", e);
+        }
+    }
+
+    public static String decrypt(String ciphertext, SecretKey key) throws EncryptionException {
+        try {
+            byte[] decoded = java.util.Base64.getDecoder().decode(ciphertext);
+
+            if (decoded.length < GCM_IV_LENGTH_BYTES) {
+                throw new EncryptionException("Ciphertext too short to contain IV");
+            }
+
+            // Split nonce (first 12 bytes) from the encrypted payload
+            byte[] iv = new byte[GCM_IV_LENGTH_BYTES];
+            System.arraycopy(decoded, 0, iv, 0, GCM_IV_LENGTH_BYTES);
+
+            byte[] encrypted = new byte[decoded.length - GCM_IV_LENGTH_BYTES];
+            System.arraycopy(decoded, GCM_IV_LENGTH_BYTES, encrypted, 0, encrypted.length);
+
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(
+                    Cipher.DECRYPT_MODE,
+                    key,
+                    new GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv));
+
+            byte[] decrypted = cipher.doFinal(encrypted);
+            return new String(decrypted, StandardCharsets.UTF_8);
+
+        } catch (NoSuchPaddingException | NoSuchAlgorithmException e) {
+            throw new EncryptionException("AES configuration not found ", e);
+        } catch (InvalidKeyException e) {
+            throw new EncryptionException("The provided key is invalid for AES decryption", e);
+        } catch (InvalidAlgorithmParameterException e) {
+            throw new EncryptionException("Invalid GCM parameters for AES decryption", e);
+        } catch (IllegalBlockSizeException | BadPaddingException e) {
+            throw new EncryptionException(
+                    "AES decryption failed due to block size or padding issues", e);
         }
     }
 }

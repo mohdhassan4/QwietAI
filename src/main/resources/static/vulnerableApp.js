@@ -115,7 +115,7 @@ function _callbackForInnerMasterOnClickEvent(
     _updateChallengeToggleAvailability(levelChallengeCards);
     _renderDetailMode(vulnerableAppEndPointData);
     let htmlTemplate = levelInfo["HtmlTemplate"];
-    document.getElementById("vulnerabilityDescription").innerHTML =
+    document.getElementById("vulnerabilityDescription").textContent =
       endPointEntry["Description"];
     let urlToFetchHtmlTemplate = htmlTemplate
       ? "/VulnerableApp/templates/" + vulnerabilitySelected + "/" + htmlTemplate
@@ -261,13 +261,13 @@ function handleElementAutoSelection(vulnerableAppEndPointData, id = 0) {
   let selectedEntry = vulnerableAppEndPointData[id];
 
   if (id === 0) {
-    detailTitle.innerHTML = selectedEntry["Description"];
+    detailTitle.textContent = selectedEntry["Description"];
   } else {
     innerMaster.innerHTML = "";
   }
 
   vulnerabilitySelected = selectedEntry["Name"];
-  detailTitle.innerHTML = selectedEntry["Description"];
+  detailTitle.textContent = selectedEntry["Description"];
   appendNewColumn(vulnerableAppEndPointData, id);
 }
 
