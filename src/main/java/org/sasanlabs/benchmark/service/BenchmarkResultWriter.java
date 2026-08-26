@@ -35,7 +35,8 @@ public class BenchmarkResultWriter {
     }
 
     public Path write(BenchmarkResult result, String benchmarksDir) throws IOException {
-        Path dir = Paths.get(benchmarksDir);
+        Path dir = Paths.get(benchmarksDir).normalize();
+        validateNoPathTraversal(dir, benchmarksDir);
         Files.createDirectories(dir);
         String fileName = sanitizeToolName(result.getTool()) + "-results.json";
         Path target = dir.resolve(fileName);
@@ -48,6 +49,16 @@ public class BenchmarkResultWriter {
             throw ioe;
         }
         return target;
+    }
+
+    private static void validateNoPathTraversal(Path normalizedPath, String originalInput)
+            throws IOException {
+        for (int i = 0; i < normalizedPath.getNameCount(); i++) {
+            if ("..".equals(normalizedPath.getName(i).toString())) {
+                throw new IOException(
+                        "Path contains traversal sequences: " + originalInput);
+            }
+        }
     }
 
     private static void moveAtomicallyOrReplace(Path source, Path target) throws IOException {
