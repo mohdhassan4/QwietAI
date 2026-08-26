@@ -111,9 +111,9 @@ public final class PasswordHashingUtils {
         try {
             MessageDigest messageDigest =
                     MessageDigest.getInstance(HashAlgorithm.SHA256.label(), "BC");
+            messageDigest.update(salt.getBytes(StandardCharsets.UTF_8));
             byte[] digest =
-                    messageDigest.digest(
-                            (salt + rawPassword).getBytes(StandardCharsets.UTF_8));
+                    messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("SHA-256 Hash Algorithm Not Found", e);
