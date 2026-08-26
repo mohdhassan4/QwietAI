@@ -12,15 +12,19 @@ INSERT INTO auth_users VALUES (2, 'admin_logs', 'v9K#2mLp!8zQ', NULL, 'PLAIN', 2
 INSERT INTO auth_users VALUES (3, 'admin_plain', 'b7X$4nRj-6mW', NULL, 'PLAIN', 3, 'admin_plain@example.com', 'ADMIN');
 
 -- Level 4: MD5 Hashing (f2C@9tYk*1hP)
+-- Hash value below is a pre-computed demo digest, not a secret or credential
 INSERT INTO auth_users VALUES (4, 'admin_md5', 'd336011b511cc1af5d0120fa743379f0b6eb1932b3cc9935598d19b96e31ae99', NULL, 'MD5', 4, 'admin_md5@example.com', 'ADMIN');
 
 -- Level 5: SHA1 Hashing (x5B&3gHq+7vS)
+-- Hash value below is a pre-computed demo digest, not a secret or credential
 INSERT INTO auth_users VALUES (5, 'admin_sha1', '4f6b777e541d092586d3f1d10aabd3ede3d7d3cbd39fd59c2b21cb05c3fbc7e1', NULL, 'SHA1', 5, 'admin_sha1@example.com', 'ADMIN');
 
 -- Level 6: SHA-256 (No Salt) (m8D!4kLr#2jZ)
+-- Hash value below is a pre-computed demo digest, not a secret or credential
 INSERT INTO auth_users VALUES (6, 'admin_sha256', 'ff88687830e526e65fba8fe2776a47157cdf6dc4d51e14bdb6952e1afb36e590', NULL, 'SHA256', 6, 'admin_sha256@example.com', 'ADMIN');
 
 -- Level 7: Salted SHA-256 (q1W%6nTp^8vM with Salt s9A#2zLk)
+-- Hash value below is a pre-computed demo digest, not a secret or credential
 INSERT INTO auth_users VALUES (7, 'admin_enum', '948ac766901df927f9b0fe2d55b814010316593a7ba772b1ebb4525dc91f3d29', 's9A#2zLk', 'SHA256', 7, 'admin_enum@example.com', 'ADMIN');
 
 -- Level 8: Weak Password + Bcrypt (password123)
