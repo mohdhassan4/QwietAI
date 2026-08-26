@@ -130,8 +130,8 @@ public class VulnerableAppConfiguration {
     public DataSourceInitializer adminDataSourceInitializer(
             @Qualifier("adminDataSource") DataSource adminDataSource,
             @Value("${spring.datasource.application.password}") String appPassword,
-            @Value("${db.readonly.user.password}") String readonlyPassword,
-            @Value("${db.crypto.user.password}") String cryptoUserPassword) {
+            @Value("${db.readonly.user.password:changeme}") String readonlyPassword,
+            @Value("${db.crypto.user.password:changeme}") String cryptoUserPassword) {
         ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
         JdbcTemplate adminJdbcTemplate = new JdbcTemplate(adminDataSource);
         adminJdbcTemplate.execute(
