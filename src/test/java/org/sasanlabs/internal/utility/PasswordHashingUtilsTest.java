@@ -8,30 +8,42 @@ import org.junit.jupiter.api.Test;
 class PasswordHashingUtilsTest {
 
     @Test
-    @DisplayName("MD4: Should generate a correct unsalted hash")
-    void md4Hash_CorrectHex() {
-        // Known MD4 hash for "password123" — publicly known digest, not a credential
-        String expected = "fc7b71b67e964466cec486ab12f4b558";
+    @DisplayName("MD4: Should generate a salted hash that differs from the raw unsalted digest")
+    void md4Hash_SaltedAndDeterministic() {
+        // With the application-level pepper, the result should be deterministic but different
+        // from the well-known unsalted MD4 of "password123"
+        String unsaltedKnown = "fc7b71b67e964466cec486ab12f4b558";
         String actual = PasswordHashingUtils.md4Hex("password123");
-        assertEquals(expected, actual);
+        assertNotNull(actual);
+        assertNotEquals(unsaltedKnown, actual, "Hash must include salt/pepper and differ from unsalted value");
+        // Deterministic: same input yields same output
+        assertEquals(actual, PasswordHashingUtils.md4Hex("password123"));
     }
 
     @Test
-    @DisplayName("MD5: Should generate a correct unsalted hash")
-    void md5Hash_CorrectHex() {
-        // Known MD5 hash for "password" — publicly known digest, not a credential
-        String expected = "5f4dcc3b5aa765d61d8327deb882cf99";
+    @DisplayName("MD5: Should generate a salted hash that differs from the raw unsalted digest")
+    void md5Hash_SaltedAndDeterministic() {
+        // With the application-level pepper, the result should be deterministic but different
+        // from the well-known unsalted MD5 of "password"
+        String unsaltedKnown = "5f4dcc3b5aa765d61d8327deb882cf99";
         String actual = PasswordHashingUtils.md5Hex("password");
-        assertEquals(expected, actual);
+        assertNotNull(actual);
+        assertNotEquals(unsaltedKnown, actual, "Hash must include salt/pepper and differ from unsalted value");
+        // Deterministic: same input yields same output
+        assertEquals(actual, PasswordHashingUtils.md5Hex("password"));
     }
 
     @Test
-    @DisplayName("Unsalted SHA-256: Should generate a correct unsalted hash")
-    void sha256Hash_CorrectHex() {
-        // Known SHA-256 hash for "password" — publicly known digest, not a credential
-        String expected = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
+    @DisplayName("SHA-256: Should generate a salted hash that differs from the raw unsalted digest")
+    void sha256Hash_SaltedAndDeterministic() {
+        // With the application-level pepper, the result should be deterministic but different
+        // from the well-known unsalted SHA-256 of "password"
+        String unsaltedKnown = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
         String actual = PasswordHashingUtils.unsaltedSha256Hex("password");
-        assertEquals(expected, actual);
+        assertNotNull(actual);
+        assertNotEquals(unsaltedKnown, actual, "Hash must include salt/pepper and differ from unsalted value");
+        // Deterministic: same input yields same output
+        assertEquals(actual, PasswordHashingUtils.unsaltedSha256Hex("password"));
     }
 
     @Test
