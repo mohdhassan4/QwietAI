@@ -35,7 +35,19 @@ public class BenchmarkResultWriter {
     }
 
     public Path write(BenchmarkResult result, String benchmarksDir) throws IOException {
-        Path dir = Paths.get(benchmarksDir);
+        Path requested = Paths.get(benchmarksDir);
+        Path dir;
+        if (requested.isAbsolute()) {
+            dir = requested.normalize();
+        } else {
+            Path baseDir = Paths.get("").toAbsolutePath().normalize();
+            dir = baseDir.resolve(requested).normalize();
+            if (!dir.startsWith(baseDir)) {
+                throw new IOException(
+                        "Resolved benchmarks directory escapes the application root: "
+                                + benchmarksDir);
+            }
+        }
         Files.createDirectories(dir);
         String fileName = sanitizeToolName(result.getTool()) + "-results.json";
         Path target = dir.resolve(fileName);

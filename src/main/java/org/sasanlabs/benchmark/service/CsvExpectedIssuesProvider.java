@@ -103,7 +103,19 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
         if (csvPath.startsWith(CLASSPATH_PREFIX)) {
             return parseFromResource(csvPath.substring(CLASSPATH_PREFIX.length()));
         }
-        return parseFromPath(Paths.get(csvPath));
+        Path requested = Paths.get(csvPath);
+        Path resolved;
+        if (requested.isAbsolute()) {
+            resolved = requested.normalize();
+        } else {
+            Path baseDir = Paths.get("").toAbsolutePath().normalize();
+            resolved = baseDir.resolve(requested).normalize();
+            if (!resolved.startsWith(baseDir)) {
+                throw new IOException(
+                        "Resolved CSV path escapes the application root: " + csvPath);
+            }
+        }
+        return parseFromPath(resolved);
     }
 
     private List<ExpectedIssue> parseFromResource(String location) throws IOException {
