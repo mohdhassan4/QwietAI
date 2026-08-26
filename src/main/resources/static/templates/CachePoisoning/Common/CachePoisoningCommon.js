@@ -48,7 +48,13 @@ export function getHeadersWithForwardedHost(inputId = "forwardedHostInput") {
 
 export function setDemoUserCookie(value) {
   if (value) {
-    document.cookie = `demo_user=${value}; path=/; SameSite=Lax`;
+    // Request a server-issued opaque session token instead of raw credentials
+    const url =
+      getUrlForVulnerability() + "/session?user=" + encodeURIComponent(value);
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url, false);
+    xhr.send();
+    // The server sets the session cookie via Set-Cookie header
   } else {
     document.cookie =
       "demo_user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
