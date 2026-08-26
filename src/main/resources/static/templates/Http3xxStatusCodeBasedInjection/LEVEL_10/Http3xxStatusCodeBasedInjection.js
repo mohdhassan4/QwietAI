@@ -32,7 +32,7 @@ function updatePlaceholderDiv() {
     boxSizing: "border-box",
   });
 
-  overlay.innerHTML =
+  overlay.innerHTML = sanitizeHTML(
     '<div class="redirect-modal-card">' +
     '<div class="redirect-modal-icon-wrap">' +
     '<span class="redirect-modal-icon">&#9888;</span>' +
@@ -44,7 +44,8 @@ function updatePlaceholderDiv() {
     '<button class="btn-redirect-close">Close</button>' +
     '<button class="btn-redirect-continue">Continue</button>' +
     "</div>" +
-    "</div>";
+    "</div>"
+  );
 
   document.body.appendChild(overlay);
 
