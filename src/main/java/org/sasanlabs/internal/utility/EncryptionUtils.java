@@ -1,7 +1,9 @@
 package org.sasanlabs.internal.utility;
 
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
@@ -12,6 +14,7 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.sasanlabs.internal.utility.exception.EncryptionException;
@@ -82,19 +85,40 @@ public class EncryptionUtils {
         }
     }
 
+    private static final int GCM_NONCE_LENGTH = 12;
+    private static final int GCM_TAG_LENGTH_BITS = 128;
+
     public static String encrypt(String plaintext, SecretKey key) throws EncryptionException {
         try {
-            // VULNERABILITY NOTE: ECB mode does not use an IV and reveals patterns (CWE-327)
-            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
-            cipher.init(Cipher.ENCRYPT_MODE, key);
+            // Derive a deterministic nonce from key + plaintext using SHA-256
+            // This ensures same key+plaintext produces same ciphertext (needed by callers)
+            // while avoiding ECB mode weaknesses.
+            MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+            sha256.update(key.getEncoded());
+            sha256.update(plaintext.getBytes(StandardCharsets.UTF_8));
+            byte[] nonceSource = sha256.digest();
+            byte[] nonce = new byte[GCM_NONCE_LENGTH];
+            System.arraycopy(nonceSource, 0, nonce, 0, GCM_NONCE_LENGTH);
+
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            GCMParameterSpec gcmSpec = new GCMParameterSpec(GCM_TAG_LENGTH_BITS, nonce);
+            cipher.init(Cipher.ENCRYPT_MODE, key, gcmSpec);
 
             byte[] encrypted = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
-            return java.util.Base64.getEncoder().encodeToString(encrypted);
+
+            // Prepend nonce to ciphertext for self-contained output
+            byte[] output = new byte[nonce.length + encrypted.length];
+            System.arraycopy(nonce, 0, output, 0, nonce.length);
+            System.arraycopy(encrypted, 0, output, nonce.length, encrypted.length);
+
+            return java.util.Base64.getEncoder().encodeToString(output);
 
         } catch (NoSuchPaddingException | NoSuchAlgorithmException e) {
             throw new EncryptionException("AES configuration not found ", e);
         } catch (InvalidKeyException e) {
             throw new EncryptionException("The provided key is invalid for AES encryption", e);
+        } catch (InvalidAlgorithmParameterException e) {
+            throw new EncryptionException("Invalid GCM parameters for AES encryption", e);
         } catch (IllegalBlockSizeException | BadPaddingException e) {
             throw new EncryptionException(
                     "AES encryption failed due to block size or padding issues", e);
