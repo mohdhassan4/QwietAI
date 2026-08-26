@@ -38,8 +38,14 @@ public class PasswordResetReferrerPolicyFilter extends OncePerRequestFilter {
         }
 
         String level = request.getParameter("level");
-        if (level == null) {
+        if (level == null || level.isEmpty() || level.length() > 10) {
             return false;
+        }
+
+        for (int i = 0; i < level.length(); i++) {
+            if (!Character.isDigit(level.charAt(i))) {
+                return false;
+            }
         }
 
         try {
