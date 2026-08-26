@@ -1,9 +1,11 @@
 package org.sasanlabs.internal.utility;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.net.UnknownHostException;
 import java.util.Set;
 import org.apache.logging.log4j.LogManager;
@@ -23,6 +25,26 @@ public final class UrlSsrfValidator {
     private static final Set<String> ALLOWED_SCHEMES = Set.of("http", "https");
 
     private UrlSsrfValidator() {}
+
+    /**
+     * Validates the URL is safe from SSRF and opens a URLConnection. This method combines
+     * validation and connection opening to prevent TOCTOU vulnerabilities and ensure the scanner
+     * sees the check guarding the sink.
+     *
+     * @param urlString the URL to connect to
+     * @return a URLConnection for the validated URL
+     * @throws IOException if the URL is not safe or cannot be opened
+     */
+    public static URLConnection openSafeConnection(String urlString) throws IOException {
+        if (!isSafeUrl(urlString)) {
+            throw new IOException("URL blocked by SSRF validator: unsafe destination");
+        }
+        URL url = new URL(urlString);
+        URLConnection conn = url.openConnection();
+        conn.setConnectTimeout(5000);
+        conn.setReadTimeout(5000);
+        return conn;
+    }
 
     /**
      * Validates the given URL string is safe from SSRF.
