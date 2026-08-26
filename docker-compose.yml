@@ -6,6 +6,8 @@ services:
       tmpfs:
         - /tmp
         - /var/run
+      security_opt:
+        - "no-new-privileges:true"
       networks:
         - app_net
       
@@ -15,6 +17,8 @@ services:
       tmpfs:
         - /tmp
         - /var/run
+      security_opt:
+        - "no-new-privileges:true"
       networks:
         - app_net
  
@@ -24,6 +28,8 @@ services:
       tmpfs:
         - /tmp
         - /var/run
+      security_opt:
+        - "no-new-privileges:true"
       networks:
         - app_net
 
@@ -33,6 +39,8 @@ services:
       tmpfs:
         - /tmp
         - /var/run
+      security_opt:
+        - "no-new-privileges:true"
       ports:
        - "11434:11434"
       volumes:
@@ -54,6 +62,8 @@ services:
       tmpfs:
         - /tmp
         - /var/run
+      security_opt:
+        - "no-new-privileges:true"
       depends_on:
         ollama:
           condition: service_healthy
@@ -80,6 +90,8 @@ services:
       tmpfs:
         - /tmp
         - /var/run
+      security_opt:
+        - "no-new-privileges:true"
       depends_on:
         ollama:
           condition: service_healthy
@@ -103,6 +115,8 @@ services:
       tmpfs:
         - /tmp
         - /var/run
+      security_opt:
+        - "no-new-privileges:true"
       restart: unless-stopped
       expose:
         - "1025"
@@ -134,6 +148,8 @@ services:
         - /tmp
         - /var/run
         - /var/cache/nginx
+      security_opt:
+        - "no-new-privileges:true"
       volumes:
        - ./templates:/etc/nginx/templates
       ports:
