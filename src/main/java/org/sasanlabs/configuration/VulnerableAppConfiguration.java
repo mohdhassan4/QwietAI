@@ -155,6 +155,39 @@ public class VulnerableAppConfiguration {
         return initializer;
     }
 
+    /**
+     * Populates bcrypt-hashed passwords for auth seed users after the schema and placeholder rows
+     * are created by adminDataSourceInitializer. Hash values are generated at runtime from
+     * configurable properties (overridable via environment variables) so that no bcrypt hashes are
+     * stored in source control.
+     */
+    @Bean
+    @DependsOn("adminDataSourceInitializer")
+    public Boolean authBcryptSeedInitializer(
+            @Qualifier("adminDataSource") DataSource adminDataSource,
+            @Value("${auth.seed.password.level8}") String passwordLevel8,
+            @Value("${auth.seed.password.level9}") String passwordLevel9,
+            @Value("${auth.seed.password.level10}") String passwordLevel10,
+            @Value("${auth.seed.bcrypt-cost.level10}") int bcryptCostLevel10) {
+        BCryptPasswordEncoder defaultEncoder = new BCryptPasswordEncoder();
+        BCryptPasswordEncoder lowCostEncoder = new BCryptPasswordEncoder(bcryptCostLevel10);
+
+        JdbcTemplate jdbc = new JdbcTemplate(adminDataSource);
+        jdbc.update(
+                "UPDATE auth_users SET password = ? WHERE id = ?",
+                defaultEncoder.encode(passwordLevel8),
+                8);
+        jdbc.update(
+                "UPDATE auth_users SET password = ? WHERE id = ?",
+                defaultEncoder.encode(passwordLevel9),
+                9);
+        jdbc.update(
+                "UPDATE auth_users SET password = ? WHERE id = ?",
+                lowCostEncoder.encode(passwordLevel10),
+                10);
+        return Boolean.TRUE;
+    }
+
     @Bean
     @Lazy
     @ConfigurationProperties("spring.datasource.application")
