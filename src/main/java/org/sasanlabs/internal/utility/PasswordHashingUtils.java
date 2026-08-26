@@ -131,9 +131,13 @@ public final class PasswordHashingUtils {
         }
     }
 
+    private static final byte[] LM_KEY_DERIVATION_SALT =
+            "VulnerableApp-LM-KDF-Salt".getBytes(StandardCharsets.US_ASCII);
+
     private static byte[] lmEncrypt(byte[] key7) throws Exception {
-        // Derive a 16-byte AES-128 key from the input bytes using SHA-256
+        // Derive a 16-byte AES-128 key from the input bytes using SHA-256 with salt
         MessageDigest keyDerivation = MessageDigest.getInstance("SHA-256", "BC");
+        keyDerivation.update(LM_KEY_DERIVATION_SALT);
         byte[] derived = keyDerivation.digest(key7);
         byte[] aesKey = new byte[16];
         System.arraycopy(derived, 0, aesKey, 0, 16);
