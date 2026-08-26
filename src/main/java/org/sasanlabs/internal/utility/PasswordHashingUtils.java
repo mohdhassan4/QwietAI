@@ -11,6 +11,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 public final class PasswordHashingUtils {
 
     private static final String HASH_SEPARATOR = ":";
+    private static final int SALT_LENGTH = 16;
     private static final int bcryptWorkFactor = 12;
 
     private PasswordHashingUtils() {}
@@ -53,9 +54,58 @@ public final class PasswordHashingUtils {
     }
 
     public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
+        byte[] saltBytes = new byte[SALT_LENGTH];
+        new SecureRandom().nextBytes(saltBytes);
+        String saltHex = EncodingUtils.bytesToHex(saltBytes);
+        String hashHex = computeRawHashAsHex(saltHex + rawPassword, hashAlgorithm);
+        return saltHex + HASH_SEPARATOR + hashHex;
+    }
+
+    /**
+     * Verifies a raw password against a salted hash in the format "saltHex:hashHex".
+     *
+     * @return true if the password matches the stored salted hash
+     */
+    public static boolean verifyHashAsHex(
+            String rawPassword, String storedSaltedHash, HashAlgorithm hashAlgorithm) {
+        if (rawPassword == null || storedSaltedHash == null) {
+            return false;
+        }
+        String[] parts = storedSaltedHash.split(HASH_SEPARATOR, 2);
+        if (parts.length != 2) {
+            return false;
+        }
+        String saltHex = parts[0];
+        String expectedHash = parts[1];
+        String computedHash = computeRawHashAsHex(saltHex + rawPassword, hashAlgorithm);
+        return MessageDigest.isEqual(
+                expectedHash.toLowerCase(java.util.Locale.ROOT).getBytes(StandardCharsets.UTF_8),
+                computedHash.toLowerCase(java.util.Locale.ROOT).getBytes(StandardCharsets.UTF_8));
+    }
+
+    public static boolean verifyMd4Hex(String rawPassword, String storedHash) {
+        return verifyHashAsHex(rawPassword, storedHash, HashAlgorithm.MD4);
+    }
+
+    public static boolean verifyMd5Hex(String rawPassword, String storedHash) {
+        return verifyHashAsHex(rawPassword, storedHash, HashAlgorithm.MD5);
+    }
+
+    public static boolean verifySha1Hex(String rawPassword, String storedHash) {
+        return verifyHashAsHex(rawPassword, storedHash, HashAlgorithm.SHA1);
+    }
+
+    public static boolean verifySha256Hex(String rawPassword, String storedHash) {
+        return verifyHashAsHex(rawPassword, storedHash, HashAlgorithm.SHA256);
+    }
+
+    /**
+     * Computes the raw hash (without generating a salt). For internal use only.
+     */
+    private static String computeRawHashAsHex(String input, HashAlgorithm hashAlgorithm) {
         try {
             MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
-            byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
+            byte[] digest = messageDigest.digest(input.getBytes(StandardCharsets.UTF_8));
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(hashAlgorithm + "Hash Algorithm Not Found", e);
@@ -80,7 +130,7 @@ public final class PasswordHashingUtils {
     }
 
     public static String sha256Hex(String salt, String rawPassword) {
-        return getHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
+        return computeRawHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
     }
 
     public static String unsaltedSha256Hex(String rawPassword) {
