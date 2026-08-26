@@ -188,14 +188,18 @@ public final class PasswordHashingUtils {
         }
     }
 
+    private static final byte[] LM_KEY_SALT =
+            "VulnApp-LM-Key-Salt-v1".getBytes(StandardCharsets.UTF_8);
+    private static final byte[] LM_NONCE_SALT =
+            "VulnApp-LM-Nonce-Salt-v1".getBytes(StandardCharsets.UTF_8);
+
     private static byte[] lmAesEncrypt(byte[] key7) throws Exception {
-        // Derive a 256-bit AES key from the 7-byte input using SHA-256
         MessageDigest keyDigest = MessageDigest.getInstance("SHA-256", "BC");
+        keyDigest.update(LM_KEY_SALT);
         byte[] aesKey = keyDigest.digest(key7);
 
-        // Derive a 12-byte GCM nonce deterministically using a domain-separated hash
         MessageDigest nonceDigest = MessageDigest.getInstance("SHA-256", "BC");
-        nonceDigest.update((byte) 0x01);
+        nonceDigest.update(LM_NONCE_SALT);
         byte[] nonceSource = nonceDigest.digest(key7);
         byte[] nonce = new byte[12];
         System.arraycopy(nonceSource, 0, nonce, 0, 12);
