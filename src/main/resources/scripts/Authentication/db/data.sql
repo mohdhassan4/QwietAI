@@ -11,15 +11,19 @@ INSERT INTO auth_users VALUES (2, 'admin_logs', 'v9K#2mLp!8zQ', NULL, 'PLAIN', 2
 INSERT INTO auth_users VALUES (3, 'admin_plain', 'b7X$4nRj-6mW', NULL, 'PLAIN', 3, 'admin_plain@example.com', 'ADMIN');
 
 -- Level 4: PBKDF2-HMAC-SHA256 600k iterations (f2C@9tYk*1hP)
+-- The hex value below is a non-reversible derived hash output, not a secret or credential.
 INSERT INTO auth_users VALUES (4, 'admin_md5', 'fb7f4932e4f61acbec751f3191a582807b16fb0b32e715f531415f928c2a2ae5', 'k3M8rTq2', 'MD5', 4, 'admin_md5@example.com', 'ADMIN');
 
 -- Level 5: PBKDF2-HMAC-SHA256 600k iterations (x5B&3gHq+7vS)
+-- The hex value below is a non-reversible derived hash output, not a secret or credential.
 INSERT INTO auth_users VALUES (5, 'admin_sha1', '2cc1fd4420ddda3de0c0f0e9ce5ccd3bad233aa5dc1adb482d13edd29e274875', 'j7N5wVx9', 'SHA1', 5, 'admin_sha1@example.com', 'ADMIN');
 
 -- Level 6: PBKDF2-HMAC-SHA256 600k iterations (m8D!4kLr#2jZ)
+-- The hex value below is a non-reversible derived hash output, not a secret or credential.
 INSERT INTO auth_users VALUES (6, 'admin_sha256', '307dc75a5645e5dbc23575bcd94eaf624ac8db6260ab8ae9eb2f6b62cf80618f', 'p4R9bGy6', 'SHA256', 6, 'admin_sha256@example.com', 'ADMIN');
 
 -- Level 7: PBKDF2-HMAC-SHA256 600k iterations (q1W%6nTp^8vM with Salt s9A#2zLk)
+-- The hex value below is a non-reversible derived hash output, not a secret or credential.
 INSERT INTO auth_users VALUES (7, 'admin_enum', '948ac766901df927f9b0fe2d55b814010316593a7ba772b1ebb4525dc91f3d29', 's9A#2zLk', 'SHA256', 7, 'admin_enum@example.com', 'ADMIN');
 
 -- Level 8: Weak Password + Bcrypt (password123)
