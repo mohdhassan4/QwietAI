@@ -9,6 +9,7 @@ import java.security.spec.KeySpec;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.Mac;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
@@ -99,5 +100,56 @@ public class EncryptionUtils {
             throw new EncryptionException(
                     "AES encryption failed due to block size or padding issues", e);
         }
+    }
+
+    /**
+     * Computes HMAC-SHA256 of the given data using the provided key.
+     *
+     * @param data the data to authenticate
+     * @param key the secret key (from externalized configuration)
+     * @return hex-encoded HMAC
+     */
+    public static String hmacSha256(String data, String key) throws EncryptionException {
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            SecretKeySpec keySpec =
+                    new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+            mac.init(keySpec);
+            byte[] hmacBytes = mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
+            return EncodingUtils.bytesToHex(hmacBytes);
+        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
+            throw new EncryptionException("HMAC-SHA256 computation failed", e);
+        }
+    }
+
+    /**
+     * Derives a deterministic Caesar cipher shift value (1-25) from the provided key.
+     *
+     * @param key the secret key (from externalized configuration)
+     * @return a shift value between 1 and 25 inclusive
+     */
+    public static int deriveShift(String key) {
+        int hash = 0;
+        for (char c : key.toCharArray()) {
+            hash = 31 * hash + c;
+        }
+        return Math.abs(hash % 25) + 1;
+    }
+
+    /**
+     * INSECURE: Keyed custom cipher that obscures text by reversing it then computing a keyed HMAC.
+     *
+     * @param rawPassword password to encrypt
+     * @param key the secret key (from externalized configuration)
+     */
+    public static String customCipher(String rawPassword, String key) throws EncryptionException {
+        if (rawPassword == null) {
+            throw new EncryptionException("Raw password cannot be null ");
+        }
+        if (key == null) {
+            throw new EncryptionException("Key cannot be null ");
+        }
+        String reversed = new StringBuilder(rawPassword).reverse().toString();
+        return hmacSha256(reversed, key);
     }
 }
