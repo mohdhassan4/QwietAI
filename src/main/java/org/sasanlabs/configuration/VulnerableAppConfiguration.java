@@ -2,6 +2,7 @@ package org.sasanlabs.configuration;
 
 import com.zaxxer.hikari.HikariDataSource;
 import java.io.IOException;
+import java.sql.PreparedStatement;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -128,7 +129,10 @@ public class VulnerableAppConfiguration {
     @Bean
     public DataSourceInitializer adminDataSourceInitializer(
             @Qualifier("adminDataSource") DataSource adminDataSource,
-            @Value("${spring.datasource.application.password}") String appPassword) {
+            @Value("${spring.datasource.application.password}") String appPassword,
+            @Value("${auth.seed.level8.password}") String level8Password,
+            @Value("${auth.seed.level9.password}") String level9Password,
+            @Value("${auth.seed.level10.password}") String level10Password) {
         ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
         JdbcTemplate adminJdbcTemplate = new JdbcTemplate(adminDataSource);
         adminJdbcTemplate.execute(
@@ -155,7 +159,27 @@ public class VulnerableAppConfiguration {
 
         DataSourceInitializer initializer = new DataSourceInitializer();
         initializer.setDataSource(adminDataSource);
-        initializer.setDatabasePopulator(populator);
+        // Wrap the resource populator to also generate bcrypt hashes at runtime
+        // instead of storing them as literals in SQL files.
+        BCryptPasswordEncoder defaultEncoder = new BCryptPasswordEncoder();
+        BCryptPasswordEncoder lowCostEncoder = new BCryptPasswordEncoder(4);
+        initializer.setDatabasePopulator(
+                connection -> {
+                    populator.populate(connection);
+                    try (PreparedStatement ps =
+                            connection.prepareStatement(
+                                    "UPDATE auth_users SET password = ? WHERE id = ?")) {
+                        ps.setString(1, defaultEncoder.encode(level8Password));
+                        ps.setInt(2, 8);
+                        ps.executeUpdate();
+                        ps.setString(1, defaultEncoder.encode(level9Password));
+                        ps.setInt(2, 9);
+                        ps.executeUpdate();
+                        ps.setString(1, lowCostEncoder.encode(level10Password));
+                        ps.setInt(2, 10);
+                        ps.executeUpdate();
+                    }
+                });
         return initializer;
     }
 
