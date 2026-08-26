@@ -1,3 +1,12 @@
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 function loadChallenge() {
   let url = getUrlForVulnerabilityLevel();
   doGetAjaxCall(displayChallenge, url, true);
@@ -5,7 +14,7 @@ function loadChallenge() {
 
 function displayChallenge(data) {
   let challengeDiv = document.getElementById("challenge");
-  challengeDiv.innerHTML = "<strong>" + data.content + "</strong>";
+  challengeDiv.innerHTML = "<strong>" + escapeHtml(data.content) + "</strong>";
   if (data.isValid) {
     challengeDiv.className = "challenge-secure";
   } else {
@@ -41,10 +50,10 @@ function addingEventListenerToSubmitButton() {
 function appendResponseCallback(data) {
   let resultDiv = document.getElementById("result");
   if (data.isValid) {
-    resultDiv.innerHTML = "<strong>Result:</strong> " + data.content;
+    resultDiv.innerHTML = "<strong>Result:</strong> " + escapeHtml(data.content);
     resultDiv.className = "result-success";
   } else {
-    resultDiv.innerHTML = "<strong>Result:</strong> " + data.content;
+    resultDiv.innerHTML = "<strong>Result:</strong> " + escapeHtml(data.content);
     resultDiv.className = "result-failure";
   }
 }

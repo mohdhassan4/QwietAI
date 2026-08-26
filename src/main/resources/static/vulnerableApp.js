@@ -1,3 +1,12 @@
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 const detail = document.querySelector(".detail");
 const detailTitle = document.querySelector(".detail-title");
 const master = document.querySelector(".master");
@@ -187,7 +196,7 @@ function createColumn(detailedInformationArray, key) {
   span.classList.add(
     isSecure ? "secure-variant-tooltip-text" : "unsecure-variant-tooltip-text"
   );
-  span.innerHTML = isSecure ? variantTooltip.secure : variantTooltip.unsecure;
+  span.textContent = isSecure ? variantTooltip.secure : variantTooltip.unsecure;
   svgWithTooltip.appendChild(span);
   svgWithTooltip.appendChild(_getSvgElementForVariant(isSecure));
   column.appendChild(svgWithTooltip);
@@ -426,9 +435,9 @@ function _addingEventListenerToShowHideHelpButton(vulnerableAppEndPointData) {
       helpText =
         helpText +
         "<li><b>Description about the attack:</b> " +
-        description +
+        escapeHtml(description) +
         "<br/><b>Payload:</b> " +
-        curlPayload +
+        escapeHtml(curlPayload) +
         "</li>";
     }
     helpText = helpText + "</ol>";
