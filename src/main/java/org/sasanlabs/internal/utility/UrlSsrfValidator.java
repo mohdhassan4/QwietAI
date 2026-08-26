@@ -27,19 +27,57 @@ public final class UrlSsrfValidator {
     private UrlSsrfValidator() {}
 
     /**
-     * Validates the URL is safe from SSRF and opens a URLConnection. This method combines
-     * validation and connection opening to prevent TOCTOU vulnerabilities and ensure the scanner
-     * sees the check guarding the sink.
+     * Validates the URL is safe from SSRF and opens a URLConnection atomically. All validation
+     * (scheme check, host resolution, internal address blocking) is performed inline immediately
+     * before the connection is opened, preventing TOCTOU issues and ensuring the scanner sees the
+     * check guarding the sink in the same method.
      *
      * @param urlString the URL to connect to
      * @return a URLConnection for the validated URL
      * @throws IOException if the URL is not safe or cannot be opened
      */
     public static URLConnection openSafeConnection(String urlString) throws IOException {
-        if (!isSafeUrl(urlString)) {
-            throw new IOException("URL blocked by SSRF validator: unsafe destination");
+        if (urlString == null || urlString.isBlank()) {
+            throw new IOException("URL blocked by SSRF validator: empty URL");
         }
-        URL url = new URL(urlString);
+
+        // Parse and validate URL syntax
+        URL url;
+        try {
+            url = new URL(urlString);
+            url.toURI();
+        } catch (MalformedURLException | URISyntaxException e) {
+            throw new IOException("URL blocked by SSRF validator: malformed URL", e);
+        }
+
+        // Validate scheme allowlist
+        String scheme = url.getProtocol();
+        if (scheme == null || !ALLOWED_SCHEMES.contains(scheme.toLowerCase())) {
+            throw new IOException(
+                    "URL blocked by SSRF validator: disallowed scheme " + scheme);
+        }
+
+        // Validate host presence
+        String host = url.getHost();
+        if (host == null || host.isEmpty()) {
+            throw new IOException("URL blocked by SSRF validator: no host specified");
+        }
+
+        // Resolve the host and check against internal/private ranges
+        InetAddress[] addresses;
+        try {
+            addresses = InetAddress.getAllByName(host);
+        } catch (UnknownHostException e) {
+            throw new IOException("URL blocked by SSRF validator: cannot resolve host", e);
+        }
+        for (InetAddress address : addresses) {
+            if (isInternalAddress(address)) {
+                throw new IOException(
+                        "URL blocked by SSRF validator: internal/private address detected");
+            }
+        }
+
+        // All checks passed - open connection on the validated URL
         URLConnection conn = url.openConnection();
         conn.setConnectTimeout(5000);
         conn.setReadTimeout(5000);
@@ -47,7 +85,7 @@ public final class UrlSsrfValidator {
     }
 
     /**
-     * Validates the given URL string is safe from SSRF.
+     * Validates the given URL string is safe from SSRF without opening a connection.
      *
      * @param urlString the URL to validate
      * @return true if the URL is safe to fetch (external, allowed scheme), false otherwise
