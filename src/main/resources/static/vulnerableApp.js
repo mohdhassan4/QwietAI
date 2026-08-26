@@ -15,6 +15,40 @@ const MODE_SCANNER = "SCANNER";
 const MODE_CHALLENGE = "CHALLENGE";
 let appMode = MODE_SCANNER;
 
+/**
+ * Encodes a string for safe insertion into HTML context.
+ */
+function escapeHtml(str) {
+  var div = document.createElement("div");
+  div.appendChild(document.createTextNode(String(str)));
+  return div.innerHTML;
+}
+
+/**
+ * Safely sets the inner HTML of an element by parsing and sanitizing
+ * the provided HTML string (removes scripts, event handlers, etc.).
+ */
+function setInnerHtmlSafe(element, html) {
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(html, "text/html");
+  doc.querySelectorAll("script, iframe, object, embed").forEach(function (el) {
+    el.remove();
+  });
+  doc.querySelectorAll("*").forEach(function (el) {
+    Array.from(el.attributes).forEach(function (attr) {
+      if (attr.name.toLowerCase().startsWith("on")) {
+        el.removeAttribute(attr.name);
+      }
+    });
+  });
+  while (element.firstChild) {
+    element.removeChild(element.firstChild);
+  }
+  while (doc.body.firstChild) {
+    element.appendChild(doc.body.firstChild);
+  }
+}
+
 let currentId;
 let currentKey;
 // Incrementing token identifying the most recent navigation/request.
@@ -110,7 +144,7 @@ function _callbackForInnerMasterOnClickEvent(
       vulnerableAppEndPointData[id]["Detailed Information"][key][
         "HtmlTemplate"
       ];
-    document.getElementById("vulnerabilityDescription").innerHTML =
+    document.getElementById("vulnerabilityDescription").textContent =
       vulnerableAppEndPointData[id]["Description"];
     let urlToFetchHtmlTemplate = htmlTemplate
       ? "/VulnerableApp/templates/" + vulnerabilitySelected + "/" + htmlTemplate
@@ -133,7 +167,7 @@ function _callbackForInnerMasterOnClickEvent(
         if (requestToken !== thisRequestToken) {
           return;
         }
-        detailTitle.innerHTML = responseText;
+        setInnerHtmlSafe(detailTitle, responseText);
         _loadDynamicJSAndCSS(urlToFetchHtmlTemplate, () => {
           // Re-check: the asset load itself is async, so navigation could
           // have moved on again between the AJAX response and now.
@@ -187,7 +221,7 @@ function createColumn(detailedInformationArray, key) {
   span.classList.add(
     isSecure ? "secure-variant-tooltip-text" : "unsecure-variant-tooltip-text"
   );
-  span.innerHTML = isSecure ? variantTooltip.secure : variantTooltip.unsecure;
+  span.textContent = isSecure ? variantTooltip.secure : variantTooltip.unsecure;
   svgWithTooltip.appendChild(span);
   svgWithTooltip.appendChild(_getSvgElementForVariant(isSecure));
   column.appendChild(svgWithTooltip);
@@ -241,13 +275,13 @@ function handleElementAutoSelection(vulnerableAppEndPointData, id = 0) {
   }
 
   if (id === 0) {
-    detailTitle.innerHTML = vulnerableAppEndPointData[id]["Description"];
+    detailTitle.textContent = vulnerableAppEndPointData[id]["Description"];
   } else {
-    innerMaster.innerHTML = "";
+    innerMaster.textContent = "";
   }
 
   vulnerabilitySelected = vulnerableAppEndPointData[id]["Name"];
-  detailTitle.innerHTML = vulnerableAppEndPointData[id]["Description"];
+  detailTitle.textContent = vulnerableAppEndPointData[id]["Description"];
   appendNewColumn(vulnerableAppEndPointData, id);
 }
 
@@ -406,14 +440,14 @@ function generateMasterDetail(vulnerableAppEndPointData) {
 
 function _clearHelp() {
   document.getElementById("showHelp").disabled = false;
-  document.getElementById("helpText").innerHTML = "";
+  document.getElementById("helpText").textContent = "";
   document.getElementById("hideHelp").disabled = true;
 }
 
 function _addingEventListenerToShowHideHelpButton(vulnerableAppEndPointData) {
   document.getElementById("showHelp").addEventListener("click", function () {
     document.getElementById("showHelp").disabled = true;
-    let helpText = "<ol>";
+    let ol = document.createElement("ol");
     for (let index in vulnerableAppEndPointData[currentId][
       "Detailed Information"
     ][currentKey]["AttackVectors"]) {
@@ -423,16 +457,21 @@ function _addingEventListenerToShowHideHelpButton(vulnerableAppEndPointData) {
         ]["AttackVectors"][index];
       let curlPayload = attackVector["CurlPayload"];
       let description = attackVector["Description"];
-      helpText =
-        helpText +
-        "<li><b>Description about the attack:</b> " +
-        description +
-        "<br/><b>Payload:</b> " +
-        curlPayload +
-        "</li>";
+      let li = document.createElement("li");
+      let descLabel = document.createElement("b");
+      descLabel.textContent = "Description about the attack:";
+      li.appendChild(descLabel);
+      li.appendChild(document.createTextNode(" " + description));
+      li.appendChild(document.createElement("br"));
+      let payloadLabel = document.createElement("b");
+      payloadLabel.textContent = "Payload:";
+      li.appendChild(payloadLabel);
+      li.appendChild(document.createTextNode(" " + curlPayload));
+      ol.appendChild(li);
     }
-    helpText = helpText + "</ol>";
-    document.getElementById("helpText").innerHTML = helpText;
+    let helpTextEl = document.getElementById("helpText");
+    helpTextEl.textContent = "";
+    helpTextEl.appendChild(ol);
     document.getElementById("hideHelp").disabled = false;
   });
 
