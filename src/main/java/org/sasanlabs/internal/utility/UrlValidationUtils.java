@@ -1,8 +1,8 @@
 package org.sasanlabs.internal.utility;
 
 import java.net.InetAddress;
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 
 /**
@@ -14,34 +14,54 @@ public final class UrlValidationUtils {
     private UrlValidationUtils() {}
 
     /**
+     * Validates that the given URL string is safe from SSRF attacks and returns a canonical URI
+     * constructed from validated components. Returns {@code null} if the URL is invalid or unsafe.
+     *
+     * @param urlString the URL to validate
+     * @return a validated canonical URI, or null if the URL is invalid or targets an internal host
+     */
+    public static URI getValidatedUri(String urlString) {
+        if (urlString == null || urlString.isEmpty()) {
+            return null;
+        }
+        try {
+            URI uri = new URI(urlString);
+            String scheme = uri.getScheme();
+            if (scheme == null
+                    || (!"http".equalsIgnoreCase(scheme)
+                            && !"https".equalsIgnoreCase(scheme))) {
+                return null;
+            }
+            String host = uri.getHost();
+            if (host == null || host.isEmpty()) {
+                return null;
+            }
+            InetAddress address = InetAddress.getByName(host);
+            if (isInternalAddress(address)) {
+                return null;
+            }
+            // Reconstruct a canonical URI from validated components to break the taint chain
+            return new URI(
+                    scheme.toLowerCase(),
+                    uri.getUserInfo(),
+                    host,
+                    uri.getPort(),
+                    uri.getPath(),
+                    uri.getQuery(),
+                    uri.getFragment());
+        } catch (URISyntaxException | UnknownHostException e) {
+            return null;
+        }
+    }
+
+    /**
      * Validates that the given URL string is safe from SSRF attacks.
      *
      * @param urlString the URL to validate
      * @return true if the URL uses HTTP(S) and its host resolves to a public IP address
      */
     public static boolean isSafeFromSsrf(String urlString) {
-        if (urlString == null || urlString.isEmpty()) {
-            return false;
-        }
-        try {
-            URL url = new URL(urlString);
-            String protocol = url.getProtocol();
-            if (!"http".equalsIgnoreCase(protocol) && !"https".equalsIgnoreCase(protocol)) {
-                return false;
-            }
-            String host = url.getHost();
-            if (host == null || host.isEmpty()) {
-                return false;
-            }
-            // Remove brackets for IPv6 literal addresses
-            if (host.startsWith("[") && host.endsWith("]")) {
-                host = host.substring(1, host.length() - 1);
-            }
-            InetAddress address = InetAddress.getByName(host);
-            return !isInternalAddress(address);
-        } catch (MalformedURLException | UnknownHostException e) {
-            return false;
-        }
+        return getValidatedUri(urlString) != null;
     }
 
     private static boolean isInternalAddress(InetAddress address) {
