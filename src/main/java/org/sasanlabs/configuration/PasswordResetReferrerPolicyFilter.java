@@ -1,6 +1,7 @@
 package org.sasanlabs.configuration;
 
 import java.io.IOException;
+import java.util.regex.Pattern;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -20,6 +21,8 @@ public class PasswordResetReferrerPolicyFilter extends OncePerRequestFilter {
 
     private static final String RESET_PAGE_PATH = "/password-reset/reset.html";
     private static final int REFERRER_LEAK_LEVEL = 7;
+    /** Allowlist pattern: only 1-2 digit numeric strings are valid level values. */
+    private static final Pattern VALID_LEVEL_PATTERN = Pattern.compile("^\\d{1,2}$");
 
     @Override
     protected void doFilterInternal(
@@ -38,14 +41,10 @@ public class PasswordResetReferrerPolicyFilter extends OncePerRequestFilter {
         }
 
         String level = request.getParameter("level");
-        if (level == null) {
+        if (level == null || !VALID_LEVEL_PATTERN.matcher(level).matches()) {
             return false;
         }
 
-        try {
-            return Integer.parseInt(level) == REFERRER_LEAK_LEVEL;
-        } catch (NumberFormatException exception) {
-            return false;
-        }
+        return Integer.parseInt(level) == REFERRER_LEAK_LEVEL;
     }
 }
