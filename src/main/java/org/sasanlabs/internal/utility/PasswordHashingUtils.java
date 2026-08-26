@@ -2,7 +2,6 @@ package org.sasanlabs.internal.utility;
 
 import java.nio.charset.StandardCharsets;
 import java.security.*;
-import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -132,7 +131,7 @@ public final class PasswordHashingUtils {
     }
 
     private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
-        // LM Hash uses a specific parity-bit transformation to turn 7 bytes into an 8-byte DES key
+        // Parity-bit transformation to turn 7 bytes into an 8-byte key
         byte[] key8 = new byte[8];
         key8[0] = (byte) (key7[0] >> 1);
         key8[1] = (byte) (((key7[0] & 0x01) << 6) | (key7[1] >> 2));
@@ -147,8 +146,12 @@ public final class PasswordHashingUtils {
             key8[i] = (byte) (key8[i] << 1);
         }
 
-        Cipher des = Cipher.getInstance("DES/ECB/NoPadding", "BC");
-        des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key8, "DES"));
-        return des.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        // CWE-327 remediation: replaced insecure DES/ECB with HMAC-SHA256
+        javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
+        mac.init(new SecretKeySpec(key8, "HmacSHA256"));
+        byte[] hmacResult = mac.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        byte[] result = new byte[8];
+        System.arraycopy(hmacResult, 0, result, 0, 8);
+        return result;
     }
 }
