@@ -6,6 +6,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class PasswordHashingUtilsTest {
+    // Test inputs below are demo fixture values for verifying hash algorithms; not real credentials
 
     @Test
     @DisplayName("MD4: Should generate a correct unsalted hash")
