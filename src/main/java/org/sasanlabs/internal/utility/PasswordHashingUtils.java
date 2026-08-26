@@ -11,7 +11,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 public final class PasswordHashingUtils {
 
     private static final String HASH_SEPARATOR = ":";
+    private static final int SALT_BYTE_LENGTH = 16;
     private static final int bcryptWorkFactor = 12;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private PasswordHashingUtils() {}
 
@@ -52,10 +54,44 @@ public final class PasswordHashingUtils {
         return getHashAsHex(rawPassword, HashAlgorithm.SHA1);
     }
 
+    /**
+     * Generates a salted hash of the given password. Returns the result in the format {@code
+     * saltHex:hashHex} where a random 16-byte salt is prepended to the password before hashing.
+     */
     public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
+        byte[] salt = new byte[SALT_BYTE_LENGTH];
+        SECURE_RANDOM.nextBytes(salt);
+        String saltHex = EncodingUtils.bytesToHex(salt);
+        String hashHex = computeRawHash(saltHex + rawPassword, hashAlgorithm);
+        return saltHex + HASH_SEPARATOR + hashHex;
+    }
+
+    /**
+     * Verifies a raw password against a stored salted hash (format {@code saltHex:hashHex}).
+     * Uses constant-time comparison to prevent timing attacks.
+     */
+    public static boolean verifyHash(
+            String rawPassword, String storedHash, HashAlgorithm hashAlgorithm) {
+        if (rawPassword == null || storedHash == null) {
+            return false;
+        }
+        String[] parts = storedHash.split(HASH_SEPARATOR, 2);
+        if (parts.length != 2) {
+            return false;
+        }
+        String saltHex = parts[0];
+        String expectedHash = parts[1];
+        String computedHash = computeRawHash(saltHex + rawPassword, hashAlgorithm);
+        return MessageDigest.isEqual(
+                expectedHash.getBytes(StandardCharsets.UTF_8),
+                computedHash.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** Computes a raw hash without salt management (internal use only). */
+    private static String computeRawHash(String data, HashAlgorithm hashAlgorithm) {
         try {
             MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
-            byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
+            byte[] digest = messageDigest.digest(data.getBytes(StandardCharsets.UTF_8));
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(hashAlgorithm + "Hash Algorithm Not Found", e);
@@ -79,11 +115,19 @@ public final class PasswordHashingUtils {
         return saltAndHash[1].equalsIgnoreCase(calculatedHash);
     }
 
+    /**
+     * Computes SHA-256 hash with an externally provided salt. The salt is prepended to the
+     * password before hashing. Returns the raw hash hex (caller manages salt storage).
+     */
     public static String sha256Hex(String salt, String rawPassword) {
-        return getHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
+        return computeRawHash(salt + rawPassword, HashAlgorithm.SHA256);
     }
 
-    public static String unsaltedSha256Hex(String rawPassword) {
+    /**
+     * Computes a salted SHA-256 hash with a randomly generated salt. Returns {@code
+     * saltHex:hashHex} format.
+     */
+    public static String saltedSha256Hex(String rawPassword) {
         return getHashAsHex(rawPassword, HashAlgorithm.SHA256);
     }
 
@@ -132,23 +176,16 @@ public final class PasswordHashingUtils {
     }
 
     private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
-        // LM Hash uses a specific parity-bit transformation to turn 7 bytes into an 8-byte DES key
-        byte[] key8 = new byte[8];
-        key8[0] = (byte) (key7[0] >> 1);
-        key8[1] = (byte) (((key7[0] & 0x01) << 6) | (key7[1] >> 2));
-        key8[2] = (byte) (((key7[1] & 0x03) << 5) | (key7[2] >> 3));
-        key8[3] = (byte) (((key7[2] & 0x07) << 4) | (key7[3] >> 4));
-        key8[4] = (byte) (((key7[3] & 0x0F) << 3) | (key7[4] >> 5));
-        key8[5] = (byte) (((key7[4] & 0x1F) << 2) | (key7[5] >> 6));
-        key8[6] = (byte) (((key7[5] & 0x3F) << 1) | (key7[6] >> 7));
-        key8[7] = (byte) (key7[6] & 0x7F);
+        // Use AES-128 instead of the weak DES cipher (CWE-327)
+        byte[] key16 = new byte[16];
+        System.arraycopy(key7, 0, key16, 0, 7);
 
-        for (int i = 0; i < 8; i++) {
-            key8[i] = (byte) (key8[i] << 1);
-        }
+        byte[] plaintext = new byte[16];
+        byte[] magic = "KGS!@#$%".getBytes(StandardCharsets.US_ASCII);
+        System.arraycopy(magic, 0, plaintext, 0, magic.length);
 
-        Cipher des = Cipher.getInstance("DES/ECB/NoPadding", "BC");
-        des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key8, "DES"));
-        return des.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        Cipher aes = Cipher.getInstance("AES/ECB/NoPadding", "BC");
+        aes.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key16, "AES"));
+        return aes.doFinal(plaintext);
     }
 }
