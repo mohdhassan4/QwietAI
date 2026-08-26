@@ -71,10 +71,25 @@ public class EncryptionUtils {
         new SecureRandom().nextBytes(salt);
     }
 
+    private static final String DEFAULT_ENCRYPTION_PASSWORD =
+            System.getenv("AES_ENCRYPTION_PASSWORD") != null
+                    ? System.getenv("AES_ENCRYPTION_PASSWORD")
+                    : "changeit";
+
+    /**
+     * Derives an AES key using the default encryption password loaded from the environment variable
+     * AES_ENCRYPTION_PASSWORD.
+     */
+    public static SecretKey getKeyFromPassword() throws EncryptionException {
+        return getKeyFromPassword(DEFAULT_ENCRYPTION_PASSWORD);
+    }
+
     public static SecretKey getKeyFromPassword(String password) throws EncryptionException {
         try {
+            String effectivePassword =
+                    (password != null && !password.isEmpty()) ? password : DEFAULT_ENCRYPTION_PASSWORD;
             SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-            KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 600000, 128);
+            KeySpec spec = new PBEKeySpec(effectivePassword.toCharArray(), salt, 600000, 128);
 
             return new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
