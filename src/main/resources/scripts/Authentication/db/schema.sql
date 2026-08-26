@@ -15,5 +15,6 @@ CREATE TABLE auth_users (
 GRANT ALL ON auth_users TO application;
 
 -- A read-only user for exploration by the attacker/user
+-- Password below is for an ephemeral H2 in-memory database only (not a production credential)
 CREATE USER IF NOT EXISTS readonly_user PASSWORD 'readonly_password';
 GRANT SELECT ON auth_users TO readonly_user;
