@@ -15,5 +15,5 @@ CREATE TABLE auth_users (
 GRANT ALL ON auth_users TO application;
 
 -- A read-only user for exploration by the attacker/user
-CREATE USER IF NOT EXISTS readonly_user PASSWORD 'readonly_password';
+-- CREATE USER is handled in VulnerableAppConfiguration.java (env-sourced password)
 GRANT SELECT ON auth_users TO readonly_user;

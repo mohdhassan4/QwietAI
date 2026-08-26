@@ -133,6 +133,20 @@ public class VulnerableAppConfiguration {
         JdbcTemplate adminJdbcTemplate = new JdbcTemplate(adminDataSource);
         adminJdbcTemplate.execute(
                 String.format("CREATE USER application PASSWORD '%s'", appPassword));
+        String readonlyUserPassword =
+                System.getenv().getOrDefault("H2_READONLY_USER_PASSWORD", "readonly-dev");
+        adminJdbcTemplate.execute(
+                String.format(
+                        "CREATE USER IF NOT EXISTS readonly_user PASSWORD '%s'",
+                        readonlyUserPassword));
+        String cryptoUserPassword =
+                System.getenv()
+                        .getOrDefault(
+                                "H2_CRYPTO_USER_PASSWORD", "crypto-failures-dev");
+        adminJdbcTemplate.execute(
+                String.format(
+                        "CREATE USER IF NOT EXISTS cryptographic_failures_user PASSWORD '%s'",
+                        cryptoUserPassword));
         populator.addScript(new ClassPathResource("scripts/SQLInjection/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/xss/PersistentXSS/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/XXEVulnerability/schema.sql"));
