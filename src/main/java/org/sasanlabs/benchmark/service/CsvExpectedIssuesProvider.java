@@ -103,7 +103,12 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
         if (csvPath.startsWith(CLASSPATH_PREFIX)) {
             return parseFromResource(csvPath.substring(CLASSPATH_PREFIX.length()));
         }
-        return parseFromPath(Paths.get(csvPath));
+        Path path = Paths.get(csvPath).toAbsolutePath().normalize();
+        if (path.toString().contains("..")) {
+            throw new IOException(
+                    "Invalid CSV path: path traversal detected in '" + csvPath + "'");
+        }
+        return parseFromPath(path);
     }
 
     private List<ExpectedIssue> parseFromResource(String location) throws IOException {
