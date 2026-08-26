@@ -3,10 +3,10 @@ const detailTitle = document.querySelector(".detail-title");
 const master = document.querySelector(".master");
 const innerMaster = document.querySelector(".inner-master");
 
-const variantTooltip = {
+const variantTooltip = Object.freeze({
   secure: "Secure implementation",
   unsecure: "Unsecure implementation",
-};
+});
 
 let vulnerabilitySelected = "";
 let vulnerabilityLevelSelected = "";
