@@ -8,30 +8,48 @@ import org.junit.jupiter.api.Test;
 class PasswordHashingUtilsTest {
 
     @Test
-    @DisplayName("MD4: Should generate a correct unsalted hash")
-    void md4Hash_CorrectHex() {
-        // Known MD4 hash for "password123" - non-secret: deterministic hash output used as test fixture
-        String expected = "fc7b71b67e964466cec486ab12f4b558";
-        String actual = PasswordHashingUtils.md4Hex("password123");
-        assertEquals(expected, actual);
+    @DisplayName("MD4: Should generate salted hash and verify correctly")
+    void md4Hash_SaltedAndVerifiable() {
+        String saltedHash = PasswordHashingUtils.md4Hex("password123");
+        // Salted hashes contain separator
+        assertTrue(saltedHash.contains(":"));
+        // Two hashes for the same input differ (random salt)
+        String saltedHash2 = PasswordHashingUtils.md4Hex("password123");
+        assertNotEquals(saltedHash, saltedHash2);
+        // Verification succeeds with correct password
+        assertTrue(
+                PasswordHashingUtils.verifyHash(
+                        "password123", saltedHash, PasswordHashingUtils.HashAlgorithm.MD4));
+        // Verification fails with wrong password
+        assertFalse(
+                PasswordHashingUtils.verifyHash(
+                        "wrong", saltedHash, PasswordHashingUtils.HashAlgorithm.MD4));
     }
 
     @Test
-    @DisplayName("MD5: Should generate a correct unsalted hash")
-    void md5Hash_CorrectHex() {
-        // Known MD5 hash for "password" - non-secret: deterministic hash output used as test fixture
-        String expected = "5f4dcc3b5aa765d61d8327deb882cf99";
-        String actual = PasswordHashingUtils.md5Hex("password");
-        assertEquals(expected, actual);
+    @DisplayName("MD5: Should generate salted hash and verify correctly")
+    void md5Hash_SaltedAndVerifiable() {
+        String saltedHash = PasswordHashingUtils.md5Hex("password");
+        assertTrue(saltedHash.contains(":"));
+        assertTrue(
+                PasswordHashingUtils.verifyHash(
+                        "password", saltedHash, PasswordHashingUtils.HashAlgorithm.MD5));
+        assertFalse(
+                PasswordHashingUtils.verifyHash(
+                        "wrong", saltedHash, PasswordHashingUtils.HashAlgorithm.MD5));
     }
 
     @Test
-    @DisplayName("Unsalted SHA-256: Should generate a correct unsalted hash")
-    void sha256Hash_CorrectHex() {
-        // Known SHA-256 hash for "password" - non-secret: deterministic hash output used as test fixture
-        String expected = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
-        String actual = PasswordHashingUtils.unsaltedSha256Hex("password");
-        assertEquals(expected, actual);
+    @DisplayName("SHA-256: Salted hash should verify correctly")
+    void sha256Hash_SaltedAndVerifiable() {
+        String saltedHash = PasswordHashingUtils.saltedSha256Hex("password");
+        assertTrue(saltedHash.contains(":"));
+        assertTrue(
+                PasswordHashingUtils.verifyHash(
+                        "password", saltedHash, PasswordHashingUtils.HashAlgorithm.SHA256));
+        assertFalse(
+                PasswordHashingUtils.verifyHash(
+                        "wrong", saltedHash, PasswordHashingUtils.HashAlgorithm.SHA256));
     }
 
     @Test
