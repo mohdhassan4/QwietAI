@@ -54,7 +54,8 @@ public class BenchmarkController {
         String safeTool = input.getTool().replaceAll("[\\r\\n]", "_");
         try {
             Path written = benchmarkResultWriter.write(result);
-            LOGGER.info("Wrote benchmark result for tool '{}' to {}", safeTool, written);
+            String safeWritten = written.toString().replaceAll("[\\r\\n]", "_");
+            LOGGER.info("Wrote benchmark result for tool '{}' to {}", safeTool, safeWritten);
         } catch (IOException ioe) {
             LOGGER.error(
                     "Failed to persist benchmark result for tool '{}'; returning 500 with result"

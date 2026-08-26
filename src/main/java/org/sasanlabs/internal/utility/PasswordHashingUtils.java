@@ -80,10 +80,17 @@ public final class PasswordHashingUtils {
     }
 
     public static String sha256Hex(String salt, String rawPassword) {
+        if (salt == null || salt.isEmpty()) {
+            throw new IllegalArgumentException("Salt must not be null or empty");
+        }
         try {
             MessageDigest messageDigest = MessageDigest.getInstance(HashAlgorithm.SHA256.label(), "BC");
-            messageDigest.update(salt.getBytes(StandardCharsets.UTF_8));
-            byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
+            byte[] saltBytes = salt.getBytes(StandardCharsets.UTF_8);
+            byte[] passwordBytes = rawPassword.getBytes(StandardCharsets.UTF_8);
+            byte[] saltedInput = new byte[saltBytes.length + passwordBytes.length];
+            System.arraycopy(saltBytes, 0, saltedInput, 0, saltBytes.length);
+            System.arraycopy(passwordBytes, 0, saltedInput, saltBytes.length, passwordBytes.length);
+            byte[] digest = messageDigest.digest(saltedInput);
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(HashAlgorithm.SHA256 + " Hash Algorithm Not Found", e);
