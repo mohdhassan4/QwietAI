@@ -9,6 +9,7 @@ import org.sasanlabs.benchmark.model.BenchmarkResult;
 import org.sasanlabs.benchmark.model.ScannerFindings;
 import org.sasanlabs.benchmark.service.BenchmarkResultWriter;
 import org.sasanlabs.benchmark.service.BenchmarkService;
+import org.sasanlabs.internal.utility.LogSanitizer;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -51,10 +52,10 @@ public class BenchmarkController {
 
         BenchmarkResult result = benchmarkService.compare(input);
 
-        String safeTool = input.getTool().replaceAll("[\\r\\n]", "_");
+        String safeTool = LogSanitizer.sanitize(input.getTool());
         try {
             Path written = benchmarkResultWriter.write(result);
-            String safeWritten = written.toString().replaceAll("[\\r\\n]", "_");
+            String safeWritten = LogSanitizer.sanitize(written.toString());
             LOGGER.info("Wrote benchmark result for tool '{}' to {}", safeTool, safeWritten);
         } catch (IOException ioe) {
             LOGGER.error(
