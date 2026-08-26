@@ -1,0 +1,13 @@
+{
+  "scan": {
+    "execution_id": "v69qbCDCSSqz8DIcxN3Wyw",
+    "status": "Success",
+    "scan_try": 2,
+    "existing_count": 135,
+    "new_count": 86,
+    "actionable_new_count": 41,
+    "ignored_new_count": 45,
+    "scan_loop_done": false,
+    "note": "Remaining actionable findings are in intentionally vulnerable OWASP demo code (CommandInjection levels 1-5, SSRF demo endpoints, etc.) that cannot be fixed without destroying the apps purpose"
+  }
+}
