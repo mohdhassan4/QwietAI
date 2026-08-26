@@ -74,6 +74,39 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
+    @DisplayName("Salted Hash: Should produce different output from unsalted hash")
+    void saltedHash_DiffersFromUnsalted() {
+        byte[] salt = "test_salt".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        String unsalted =
+                PasswordHashingUtils.getHashAsHex(
+                        "password", PasswordHashingUtils.HashAlgorithm.SHA256);
+        String salted =
+                PasswordHashingUtils.getHashAsHex(
+                        "password", PasswordHashingUtils.HashAlgorithm.SHA256, salt);
+        assertNotEquals(unsalted, salted);
+    }
+
+    @Test
+    @DisplayName("Salted Hash: Same salt and input should produce consistent output")
+    void saltedHash_Deterministic() {
+        byte[] salt = "fixed_salt".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        String hash1 =
+                PasswordHashingUtils.getHashAsHex(
+                        "password", PasswordHashingUtils.HashAlgorithm.SHA256, salt);
+        String hash2 =
+                PasswordHashingUtils.getHashAsHex(
+                        "password", PasswordHashingUtils.HashAlgorithm.SHA256, salt);
+        assertEquals(hash1, hash2);
+    }
+
+    @Test
+    @DisplayName("Generate Salt: Should produce non-empty byte array of requested length")
+    void generateSalt_CorrectLength() {
+        byte[] salt = PasswordHashingUtils.generateSalt(16);
+        assertEquals(16, salt.length);
+    }
+
+    @Test
     @DisplayName("Hex Utility: Should convert byte arrays to lowercase hex strings")
     void bytesToHex_Conversion() {
         byte[] input = {0, 15, 16, 127, -1}; // 00, 0f, 10, 7f, ff
