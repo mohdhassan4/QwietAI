@@ -103,7 +103,13 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
         if (csvPath.startsWith(CLASSPATH_PREFIX)) {
             return parseFromResource(csvPath.substring(CLASSPATH_PREFIX.length()));
         }
-        return parseFromPath(Paths.get(csvPath));
+        Path path = Paths.get(csvPath).toAbsolutePath().normalize();
+        // Reject if the raw input contained traversal sequences that normalization resolved
+        if (csvPath.contains("..")) {
+            throw new IOException(
+                    "Path traversal detected: CSV path must not contain '..' segments");
+        }
+        return parseFromPath(path);
     }
 
     private List<ExpectedIssue> parseFromResource(String location) throws IOException {
