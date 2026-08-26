@@ -49,23 +49,31 @@ public class BenchmarkController {
                                     "Field 'findings' is required (use [] for an empty list)"));
         }
 
+        String safeTool = sanitizeForLog(input.getTool());
+
         BenchmarkResult result = benchmarkService.compare(input);
 
         try {
             Path written = benchmarkResultWriter.write(result);
-            String safeTool = input.getTool().replaceAll("[\\r\\n]", "");
-            LOGGER.info("Wrote benchmark result for tool '{}' to {}", safeTool, written);
+            String safeWritten = sanitizeForLog(written.toString());
+            LOGGER.info("Wrote benchmark result for tool '{}' to {}", safeTool, safeWritten);
         } catch (IOException ioe) {
-            String safeToolErr = input.getTool().replaceAll("[\\r\\n]", "");
             LOGGER.error(
                     "Failed to persist benchmark result for tool '{}'; returning 500 with result"
                             + " in body",
-                    safeToolErr,
+                    safeTool,
                     ioe);
             result.setPersistenceError("Failed to persist benchmark result");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
         }
 
         return ResponseEntity.ok(result);
+    }
+
+    private static String sanitizeForLog(String input) {
+        if (input == null) {
+            return "";
+        }
+        return input.replace("\r", "").replace("\n", "");
     }
 }
