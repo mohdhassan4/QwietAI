@@ -63,19 +63,31 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
-    @DisplayName("PBKDF2: Should produce deterministic hashes and differentiate inputs")
-    void pbkdf2Hash_DeterministicAndDistinct() {
-        // Same input must produce the same hash (deterministic)
+    @DisplayName("PBKDF2: Should produce unique salted hashes and verify correctly")
+    void pbkdf2Hash_RandomSaltAndVerification() {
+        // Two hashes of the same password must differ (random salt)
         String hash1 = PasswordHashingUtils.pbkdf2Hash("password");
         String hash2 = PasswordHashingUtils.pbkdf2Hash("password");
-        assertEquals(hash1, hash2);
+        assertNotEquals(hash1, hash2);
 
-        // Different inputs must produce different hashes
-        String hashOther = PasswordHashingUtils.pbkdf2Hash("different");
-        assertNotEquals(hash1, hashOther);
+        // Both must verify against the original password
+        assertTrue(PasswordHashingUtils.isValidPbkdf2("password", hash1));
+        assertTrue(PasswordHashingUtils.isValidPbkdf2("password", hash2));
 
-        // Hash should be 64 hex characters (256 bits)
-        assertEquals(64, hash1.length());
+        // Wrong password must not verify
+        assertFalse(PasswordHashingUtils.isValidPbkdf2("wrong", hash1));
+
+        // Hash format is hex(salt):hex(hash) => 32 (16-byte salt) + 1 (:) + 64 (256-bit key)
+        assertEquals(97, hash1.length());
+        assertTrue(hash1.contains(":"));
+    }
+
+    @Test
+    @DisplayName("PBKDF2: isValidPbkdf2 handles null and malformed inputs")
+    void pbkdf2Verify_NullAndMalformed() {
+        assertFalse(PasswordHashingUtils.isValidPbkdf2(null, "abc:def"));
+        assertFalse(PasswordHashingUtils.isValidPbkdf2("password", null));
+        assertFalse(PasswordHashingUtils.isValidPbkdf2("password", "nocolon"));
     }
 
     @Test

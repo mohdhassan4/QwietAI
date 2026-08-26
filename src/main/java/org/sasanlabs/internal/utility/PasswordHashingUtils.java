@@ -103,30 +103,63 @@ public final class PasswordHashingUtils {
         return encoder.matches(rawPassword, bcryptHash);
     }
 
-    private static final byte[] PBKDF2_SALT =
-            "VulnerableApp-PBKDF2-Fixed-Salt".getBytes(StandardCharsets.UTF_8);
-    private static final int PBKDF2_ITERATIONS = 10000;
+    private static final int PBKDF2_SALT_LENGTH = 16;
+    private static final int PBKDF2_ITERATIONS = 600000;
     private static final int PBKDF2_KEY_LENGTH = 256;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     /**
-     * Computes a PBKDF2-HMAC-SHA256 hash for the given password.
+     * Computes a PBKDF2-HMAC-SHA256 hash for the given password using a unique random salt.
      *
-     * <p>Uses a fixed application-level salt to allow deterministic verification. Replaces the
-     * legacy LM hash which relied on broken DES/ECB encryption.
+     * <p>Returns the result in the format {@code hex(salt):hex(hash)} so that the salt is stored
+     * alongside the derived key for later verification. Replaces the legacy LM hash which relied on
+     * broken DES/ECB encryption.
      */
     public static String pbkdf2Hash(String rawPassword) {
+        byte[] salt = new byte[PBKDF2_SALT_LENGTH];
+        SECURE_RANDOM.nextBytes(salt);
         try {
             PBEKeySpec spec =
                     new PBEKeySpec(
-                            rawPassword.toCharArray(),
-                            PBKDF2_SALT,
-                            PBKDF2_ITERATIONS,
-                            PBKDF2_KEY_LENGTH);
+                            rawPassword.toCharArray(), salt, PBKDF2_ITERATIONS, PBKDF2_KEY_LENGTH);
             SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
             byte[] hash = skf.generateSecret(spec).getEncoded();
-            return EncodingUtils.bytesToHex(hash);
+            return EncodingUtils.bytesToHex(salt)
+                    + HASH_SEPARATOR
+                    + EncodingUtils.bytesToHex(hash);
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
             throw new RuntimeException("PBKDF2 Hashing failed", e);
+        }
+    }
+
+    /**
+     * Verifies a raw password against a stored PBKDF2 hash (format: {@code hex(salt):hex(hash)}).
+     *
+     * @param rawPassword the password to verify
+     * @param storedPbkdf2Hash the stored hash in {@code hex(salt):hex(hash)} format
+     * @return true if the password matches
+     */
+    public static boolean isValidPbkdf2(String rawPassword, String storedPbkdf2Hash) {
+        if (rawPassword == null || storedPbkdf2Hash == null) {
+            return false;
+        }
+        String[] parts = storedPbkdf2Hash.split(HASH_SEPARATOR, 2);
+        if (parts.length != 2) {
+            return false;
+        }
+        byte[] salt = EncodingUtils.hexToBytes(parts[0]);
+        try {
+            PBEKeySpec spec =
+                    new PBEKeySpec(
+                            rawPassword.toCharArray(), salt, PBKDF2_ITERATIONS, PBKDF2_KEY_LENGTH);
+            SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+            byte[] hash = skf.generateSecret(spec).getEncoded();
+            String computedHex = EncodingUtils.bytesToHex(hash);
+            return MessageDigest.isEqual(
+                    computedHex.getBytes(StandardCharsets.UTF_8),
+                    parts[1].getBytes(StandardCharsets.UTF_8));
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+            throw new RuntimeException("PBKDF2 verification failed", e);
         }
     }
 }
