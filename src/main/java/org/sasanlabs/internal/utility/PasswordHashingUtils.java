@@ -11,6 +11,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 public final class PasswordHashingUtils {
 
     private static final String HASH_SEPARATOR = ":";
+    private static final String HASH_PEPPER = "VulnApp_s4lt_p3pp3r_kx9Qm2";
     private static final int bcryptWorkFactor = 12;
 
     private PasswordHashingUtils() {}
@@ -55,6 +56,7 @@ public final class PasswordHashingUtils {
     public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
         try {
             MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
+            messageDigest.update(HASH_PEPPER.getBytes(StandardCharsets.UTF_8));
             byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
