@@ -137,6 +137,20 @@ function _callbackForInnerMasterOnClickEvent(
         var parser = new DOMParser();
         var parsedDoc = parser.parseFromString(responseText, "text/html");
         parsedDoc.querySelectorAll("script").forEach(function (s) { s.remove(); });
+        // Remove inline event handlers and dangerous URL schemes to prevent XSS
+        parsedDoc.body.querySelectorAll("*").forEach(function (el) {
+          Array.from(el.attributes).forEach(function (attr) {
+            if (attr.name.toLowerCase().startsWith("on")) {
+              el.removeAttribute(attr.name);
+            }
+          });
+          ["href", "src", "action", "formaction", "xlink:href"].forEach(function (urlAttr) {
+            var val = el.getAttribute(urlAttr);
+            if (val && /^\s*javascript\s*:/i.test(val)) {
+              el.removeAttribute(urlAttr);
+            }
+          });
+        });
         while (parsedDoc.body.firstChild) {
           detailTitle.appendChild(parsedDoc.body.firstChild);
         }
