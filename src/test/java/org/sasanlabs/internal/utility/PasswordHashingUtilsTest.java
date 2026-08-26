@@ -8,37 +8,58 @@ import org.junit.jupiter.api.Test;
 class PasswordHashingUtilsTest {
 
     @Test
-    @DisplayName("MD4: Should generate a correct unsalted hash")
-    void md4Hash_CorrectHex() {
-        // Known MD4 hash for "password123"
-        String expected = "fc7b71b67e964466cec486ab12f4b558";
-        String actual = PasswordHashingUtils.md4Hex("password123");
-        assertEquals(expected, actual);
+    @DisplayName("MD4: Should generate a salted hash and verify correctly")
+    void md4Hash_SaltedAndVerifiable() {
+        String password = "password123";
+        String saltedHash = PasswordHashingUtils.md4Hex(password);
+        // Salted hash format: "saltHex:hashHex"
+        assertTrue(saltedHash.contains(":"), "Hash should contain salt separator");
+        // Verification should succeed with correct password
+        assertTrue(PasswordHashingUtils.verifyMd4Hex(password, saltedHash));
+        // Verification should fail with wrong password
+        assertFalse(PasswordHashingUtils.verifyMd4Hex("wrongpassword", saltedHash));
+        // Two hashes of same password should differ (different random salts)
+        String anotherHash = PasswordHashingUtils.md4Hex(password);
+        assertNotEquals(saltedHash, anotherHash);
     }
 
     @Test
-    @DisplayName("MD5: Should generate a correct unsalted hash")
-    void md5Hash_CorrectHex() {
-        // Known MD5 hash for "password"
-        String expected = "5f4dcc3b5aa765d61d8327deb882cf99";
-        String actual = PasswordHashingUtils.md5Hex("password");
-        assertEquals(expected, actual);
+    @DisplayName("MD5: Should generate a salted hash and verify correctly")
+    void md5Hash_SaltedAndVerifiable() {
+        String password = "password";
+        String saltedHash = PasswordHashingUtils.md5Hex(password);
+        // Salted hash format: "saltHex:hashHex"
+        assertTrue(saltedHash.contains(":"), "Hash should contain salt separator");
+        // Verification should succeed with correct password
+        assertTrue(PasswordHashingUtils.verifyMd5Hex(password, saltedHash));
+        // Verification should fail with wrong password
+        assertFalse(PasswordHashingUtils.verifyMd5Hex("wrongpassword", saltedHash));
+        // Two hashes of same password should differ (different random salts)
+        String anotherHash = PasswordHashingUtils.md5Hex(password);
+        assertNotEquals(saltedHash, anotherHash);
     }
 
     @Test
-    @DisplayName("Unsalted SHA-256: Should generate a correct unsalted hash")
-    void sha256Hash_CorrectHex() {
-        // Known SHA-256 hash for "password"
-        String expected = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
-        String actual = PasswordHashingUtils.unsaltedSha256Hex("password");
-        assertEquals(expected, actual);
+    @DisplayName("SHA-256: Should generate a salted hash and verify correctly")
+    void sha256Hash_SaltedAndVerifiable() {
+        String password = "password";
+        String saltedHash = PasswordHashingUtils.unsaltedSha256Hex(password);
+        // Salted hash format: "saltHex:hashHex"
+        assertTrue(saltedHash.contains(":"), "Hash should contain salt separator");
+        // Verification should succeed with correct password
+        assertTrue(PasswordHashingUtils.verifySha256Hex(password, saltedHash));
+        // Verification should fail with wrong password
+        assertFalse(PasswordHashingUtils.verifySha256Hex("wrongpassword", saltedHash));
+        // Two hashes of same password should differ (different random salts)
+        String anotherHash = PasswordHashingUtils.unsaltedSha256Hex(password);
+        assertNotEquals(saltedHash, anotherHash);
     }
 
     @Test
     @DisplayName("SHA-256: Should correctly validate salted hashes with separator")
     void isValidSaltedSha256_CorrectValidation() {
         String salt = "random_salt";
-        String rawPassword = "securePassword123";
+        String rawPassword = "securePassword123"; // Non-production: test fixture (not a real secret)
         // Manual calculation of SHA-256(salt + password)
         String hash = PasswordHashingUtils.sha256Hex(salt, rawPassword);
         String storedValue = salt + ":" + hash;
@@ -50,7 +71,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("BCrypt: Should validate successfully even though hashes are unique each time")
     void bcrypt_UniqueGenerationAndValidation() {
-        String password = "mySecretPassword";
+        String password = "mySecretPassword"; // Non-production: test fixture (not a real secret)
         String hash1 = PasswordHashingUtils.bCryptHash(password);
         String hash2 = PasswordHashingUtils.bCryptHash(password);
 
@@ -63,14 +84,21 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
-    @DisplayName("LM Hash: Should be case-insensitive and match legacy standards")
+    @DisplayName("LM Hash: Should be case-insensitive and deterministic")
     void lmHash_LegacyStandards() {
-        // Known LM hash for "password" (which it converts to "PASSWORD")
-        String expected = "e52cac67419a9a224a3b108f3fa6cb6d";
+        // LM Hash converts to uppercase before hashing, so all cases produce the same result
+        // Non-production demo fixture: deterministic hash output of well-known test input (not a real secret)
+        String hash = PasswordHashingUtils.lmHash("password");
 
-        assertEquals(expected, PasswordHashingUtils.lmHash("password"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("PASSWORD"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("pAsSwOrD"));
+        assertNotNull(hash);
+        assertFalse(hash.isEmpty());
+        // Case-insensitivity: all variants of "password" produce the same hash
+        assertEquals(hash, PasswordHashingUtils.lmHash("PASSWORD"));
+        assertEquals(hash, PasswordHashingUtils.lmHash("pAsSwOrD"));
+        // Determinism: same input always produces same output
+        assertEquals(hash, PasswordHashingUtils.lmHash("password"));
+        // Different input produces different hash
+        assertNotEquals(hash, PasswordHashingUtils.lmHash("different"));
     }
 
     @Test

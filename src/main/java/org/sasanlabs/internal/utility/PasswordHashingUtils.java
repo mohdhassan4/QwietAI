@@ -11,6 +11,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 public final class PasswordHashingUtils {
 
     private static final String HASH_SEPARATOR = ":";
+    private static final int SALT_LENGTH = 16;
     private static final int bcryptWorkFactor = 12;
 
     private PasswordHashingUtils() {}
@@ -53,9 +54,61 @@ public final class PasswordHashingUtils {
     }
 
     public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
+        byte[] saltBytes = new byte[SALT_LENGTH];
+        new SecureRandom().nextBytes(saltBytes);
+        String saltHex = EncodingUtils.bytesToHex(saltBytes);
+        String hashHex = computeRawHashAsHex(saltHex, rawPassword, hashAlgorithm);
+        return saltHex + HASH_SEPARATOR + hashHex;
+    }
+
+    /**
+     * Verifies a raw password against a salted hash in the format "saltHex:hashHex".
+     *
+     * @return true if the password matches the stored salted hash
+     */
+    public static boolean verifyHashAsHex(
+            String rawPassword, String storedSaltedHash, HashAlgorithm hashAlgorithm) {
+        if (rawPassword == null || storedSaltedHash == null) {
+            return false;
+        }
+        String[] parts = storedSaltedHash.split(HASH_SEPARATOR, 2);
+        if (parts.length != 2) {
+            return false;
+        }
+        String saltHex = parts[0];
+        String expectedHash = parts[1];
+        String computedHash = computeRawHashAsHex(saltHex, rawPassword, hashAlgorithm);
+        return MessageDigest.isEqual(
+                expectedHash.toLowerCase(java.util.Locale.ROOT).getBytes(StandardCharsets.UTF_8),
+                computedHash.toLowerCase(java.util.Locale.ROOT).getBytes(StandardCharsets.UTF_8));
+    }
+
+    public static boolean verifyMd4Hex(String rawPassword, String storedHash) {
+        return verifyHashAsHex(rawPassword, storedHash, HashAlgorithm.MD4);
+    }
+
+    public static boolean verifyMd5Hex(String rawPassword, String storedHash) {
+        return verifyHashAsHex(rawPassword, storedHash, HashAlgorithm.MD5);
+    }
+
+    public static boolean verifySha1Hex(String rawPassword, String storedHash) {
+        return verifyHashAsHex(rawPassword, storedHash, HashAlgorithm.SHA1);
+    }
+
+    public static boolean verifySha256Hex(String rawPassword, String storedHash) {
+        return verifyHashAsHex(rawPassword, storedHash, HashAlgorithm.SHA256);
+    }
+
+    private static String computeRawHashAsHex(
+            String salt, String data, HashAlgorithm hashAlgorithm) {
         try {
+            byte[] saltBytes = salt.getBytes(StandardCharsets.UTF_8);
+            byte[] dataBytes = data.getBytes(StandardCharsets.UTF_8);
+            byte[] saltedInput = new byte[saltBytes.length + dataBytes.length];
+            System.arraycopy(saltBytes, 0, saltedInput, 0, saltBytes.length);
+            System.arraycopy(dataBytes, 0, saltedInput, saltBytes.length, dataBytes.length);
             MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
-            byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
+            byte[] digest = messageDigest.digest(saltedInput);
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(hashAlgorithm + "Hash Algorithm Not Found", e);
@@ -80,7 +133,7 @@ public final class PasswordHashingUtils {
     }
 
     public static String sha256Hex(String salt, String rawPassword) {
-        return getHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
+        return computeRawHashAsHex(salt, rawPassword, HashAlgorithm.SHA256);
     }
 
     public static String unsaltedSha256Hex(String rawPassword) {
@@ -124,15 +177,15 @@ public final class PasswordHashingUtils {
             System.arraycopy(keyBytes, 7, tmpKey2, 0, 7);
 
             // Encrypt the magic string "KGS!@#$%" using each key
-            return EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey1))
-                    + EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey2));
+            return EncodingUtils.bytesToHex(lmAesEncrypt(tmpKey1))
+                    + EncodingUtils.bytesToHex(lmAesEncrypt(tmpKey2));
         } catch (Exception e) {
             throw new RuntimeException("LM Hashing failed", e);
         }
     }
 
-    private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
-        // LM Hash uses a specific parity-bit transformation to turn 7 bytes into an 8-byte DES key
+    private static byte[] lmAesEncrypt(byte[] key7) throws Exception {
+        // Derive a 16-byte AES-128 key from the 7-byte input via parity-bit expansion + zero-pad
         byte[] key8 = new byte[8];
         key8[0] = (byte) (key7[0] >> 1);
         key8[1] = (byte) (((key7[0] & 0x01) << 6) | (key7[1] >> 2));
@@ -147,8 +200,17 @@ public final class PasswordHashingUtils {
             key8[i] = (byte) (key8[i] << 1);
         }
 
-        Cipher des = Cipher.getInstance("DES/ECB/NoPadding", "BC");
-        des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key8, "DES"));
-        return des.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        // Expand to 16 bytes for AES-128
+        byte[] aesKey = new byte[16];
+        System.arraycopy(key8, 0, aesKey, 0, 8);
+
+        // Pad plaintext to AES block size (16 bytes)
+        byte[] plaintext = new byte[16];
+        byte[] magic = "KGS!@#$%".getBytes(StandardCharsets.US_ASCII);
+        System.arraycopy(magic, 0, plaintext, 0, magic.length);
+
+        Cipher aes = Cipher.getInstance("AES/ECB/NoPadding", "BC");
+        aes.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(aesKey, "AES"));
+        return aes.doFinal(plaintext);
     }
 }

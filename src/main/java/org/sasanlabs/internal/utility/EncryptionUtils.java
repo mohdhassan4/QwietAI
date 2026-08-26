@@ -65,16 +65,46 @@ public class EncryptionUtils {
         return EncodingUtils.encodeBase64(reversed);
     }
 
+    private static final String DEFAULT_ENCRYPTION_SECRET = resolveEncryptionSecret();
+
+    private static String resolveEncryptionSecret() {
+        String envSecret = System.getenv("ENCRYPTION_SECRET");
+        if (envSecret != null && !envSecret.isEmpty()) {
+            return envSecret;
+        }
+        // Generate a random secret at startup when env var is not set (dev mode).
+        // This avoids hardcoded credentials while allowing the app to start.
+        byte[] randomBytes = new byte[32];
+        new SecureRandom().nextBytes(randomBytes);
+        return java.util.Base64.getEncoder().encodeToString(randomBytes);
+    }
+
     private static final byte[] salt = new byte[16];
 
     static {
         new SecureRandom().nextBytes(salt);
     }
 
+    /**
+     * Returns the default encryption secret loaded from the ENCRYPTION_SECRET environment variable.
+     */
+    public static String getDefaultEncryptionSecret() {
+        return DEFAULT_ENCRYPTION_SECRET;
+    }
+
+    /**
+     * Derives an AES key using the environment-sourced default encryption secret.
+     *
+     * @return AES SecretKey derived from the default encryption secret
+     */
+    public static SecretKey getKeyFromPassword() throws EncryptionException {
+        return getKeyFromPassword(DEFAULT_ENCRYPTION_SECRET);
+    }
+
     public static SecretKey getKeyFromPassword(String password) throws EncryptionException {
         try {
             SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-            KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 1, 128);
+            KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 600000, 128);
 
             return new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
