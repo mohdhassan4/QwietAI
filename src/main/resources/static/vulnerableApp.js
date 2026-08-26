@@ -175,7 +175,22 @@ function _callbackForInnerMasterOnClickEvent(
         if (requestToken !== thisRequestToken) {
           return;
         }
-        detailTitle.innerHTML = sanitizeHtml(responseText);
+        // Adopt sanitized DOM nodes directly instead of innerHTML
+        while (detailTitle.firstChild) detailTitle.removeChild(detailTitle.firstChild);
+        var _parsed = new DOMParser().parseFromString(responseText || "", "text/html");
+        _parsed.querySelectorAll("script,style,iframe,object,embed,form").forEach(function (el) { el.remove(); });
+        _parsed.querySelectorAll("*").forEach(function (el) {
+          Array.from(el.attributes).forEach(function (attr) {
+            var name = attr.name.toLowerCase();
+            var value = (attr.value || "").trim().toLowerCase();
+            if (name.startsWith("on") || (name === "href" && value.startsWith("javascript:")) || (name === "src" && value.startsWith("javascript:"))) {
+              el.removeAttribute(attr.name);
+            }
+          });
+        });
+        while (_parsed.body.firstChild) {
+          detailTitle.appendChild(document.adoptNode(_parsed.body.firstChild));
+        }
         _loadDynamicJSAndCSS(urlToFetchHtmlTemplate, () => {
           // Re-check: the asset load itself is async, so navigation could
           // have moved on again between the AJAX response and now.
