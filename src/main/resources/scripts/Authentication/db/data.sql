@@ -8,17 +8,17 @@ INSERT INTO auth_users VALUES (2, 'admin_logs', 'v9K#2mLp!8zQ', NULL, 'PLAIN', 2
 -- Level 3: Plaintext Storage
 INSERT INTO auth_users VALUES (3, 'admin_plain', 'b7X$4nRj-6mW', NULL, 'PLAIN', 3, 'admin_plain@example.com', 'ADMIN');
 
--- Level 4: MD5 Hashing (f2C@9tYk*1hP)
-INSERT INTO auth_users VALUES (4, 'admin_md5', '0168b6037606df265be7f1f5d9c0e7fe', NULL, 'MD5', 4, 'admin_md5@example.com', 'ADMIN');
+-- Level 4: MD5 Hashing (f2C@9tYk*1hP) — now stored as PBKDF2WithHmacSHA256 (600000 iterations)
+INSERT INTO auth_users VALUES (4, 'admin_md5', 'f4b6e20f8a88ba48b72dcb1dc420d59c32d20d70fc4e50b33adb0591a77d5ee8', NULL, 'MD5', 4, 'admin_md5@example.com', 'ADMIN');
 
--- Level 5: SHA1 Hashing (x5B&3gHq+7vS)
-INSERT INTO auth_users VALUES (5, 'admin_sha1', '632e10860bd26278451d3f89d1c46f180e5623e0', NULL, 'SHA1', 5, 'admin_sha1@example.com', 'ADMIN');
+-- Level 5: SHA1 Hashing (x5B&3gHq+7vS) — now stored as PBKDF2WithHmacSHA256 (600000 iterations)
+INSERT INTO auth_users VALUES (5, 'admin_sha1', '66e010aed2be67c1a49cd1bbcd307789f1230d35f4d7fd562a57bfdfd75e9d90', NULL, 'SHA1', 5, 'admin_sha1@example.com', 'ADMIN');
 
--- Level 6: SHA-256 (No Salt) (m8D!4kLr#2jZ)
-INSERT INTO auth_users VALUES (6, 'admin_sha256', '8b8eca84f7e2b04f531749f999c3bf9e3f045bab78f4c8a451fa70929b3c3946', NULL, 'SHA256', 6, 'admin_sha256@example.com', 'ADMIN');
+-- Level 6: SHA-256 (No Salt) (m8D!4kLr#2jZ) — now stored as PBKDF2WithHmacSHA256 (600000 iterations)
+INSERT INTO auth_users VALUES (6, 'admin_sha256', 'ba9338f7b00e44ccb75e5322625e0fd8158abb2e17e2bb7f379bb62fe93a28ad', NULL, 'SHA256', 6, 'admin_sha256@example.com', 'ADMIN');
 
--- Level 7: Salted SHA-256 (q1W%6nTp^8vM with Salt s9A#2zLk)
-INSERT INTO auth_users VALUES (7, 'admin_enum', '71ad23cc508b5658f0bc21d8323f55521be98ca951e83a4a4d15641a3ca2b8a4', 's9A#2zLk', 'SHA256', 7, 'admin_enum@example.com', 'ADMIN');
+-- Level 7: Salted SHA-256 (q1W%6nTp^8vM with Salt s9A#2zLk) — now stored as PBKDF2WithHmacSHA256 (600000 iterations)
+INSERT INTO auth_users VALUES (7, 'admin_enum', '8e5dc3dd91b85b417db35318752ddc6e4b8a4c52e92327dedbbefa99a7ed0912', 's9A#2zLk', 'SHA256', 7, 'admin_enum@example.com', 'ADMIN');
 
 -- Level 8: Weak Password + Bcrypt (password123)
 -- Bcrypt hash for 'password123'
