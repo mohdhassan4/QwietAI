@@ -72,11 +72,17 @@ public final class PasswordHashingUtils {
         String[] saltAndHash = saltedSha256Hash.split(HASH_SEPARATOR, 2);
         if (saltAndHash.length != 2) {
             // Backward compatibility for old plaintext test data.
-            return saltedSha256Hash.equals(rawPassword);
+            // Constant-time comparison to prevent timing attacks.
+            return MessageDigest.isEqual(
+                    saltedSha256Hash.getBytes(StandardCharsets.UTF_8),
+                    rawPassword.getBytes(StandardCharsets.UTF_8));
         }
 
         String calculatedHash = sha256Hex(saltAndHash[0], rawPassword);
-        return saltAndHash[1].equalsIgnoreCase(calculatedHash);
+        // Constant-time comparison to prevent timing attacks.
+        return MessageDigest.isEqual(
+                saltAndHash[1].toLowerCase().getBytes(StandardCharsets.UTF_8),
+                calculatedHash.toLowerCase().getBytes(StandardCharsets.UTF_8));
     }
 
     public static String sha256Hex(String salt, String rawPassword) {
