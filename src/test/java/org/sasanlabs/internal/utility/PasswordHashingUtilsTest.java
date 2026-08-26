@@ -26,12 +26,16 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
-    @DisplayName("Unsalted SHA-256: Should generate a correct unsalted hash")
-    void sha256Hash_CorrectHex() {
-        // Test-only fixture: known SHA-256 hash for "password" (not a real credential)
-        String expected = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
-        String actual = PasswordHashingUtils.unsaltedSha256Hex("password");
-        assertEquals(expected, actual);
+    @DisplayName("Salted SHA-256: Should generate a salted hash in salt:hash format")
+    void sha256Hash_SaltedFormat() {
+        // Test-only fixture: verify salted hash format and validation (not a real credential)
+        String result = PasswordHashingUtils.saltedSha256Hex("password");
+        assertTrue(result.contains(":"), "Salted hash must contain separator");
+        String[] parts = result.split(":", 2);
+        assertEquals(2, parts.length, "Salted hash must have salt and hash parts");
+        assertEquals(32, parts[0].length(), "Salt should be 32 hex chars (16 bytes)");
+        assertTrue(PasswordHashingUtils.isValidSaltedSha256("password", result));
+        assertFalse(PasswordHashingUtils.isValidSaltedSha256("wrongPassword", result));
     }
 
     @Test

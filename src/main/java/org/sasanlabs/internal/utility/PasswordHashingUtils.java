@@ -83,8 +83,11 @@ public final class PasswordHashingUtils {
         return getHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
     }
 
-    public static String unsaltedSha256Hex(String rawPassword) {
-        return getHashAsHex(rawPassword, HashAlgorithm.SHA256);
+    public static String saltedSha256Hex(String rawPassword) {
+        byte[] saltBytes = new byte[16];
+        new SecureRandom().nextBytes(saltBytes);
+        String salt = EncodingUtils.bytesToHex(saltBytes);
+        return salt + HASH_SEPARATOR + getHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
     }
 
     // BC not used for bcrypt due to extra complexity for BC implementation

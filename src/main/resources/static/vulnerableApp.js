@@ -448,7 +448,7 @@ function generateMasterDetail(vulnerableAppEndPointData) {
 
 function _clearHelp() {
   document.getElementById("showHelp").disabled = false;
-  document.getElementById("helpText").innerHTML = "";
+  document.getElementById("helpText").textContent = "";
   document.getElementById("hideHelp").disabled = true;
 }
 
@@ -474,7 +474,7 @@ function _addingEventListenerToShowHideHelpButton(vulnerableAppEndPointData) {
         "</li>";
     }
     helpText = helpText + "</ol>";
-    document.getElementById("helpText").innerHTML = helpText;
+    document.getElementById("helpText").innerHTML = sanitizeHtml(helpText);
     document.getElementById("hideHelp").disabled = false;
   });
 

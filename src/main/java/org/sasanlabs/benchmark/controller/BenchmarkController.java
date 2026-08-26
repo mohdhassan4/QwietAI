@@ -61,10 +61,11 @@ public class BenchmarkController {
                     sanitizedTool,
                     sanitizedPath);
         } catch (IOException ioe) {
+            String sanitizedErrorMessage = LogSanitizer.sanitize(ioe.getMessage());
             LOGGER.error(
                     "Failed to persist benchmark result for tool '{}'; returning 500: {}",
                     sanitizedTool,
-                    LogSanitizer.sanitize(ioe.getMessage()));
+                    sanitizedErrorMessage);
             result.setPersistenceError("Failed to persist benchmark result");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
         }
