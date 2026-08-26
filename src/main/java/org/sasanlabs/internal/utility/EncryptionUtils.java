@@ -65,10 +65,16 @@ public class EncryptionUtils {
         return EncodingUtils.encodeBase64(reversed);
     }
 
-    private static final byte[] salt = new byte[16];
+    private static final byte[] salt = initSalt();
 
-    static {
-        new SecureRandom().nextBytes(salt);
+    private static byte[] initSalt() {
+        String envSalt = System.getenv("ENCRYPTION_SALT");
+        if (envSalt != null) {
+            return java.util.Base64.getDecoder().decode(envSalt);
+        }
+        byte[] randomSalt = new byte[16];
+        new SecureRandom().nextBytes(randomSalt);
+        return randomSalt;
     }
 
     public static SecretKey getKeyFromPassword(String password) throws EncryptionException {
