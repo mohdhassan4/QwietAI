@@ -1,6 +1,7 @@
 package org.sasanlabs.benchmark.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
@@ -114,6 +115,18 @@ class BenchmarkResultWriterTest {
         assertThat(BenchmarkResultWriter.sanitizeToolName("OWASP-ZAP_v2"))
                 .isEqualTo("owasp-zap_v2");
         assertThat(BenchmarkResultWriter.sanitizeToolName("../etc/passwd")).isEqualTo("etcpasswd");
+    }
+
+    @Test
+    void write_rejectsPathTraversalInBenchmarksDir(@TempDir Path tempDir) {
+        Path defaultDir = tempDir.resolve("benchmarks");
+        BenchmarkResultWriter writer = new BenchmarkResultWriter(MAPPER, defaultDir.toString());
+
+        String traversalDir = tempDir.resolve("benchmarks/../../etc").toString();
+
+        assertThatThrownBy(() -> writer.write(sampleResult("ZAP"), traversalDir))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("allowed base directory");
     }
 
     private static BenchmarkResult sampleResult(String tool) {

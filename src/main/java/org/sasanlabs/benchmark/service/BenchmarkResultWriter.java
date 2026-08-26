@@ -22,12 +22,16 @@ public class BenchmarkResultWriter {
 
     private final ObjectMapper objectMapper;
     private final String defaultBenchmarksDir;
+    private final Path allowedBaseDir;
 
     public BenchmarkResultWriter(
             ObjectMapper objectMapper,
             @Value("${benchmark.output.dir:benchmarks}") String defaultBenchmarksDir) {
         this.objectMapper = objectMapper;
         this.defaultBenchmarksDir = defaultBenchmarksDir;
+        Path defaultPath = Paths.get(defaultBenchmarksDir).toAbsolutePath().normalize();
+        this.allowedBaseDir =
+                defaultPath.getParent() != null ? defaultPath.getParent() : defaultPath;
     }
 
     public Path write(BenchmarkResult result) throws IOException {
@@ -35,7 +39,11 @@ public class BenchmarkResultWriter {
     }
 
     public Path write(BenchmarkResult result, String benchmarksDir) throws IOException {
-        Path dir = Paths.get(benchmarksDir);
+        Path dir = Paths.get(benchmarksDir).toAbsolutePath().normalize();
+        if (!dir.startsWith(allowedBaseDir)) {
+            throw new IllegalArgumentException(
+                    "Output directory must resolve within the allowed base directory");
+        }
         Files.createDirectories(dir);
         String fileName = sanitizeToolName(result.getTool()) + "-results.json";
         Path target = dir.resolve(fileName);
