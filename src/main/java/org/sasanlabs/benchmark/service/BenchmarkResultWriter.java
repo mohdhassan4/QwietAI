@@ -35,7 +35,13 @@ public class BenchmarkResultWriter {
     }
 
     public Path write(BenchmarkResult result, String benchmarksDir) throws IOException {
-        Path dir = Paths.get(benchmarksDir);
+        Path dir = Paths.get(benchmarksDir).normalize();
+        if (containsTraversal(dir)) {
+            throw new IOException(
+                    "Path traversal attempt: benchmarks directory '"
+                            + benchmarksDir
+                            + "' contains directory traversal components");
+        }
         Files.createDirectories(dir);
         String fileName = sanitizeToolName(result.getTool()) + "-results.json";
         Path target = dir.resolve(fileName);
@@ -60,6 +66,15 @@ public class BenchmarkResultWriter {
         } catch (AtomicMoveNotSupportedException notSupported) {
             Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
         }
+    }
+
+    private static boolean containsTraversal(Path path) {
+        for (int i = 0; i < path.getNameCount(); i++) {
+            if ("..".equals(path.getName(i).toString())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static final int MAX_TOOL_LENGTH = 64;

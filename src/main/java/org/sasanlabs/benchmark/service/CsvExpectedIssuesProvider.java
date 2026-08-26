@@ -103,7 +103,23 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
         if (csvPath.startsWith(CLASSPATH_PREFIX)) {
             return parseFromResource(csvPath.substring(CLASSPATH_PREFIX.length()));
         }
-        return parseFromPath(Paths.get(csvPath));
+        Path resolved = Paths.get(csvPath).normalize();
+        if (containsTraversal(resolved)) {
+            throw new IOException(
+                    "Path traversal attempt: CSV path '"
+                            + csvPath
+                            + "' contains directory traversal components");
+        }
+        return parseFromPath(resolved);
+    }
+
+    private static boolean containsTraversal(Path path) {
+        for (int i = 0; i < path.getNameCount(); i++) {
+            if ("..".equals(path.getName(i).toString())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private List<ExpectedIssue> parseFromResource(String location) throws IOException {
