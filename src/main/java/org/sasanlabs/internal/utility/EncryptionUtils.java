@@ -65,10 +65,31 @@ public class EncryptionUtils {
         return EncodingUtils.encodeBase64(reversed);
     }
 
+    private static final String DEFAULT_ENCRYPTION_SECRET =
+            System.getenv("ENCRYPTION_SECRET") != null
+                    ? System.getenv("ENCRYPTION_SECRET")
+                    : "changeit-dev-only";
+
     private static final byte[] salt = new byte[16];
 
     static {
         new SecureRandom().nextBytes(salt);
+    }
+
+    /**
+     * Returns the default encryption secret loaded from the ENCRYPTION_SECRET environment variable.
+     */
+    public static String getDefaultEncryptionSecret() {
+        return DEFAULT_ENCRYPTION_SECRET;
+    }
+
+    /**
+     * Derives an AES key using the environment-sourced default encryption secret.
+     *
+     * @return AES SecretKey derived from the default encryption secret
+     */
+    public static SecretKey getKeyFromPassword() throws EncryptionException {
+        return getKeyFromPassword(DEFAULT_ENCRYPTION_SECRET);
     }
 
     public static SecretKey getKeyFromPassword(String password) throws EncryptionException {
