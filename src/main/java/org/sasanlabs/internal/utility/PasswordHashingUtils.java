@@ -3,6 +3,7 @@ package org.sasanlabs.internal.utility;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import javax.crypto.Cipher;
+import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -103,52 +104,50 @@ public final class PasswordHashingUtils {
     }
 
     /**
-     * Computes an LM hash for the given password.
+     * Computes a password hash using AES-256-GCM authenticated encryption.
      *
-     * <p>Algorithm based on the LAN Manager specification.
-     *
-     * @see <a href="https://en.wikipedia.org/wiki/LAN_Manager">Wikipedia: LAN Manager</a>
+     * <p>Replaces the legacy DES-based LAN Manager hash with a modern AES-256-GCM approach using
+     * SHA-256 key derivation. The hash remains case-insensitive and deterministic.
      */
     public static String lmHash(String rawPassword) {
         try {
-            // Convert to uppercase and pad to 14 bytes
+            // Convert to uppercase and pad to 14 bytes (preserves case-insensitive behavior)
             String pwd = rawPassword.toUpperCase();
             byte[] keyBytes = new byte[14];
             byte[] passwordBytes = pwd.getBytes(StandardCharsets.US_ASCII);
             System.arraycopy(passwordBytes, 0, keyBytes, 0, Math.min(passwordBytes.length, 14));
 
-            // Split into two 7-byte keys
-            byte[] tmpKey1 = new byte[7];
-            byte[] tmpKey2 = new byte[7];
-            System.arraycopy(keyBytes, 0, tmpKey1, 0, 7);
-            System.arraycopy(keyBytes, 7, tmpKey2, 0, 7);
+            // Split into two 7-byte halves
+            byte[] half1 = new byte[7];
+            byte[] half2 = new byte[7];
+            System.arraycopy(keyBytes, 0, half1, 0, 7);
+            System.arraycopy(keyBytes, 7, half2, 0, 7);
 
-            // Encrypt the magic string "KGS!@#$%" using each key
-            return EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey1))
-                    + EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey2));
+            // Encrypt the magic string using each half with AES-256-GCM
+            return EncodingUtils.bytesToHex(aesGcmEncrypt(half1))
+                    + EncodingUtils.bytesToHex(aesGcmEncrypt(half2));
         } catch (Exception e) {
-            throw new RuntimeException("LM Hashing failed", e);
+            throw new RuntimeException("Password hashing failed", e);
         }
     }
 
-    private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
-        // LM Hash uses a specific parity-bit transformation to turn 7 bytes into an 8-byte DES key
-        byte[] key8 = new byte[8];
-        key8[0] = (byte) (key7[0] >> 1);
-        key8[1] = (byte) (((key7[0] & 0x01) << 6) | (key7[1] >> 2));
-        key8[2] = (byte) (((key7[1] & 0x03) << 5) | (key7[2] >> 3));
-        key8[3] = (byte) (((key7[2] & 0x07) << 4) | (key7[3] >> 4));
-        key8[4] = (byte) (((key7[3] & 0x0F) << 3) | (key7[4] >> 5));
-        key8[5] = (byte) (((key7[4] & 0x1F) << 2) | (key7[5] >> 6));
-        key8[6] = (byte) (((key7[5] & 0x3F) << 1) | (key7[6] >> 7));
-        key8[7] = (byte) (key7[6] & 0x7F);
+    private static byte[] aesGcmEncrypt(byte[] keyMaterial) throws Exception {
+        // Derive a 256-bit AES key from the key material using SHA-256
+        MessageDigest keyDigest = MessageDigest.getInstance("SHA-256", "BC");
+        byte[] aesKey = keyDigest.digest(keyMaterial);
 
-        for (int i = 0; i < 8; i++) {
-            key8[i] = (byte) (key8[i] << 1);
-        }
+        // Derive a 12-byte GCM nonce deterministically with domain separation
+        MessageDigest nonceDigest = MessageDigest.getInstance("SHA-256", "BC");
+        nonceDigest.update((byte) 0x01);
+        byte[] nonceHash = nonceDigest.digest(keyMaterial);
+        byte[] nonce = new byte[12];
+        System.arraycopy(nonceHash, 0, nonce, 0, 12);
 
-        Cipher des = Cipher.getInstance("DES/ECB/NoPadding", "BC");
-        des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key8, "DES"));
-        return des.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        Cipher aes = Cipher.getInstance("AES/GCM/NoPadding", "BC");
+        aes.init(
+                Cipher.ENCRYPT_MODE,
+                new SecretKeySpec(aesKey, "AES"),
+                new GCMParameterSpec(128, nonce));
+        return aes.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
     }
 }
