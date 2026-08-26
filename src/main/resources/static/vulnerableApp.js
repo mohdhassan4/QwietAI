@@ -327,7 +327,7 @@ function genericResponseHandler(xmlHttpRequest, callBack, isJson, onError) {
         callBack(xmlHttpRequest.responseText, xmlHttpRequest);
       }
     } else if (xmlHttpRequest.status == 400) {
-      alert("There was an error 400");
+      console.warn("There was an error 400");
       if (typeof onError === "function") {
         onError(xmlHttpRequest);
       }
