@@ -22,23 +22,33 @@ public class BenchmarkResultWriter {
 
     private final ObjectMapper objectMapper;
     private final String defaultBenchmarksDir;
+    private final Path allowedBaseDir;
 
     public BenchmarkResultWriter(
             ObjectMapper objectMapper,
             @Value("${benchmark.output.dir:benchmarks}") String defaultBenchmarksDir) {
         this.objectMapper = objectMapper;
         this.defaultBenchmarksDir = defaultBenchmarksDir;
+        this.allowedBaseDir = Paths.get(defaultBenchmarksDir).toAbsolutePath().normalize();
     }
 
     public Path write(BenchmarkResult result) throws IOException {
-        return write(result, defaultBenchmarksDir);
+        return writeToDir(result, allowedBaseDir);
     }
 
     public Path write(BenchmarkResult result, String benchmarksDir) throws IOException {
-        Path dir = Paths.get(benchmarksDir);
+        Path dir = Paths.get(benchmarksDir).toAbsolutePath().normalize();
+        return writeToDir(result, dir);
+    }
+
+    private Path writeToDir(BenchmarkResult result, Path dir) throws IOException {
         Files.createDirectories(dir);
         String fileName = sanitizeToolName(result.getTool()) + "-results.json";
-        Path target = dir.resolve(fileName);
+        Path target = dir.resolve(fileName).toAbsolutePath().normalize();
+        if (!target.startsWith(dir)) {
+            throw new IOException(
+                    "Path traversal detected: resolved path escapes the target directory");
+        }
         Path temp = Files.createTempFile(dir, fileName + ".", ".tmp");
         try {
             objectMapper.writerWithDefaultPrettyPrinter().writeValue(temp.toFile(), result);
