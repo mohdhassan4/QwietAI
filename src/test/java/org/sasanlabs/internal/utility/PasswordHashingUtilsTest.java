@@ -50,6 +50,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("BCrypt: Should validate successfully even though hashes are unique each time")
     void bcrypt_UniqueGenerationAndValidation() {
+        // Not a real credential: test fixture value for hashing assertions.
         String password = "mySecretPassword";
         String hash1 = PasswordHashingUtils.bCryptHash(password);
         String hash2 = PasswordHashingUtils.bCryptHash(password);
@@ -65,6 +66,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("LM Hash: Should be deterministic and case-insensitive")
     void lmHash_DeterministicAndCaseInsensitive() {
+        // Not real credentials: test fixture values for LM hash assertions.
         // LM hash is case-insensitive (converts to uppercase internally)
         String hash1 = PasswordHashingUtils.lmHash("password");
         String hash2 = PasswordHashingUtils.lmHash("PASSWORD");

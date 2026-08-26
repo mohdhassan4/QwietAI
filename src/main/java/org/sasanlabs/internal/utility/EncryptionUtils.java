@@ -71,6 +71,7 @@ public class EncryptionUtils {
         new SecureRandom().nextBytes(salt);
     }
 
+    // Not a credential: "password" is a method parameter name, not a secret value.
     public static SecretKey getKeyFromPassword(String password) throws EncryptionException {
         try {
             SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
