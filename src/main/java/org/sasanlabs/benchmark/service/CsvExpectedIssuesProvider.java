@@ -103,7 +103,16 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
         if (csvPath.startsWith(CLASSPATH_PREFIX)) {
             return parseFromResource(csvPath.substring(CLASSPATH_PREFIX.length()));
         }
-        return parseFromPath(Paths.get(csvPath));
+        Path resolved = Paths.get(csvPath).normalize();
+        // Reject paths that contain parent directory traversal segments after normalization
+        for (int i = 0; i < resolved.getNameCount(); i++) {
+            if ("..".equals(resolved.getName(i).toString())) {
+                throw new IOException(
+                        "Path traversal attempt: CSV path must not traverse"
+                                + " parent directories");
+            }
+        }
+        return parseFromPath(resolved);
     }
 
     private List<ExpectedIssue> parseFromResource(String location) throws IOException {

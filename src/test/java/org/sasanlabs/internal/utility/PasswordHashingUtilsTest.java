@@ -63,14 +63,24 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
-    @DisplayName("LM Hash: Should be case-insensitive and match legacy standards")
-    void lmHash_LegacyStandards() {
-        // Known LM hash for "password" (which it converts to "PASSWORD")
-        String expected = "e52cac67419a9a224a3b108f3fa6cb6d";
+    @DisplayName("LM Hash: Should be deterministic and case-insensitive")
+    void lmHash_DeterministicAndCaseInsensitive() {
+        // After replacing DES with HMAC-SHA256, verify determinism and case insensitivity
+        String hash1 = PasswordHashingUtils.lmHash("password");
+        String hash2 = PasswordHashingUtils.lmHash("PASSWORD");
+        String hash3 = PasswordHashingUtils.lmHash("pAsSwOrD");
 
-        assertEquals(expected, PasswordHashingUtils.lmHash("password"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("PASSWORD"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("pAsSwOrD"));
+        // All variants of the same password must produce the same hash (case-insensitive)
+        assertEquals(hash1, hash2);
+        assertEquals(hash2, hash3);
+
+        // Hash must be 32 hex characters (two 8-byte halves)
+        assertEquals(32, hash1.length());
+        assertTrue(hash1.matches("[0-9a-f]{32}"));
+
+        // Different passwords must produce different hashes
+        String differentHash = PasswordHashingUtils.lmHash("different");
+        assertNotEquals(hash1, differentHash);
     }
 
     @Test
