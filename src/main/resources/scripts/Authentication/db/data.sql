@@ -1,12 +1,15 @@
 -- Level 1: SQL Injection
+-- Intentional demo credential for vulnerability exercise (not a production secret)
 -- Real password: 'not_needed_for_sqli'
 INSERT INTO auth_users VALUES (1, 'admin_sqli', 'not_needed_for_sqli', NULL, 'PLAIN', 1, 'admin_sqli@example.com', 'ADMIN');
 
 -- Level 2: Sensitive Data Logging
+-- Intentional demo credential for vulnerability exercise (not a production secret)
 -- Real password: 'v9K#2mLp!8zQ'
 INSERT INTO auth_users VALUES (2, 'admin_logs', 'v9K#2mLp!8zQ', NULL, 'PLAIN', 2, 'admin_logs@example.com', 'ADMIN');
 
 -- Level 3: Plaintext Storage
+-- Intentional demo credential for vulnerability exercise (not a production secret)
 -- Real password: 'b7X$4nRj-6mW'
 INSERT INTO auth_users VALUES (3, 'admin_plain', 'b7X$4nRj-6mW', NULL, 'PLAIN', 3, 'admin_plain@example.com', 'ADMIN');
 
