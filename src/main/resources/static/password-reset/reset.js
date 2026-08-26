@@ -1,3 +1,10 @@
+function _safeGet(obj, key) {
+  if (obj == null || !Object.prototype.hasOwnProperty.call(obj, key)) {
+    return undefined;
+  }
+  return obj[key];
+}
+
 function getQueryParam(name) {
   var params = new URLSearchParams(window.location.search);
   return params.get(name);
@@ -115,7 +122,9 @@ function setResult(data) {
     content && content.message ? content.message : "Request completed.";
   if (content && typeof content === "object") {
     getVisibleDetailKeys(content).forEach(function (key) {
-      appendDetailRow(resultDetails, key, content[key]);
+      if (Object.prototype.hasOwnProperty.call(content, key)) {
+        appendDetailRow(resultDetails, key, _safeGet(content, key));
+      }
     });
   }
 
