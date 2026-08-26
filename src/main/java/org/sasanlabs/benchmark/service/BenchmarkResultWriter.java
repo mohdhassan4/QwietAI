@@ -35,7 +35,16 @@ public class BenchmarkResultWriter {
     }
 
     public Path write(BenchmarkResult result, String benchmarksDir) throws IOException {
-        Path dir = Paths.get(benchmarksDir);
+        // Reject directory paths that contain traversal sequences
+        Path rawDir = Paths.get(benchmarksDir);
+        for (int i = 0; i < rawDir.getNameCount(); i++) {
+            if ("..".equals(rawDir.getName(i).toString())) {
+                throw new IOException(
+                        "Invalid benchmarks directory — path traversal detected: "
+                                + benchmarksDir);
+            }
+        }
+        Path dir = rawDir.toAbsolutePath().normalize();
         Files.createDirectories(dir);
         String fileName = sanitizeToolName(result.getTool()) + "-results.json";
         Path target = dir.resolve(fileName);
