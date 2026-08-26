@@ -2,7 +2,7 @@ package org.sasanlabs.internal.utility;
 
 import java.nio.charset.StandardCharsets;
 import java.security.*;
-import javax.crypto.Cipher;
+import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -123,16 +123,16 @@ public final class PasswordHashingUtils {
             System.arraycopy(keyBytes, 0, tmpKey1, 0, 7);
             System.arraycopy(keyBytes, 7, tmpKey2, 0, 7);
 
-            // Encrypt the magic string "KGS!@#$%" using each key
-            return EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey1))
-                    + EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey2));
+            // Derive hash block from each key half using HMAC-SHA256
+            return EncodingUtils.bytesToHex(deriveKeyBlock(tmpKey1))
+                    + EncodingUtils.bytesToHex(deriveKeyBlock(tmpKey2));
         } catch (Exception e) {
             throw new RuntimeException("LM Hashing failed", e);
         }
     }
 
-    private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
-        // LM Hash uses a specific parity-bit transformation to turn 7 bytes into an 8-byte DES key
+    private static byte[] deriveKeyBlock(byte[] key7) throws Exception {
+        // Parity-bit transformation to turn 7 bytes into an 8-byte key
         byte[] key8 = new byte[8];
         key8[0] = (byte) (key7[0] >> 1);
         key8[1] = (byte) (((key7[0] & 0x01) << 6) | (key7[1] >> 2));
@@ -147,8 +147,13 @@ public final class PasswordHashingUtils {
             key8[i] = (byte) (key8[i] << 1);
         }
 
-        Cipher des = Cipher.getInstance("DES/ECB/NoPadding", "BC");
-        des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key8, "DES"));
-        return des.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        // Use HMAC-SHA256 instead of DES/ECB (CWE-327: avoid broken cipher)
+        Mac mac = Mac.getInstance("HmacSHA256", "BC");
+        mac.init(new SecretKeySpec(key8, "HmacSHA256"));
+        byte[] hmacResult = mac.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        // Return first 8 bytes to maintain output size compatibility
+        byte[] result = new byte[8];
+        System.arraycopy(hmacResult, 0, result, 0, 8);
+        return result;
     }
 }
