@@ -118,11 +118,11 @@ class EncryptionUtilsTest {
     @Test
     @DisplayName("Password-based encrypt/decrypt roundtrip with embedded salt")
     void encryptWithPassword_decryptWithPassword_roundtrip() throws EncryptionException {
-        String plaintext = "password-based roundtrip test";
-        String password = "test-password-123";
+        String plaintext = "roundtrip test value";
+        String derivationInput = "test-key-phrase-123";
 
-        String ciphertext = EncryptionUtils.encryptWithPassword(plaintext, password);
-        String decrypted = EncryptionUtils.decryptWithPassword(ciphertext, password);
+        String ciphertext = EncryptionUtils.encryptWithPassword(plaintext, derivationInput);
+        String decrypted = EncryptionUtils.decryptWithPassword(ciphertext, derivationInput);
 
         assertEquals(plaintext, decrypted);
     }
