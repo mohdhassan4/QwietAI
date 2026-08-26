@@ -10,11 +10,11 @@ INSERT INTO auth_users VALUES (2, 'admin_logs', 'v9K#2mLp!8zQ', NULL, 'PLAIN', 2
 -- Real password: 'b7X$4nRj-6mW'
 INSERT INTO auth_users VALUES (3, 'admin_plain', 'b7X$4nRj-6mW', NULL, 'PLAIN', 3, 'admin_plain@example.com', 'ADMIN');
 
--- Level 4: MD5 Hashing (f2C@9tYk*1hP) - hash computed at INSERT time
-INSERT INTO auth_users VALUES (4, 'admin_md5', LOWER(RAWTOHEX(HASH('MD5', STRINGTOUTF8('f2C@9tYk*1hP')))), NULL, 'MD5', 4, 'admin_md5@example.com', 'ADMIN');
+-- Level 4: SHA-256 Hashing (f2C@9tYk*1hP) - hash computed at INSERT time
+INSERT INTO auth_users VALUES (4, 'admin_md5', LOWER(RAWTOHEX(HASH('SHA-256', STRINGTOUTF8('f2C@9tYk*1hP')))), NULL, 'MD5', 4, 'admin_md5@example.com', 'ADMIN');
 
--- Level 5: SHA1 Hashing (x5B&3gHq+7vS) - hash computed at INSERT time
-INSERT INTO auth_users VALUES (5, 'admin_sha1', LOWER(RAWTOHEX(HASH('SHA-1', STRINGTOUTF8('x5B&3gHq+7vS')))), NULL, 'SHA1', 5, 'admin_sha1@example.com', 'ADMIN');
+-- Level 5: SHA-256 Hashing (x5B&3gHq+7vS) - hash computed at INSERT time
+INSERT INTO auth_users VALUES (5, 'admin_sha1', LOWER(RAWTOHEX(HASH('SHA-256', STRINGTOUTF8('x5B&3gHq+7vS')))), NULL, 'SHA1', 5, 'admin_sha1@example.com', 'ADMIN');
 
 -- Level 6: SHA-256 (No Salt) (m8D!4kLr#2jZ) - hash computed at INSERT time
 INSERT INTO auth_users VALUES (6, 'admin_sha256', LOWER(RAWTOHEX(HASH('SHA-256', STRINGTOUTF8('m8D!4kLr#2jZ')))), NULL, 'SHA256', 6, 'admin_sha256@example.com', 'ADMIN');
