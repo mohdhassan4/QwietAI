@@ -2,8 +2,6 @@ package org.sasanlabs.internal.utility;
 
 import java.nio.charset.StandardCharsets;
 import java.security.*;
-import javax.crypto.Cipher;
-import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -104,58 +102,33 @@ public final class PasswordHashingUtils {
     }
 
     /**
-     * Computes a password hash using AES-256-GCM authenticated encryption.
+     * Computes a deterministic password hash using HMAC-SHA256.
      *
-     * <p>Replaces the legacy DES-based LAN Manager hash with a modern AES-256-GCM approach using
-     * SHA-256 key derivation. The hash remains case-insensitive and deterministic.
+     * <p>Replaces the legacy DES-based LAN Manager hash. The hash remains case-insensitive and
+     * deterministic, using HMAC-SHA256 with the password half as the key.
      */
     public static String lmHash(String rawPassword) {
         try {
-            // Convert to uppercase and pad to 14 bytes (preserves case-insensitive behavior)
             String pwd = rawPassword.toUpperCase();
             byte[] keyBytes = new byte[14];
             byte[] passwordBytes = pwd.getBytes(StandardCharsets.US_ASCII);
             System.arraycopy(passwordBytes, 0, keyBytes, 0, Math.min(passwordBytes.length, 14));
 
-            // Split into two 7-byte halves
             byte[] half1 = new byte[7];
             byte[] half2 = new byte[7];
             System.arraycopy(keyBytes, 0, half1, 0, 7);
             System.arraycopy(keyBytes, 7, half2, 0, 7);
 
-            // Encrypt the magic string using each half with AES-256-GCM
-            return EncodingUtils.bytesToHex(aesGcmEncrypt(half1))
-                    + EncodingUtils.bytesToHex(aesGcmEncrypt(half2));
+            return EncodingUtils.bytesToHex(hmacHash(half1))
+                    + EncodingUtils.bytesToHex(hmacHash(half2));
         } catch (Exception e) {
             throw new RuntimeException("Password hashing failed", e);
         }
     }
 
-    private static final byte[] AES_KEY_SALT =
-            new byte[] {
-                (byte) 0x4a, (byte) 0x9f, (byte) 0x2c, (byte) 0x8d,
-                (byte) 0xe1, (byte) 0x7b, (byte) 0x56, (byte) 0xa3,
-                (byte) 0x0f, (byte) 0xd4, (byte) 0x92, (byte) 0x6e,
-                (byte) 0xb7, (byte) 0x1a, (byte) 0xc5, (byte) 0x38
-            };
-
-    private static byte[] aesGcmEncrypt(byte[] keyMaterial) throws Exception {
-        MessageDigest keyDigest = MessageDigest.getInstance("SHA-256", "BC");
-        keyDigest.update(AES_KEY_SALT);
-        byte[] aesKey = keyDigest.digest(keyMaterial);
-
-        MessageDigest nonceDigest = MessageDigest.getInstance("SHA-256", "BC");
-        nonceDigest.update((byte) 0x01);
-        nonceDigest.update(AES_KEY_SALT);
-        byte[] nonceHash = nonceDigest.digest(keyMaterial);
-        byte[] nonce = new byte[12];
-        System.arraycopy(nonceHash, 0, nonce, 0, 12);
-
-        Cipher aes = Cipher.getInstance("AES/GCM/NoPadding", "BC");
-        aes.init(
-                Cipher.ENCRYPT_MODE,
-                new SecretKeySpec(aesKey, "AES"),
-                new GCMParameterSpec(128, nonce));
-        return aes.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+    private static byte[] hmacHash(byte[] keyMaterial) throws Exception {
+        javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
+        mac.init(new SecretKeySpec(keyMaterial, "HmacSHA256"));
+        return mac.doFinal("LM_HASH_DOMAIN_SEP".getBytes(StandardCharsets.US_ASCII));
     }
 }
