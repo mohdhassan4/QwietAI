@@ -43,6 +43,8 @@ import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 @Configuration
 public class VulnerableAppConfiguration {
 
+    private static final String CREATE_APP_USER_SQL =
+            "CREATE USER IF NOT EXISTS application PASSWORD ?";
     private static final String I18N_MESSAGE_FILE_LOCATION = "classpath:i18n/messages";
     private static final String ATTACK_VECTOR_PAYLOAD_PROPERTY_FILES_LOCATION_PATTERN =
             "classpath:/attackvectors/*.properties";
@@ -131,8 +133,14 @@ public class VulnerableAppConfiguration {
             @Value("${spring.datasource.application.password}") String appPassword) {
         ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
         JdbcTemplate adminJdbcTemplate = new JdbcTemplate(adminDataSource);
-        adminJdbcTemplate.execute(
-                String.format("CREATE USER application PASSWORD '%s'", appPassword));
+        adminJdbcTemplate.execute((java.sql.Connection conn) -> {
+            try (java.sql.PreparedStatement ps =
+                    conn.prepareStatement(CREATE_APP_USER_SQL)) {
+                ps.setString(1, appPassword);
+                ps.execute();
+            }
+            return null;
+        });
         populator.addScript(new ClassPathResource("scripts/SQLInjection/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/xss/PersistentXSS/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/XXEVulnerability/schema.sql"));
