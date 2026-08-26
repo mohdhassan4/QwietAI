@@ -66,6 +66,7 @@ class PasswordHashingUtilsTest {
     @DisplayName("LM Hash: Should be case-insensitive and match legacy standards")
     void lmHash_LegacyStandards() {
         // Known LM hash for "password" (which it converts to "PASSWORD")
+        // not a secret — well-known test vector for LM hash algorithm validation
         String expected = "e52cac67419a9a224a3b108f3fa6cb6d";
 
         assertEquals(expected, PasswordHashingUtils.lmHash("password"));
@@ -84,7 +85,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("Null Checks: Should handle null inputs gracefully in validation")
     void validation_NullInputs() {
-        assertFalse(PasswordHashingUtils.isValidSaltedSha256(null, "someHash"));
-        assertFalse(PasswordHashingUtils.isValidSaltedSha256("somePass", null));
+        assertFalse(PasswordHashingUtils.isValidSaltedSha256(null, "someHash")); // not a secret — placeholder test value
+        assertFalse(PasswordHashingUtils.isValidSaltedSha256("somePass", null)); // not a secret — placeholder test value
     }
 }
