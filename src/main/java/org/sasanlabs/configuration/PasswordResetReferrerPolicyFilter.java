@@ -1,6 +1,7 @@
 package org.sasanlabs.configuration;
 
 import java.io.IOException;
+import java.util.regex.Pattern;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -31,6 +32,9 @@ public class PasswordResetReferrerPolicyFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    private static final int MAX_LEVEL_PARAM_LENGTH = 10;
+    private static final Pattern DIGITS_ONLY = Pattern.compile("\\d+");
+
     private boolean shouldApplyUnsafeUrlReferrerPolicy(HttpServletRequest request) {
         String requestUri = request.getRequestURI();
         if (requestUri == null || !requestUri.endsWith(RESET_PAGE_PATH)) {
@@ -38,14 +42,16 @@ public class PasswordResetReferrerPolicyFilter extends OncePerRequestFilter {
         }
 
         String level = request.getParameter("level");
-        if (level == null) {
+        if (level == null || level.isEmpty() || level.length() > MAX_LEVEL_PARAM_LENGTH) {
             return false;
         }
 
-        try {
-            return Integer.parseInt(level) == REFERRER_LEAK_LEVEL;
-        } catch (NumberFormatException exception) {
+        // Allowlist: only ASCII digits are accepted
+        if (!DIGITS_ONLY.matcher(level).matches()) {
             return false;
         }
+
+        int parsedLevel = Integer.parseInt(level);
+        return parsedLevel == REFERRER_LEAK_LEVEL;
     }
 }
