@@ -31,6 +31,10 @@ public class PasswordResetReferrerPolicyFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    private static final int MAX_LEVEL_LENGTH = 9;
+    private static final java.util.regex.Pattern DIGITS_ONLY =
+            java.util.regex.Pattern.compile("\\d+");
+
     private boolean shouldApplyUnsafeUrlReferrerPolicy(HttpServletRequest request) {
         String requestUri = request.getRequestURI();
         if (requestUri == null || !requestUri.endsWith(RESET_PAGE_PATH)) {
@@ -38,14 +42,16 @@ public class PasswordResetReferrerPolicyFilter extends OncePerRequestFilter {
         }
 
         String level = request.getParameter("level");
-        if (level == null) {
+        if (level == null || level.isEmpty()) {
             return false;
         }
 
-        try {
-            return Integer.parseInt(level) == REFERRER_LEAK_LEVEL;
-        } catch (NumberFormatException exception) {
+        // Validate input: must be a reasonable-length string of digits only
+        if (level.length() > MAX_LEVEL_LENGTH || !DIGITS_ONLY.matcher(level).matches()) {
             return false;
         }
+
+        int parsedLevel = Integer.parseInt(level);
+        return parsedLevel == REFERRER_LEAK_LEVEL;
     }
 }
