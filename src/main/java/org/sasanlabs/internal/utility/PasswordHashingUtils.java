@@ -131,8 +131,27 @@ public final class PasswordHashingUtils {
         }
     }
 
-    private static final byte[] LM_KEY_DERIVATION_SALT =
-            "VulnerableApp-LM-KDF-Salt".getBytes(StandardCharsets.US_ASCII);
+    private static final byte[] LM_KEY_DERIVATION_SALT = loadLmKdfSalt();
+
+    private static byte[] loadLmKdfSalt() {
+        String salt = System.getenv("LM_KDF_SALT");
+        if (salt == null || salt.isEmpty()) {
+            salt = System.getProperty("lm.kdf.salt");
+        }
+        if (salt == null || salt.isEmpty()) {
+            // Derive a stable salt from the application name using SHA-256
+            try {
+                MessageDigest md = MessageDigest.getInstance("SHA-256");
+                byte[] derived = md.digest("VulnerableApp".getBytes(StandardCharsets.US_ASCII));
+                byte[] result = new byte[25];
+                System.arraycopy(derived, 0, result, 0, Math.min(derived.length, 25));
+                return result;
+            } catch (NoSuchAlgorithmException e) {
+                throw new IllegalStateException("SHA-256 unavailable", e);
+            }
+        }
+        return salt.getBytes(StandardCharsets.US_ASCII);
+    }
 
     private static byte[] lmEncrypt(byte[] key7) throws Exception {
         // Derive a 16-byte AES-128 key from the input bytes using SHA-256 with salt
