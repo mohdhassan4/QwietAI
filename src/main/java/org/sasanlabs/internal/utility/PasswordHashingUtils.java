@@ -12,6 +12,12 @@ public final class PasswordHashingUtils {
 
     private static final String HASH_SEPARATOR = ":";
     private static final int bcryptWorkFactor = 12;
+    private static final byte[] LM_AES_SALT;
+
+    static {
+        LM_AES_SALT = new byte[16];
+        new SecureRandom().nextBytes(LM_AES_SALT);
+    }
 
     private PasswordHashingUtils() {}
 
@@ -40,21 +46,43 @@ public final class PasswordHashingUtils {
         }
     }
 
+    public static String md4Hex(String salt, String rawPassword) {
+        return getHashAsHex(rawPassword, HashAlgorithm.MD4, salt);
+    }
+
+    /** @deprecated Use {@link #md4Hex(String, String)} with a proper salt. */
+    @Deprecated
     public static String md4Hex(String rawPassword) {
-        return getHashAsHex(rawPassword, HashAlgorithm.MD4);
+        return getHashAsHex(rawPassword, HashAlgorithm.MD4, null);
     }
 
+    public static String md5Hex(String salt, String rawPassword) {
+        return getHashAsHex(rawPassword, HashAlgorithm.MD5, salt);
+    }
+
+    /** @deprecated Use {@link #md5Hex(String, String)} with a proper salt. */
+    @Deprecated
     public static String md5Hex(String rawPassword) {
-        return getHashAsHex(rawPassword, HashAlgorithm.MD5);
+        return getHashAsHex(rawPassword, HashAlgorithm.MD5, null);
     }
 
+    public static String sha1Hex(String salt, String rawPassword) {
+        return getHashAsHex(rawPassword, HashAlgorithm.SHA1, salt);
+    }
+
+    /** @deprecated Use {@link #sha1Hex(String, String)} with a proper salt. */
+    @Deprecated
     public static String sha1Hex(String rawPassword) {
-        return getHashAsHex(rawPassword, HashAlgorithm.SHA1);
+        return getHashAsHex(rawPassword, HashAlgorithm.SHA1, null);
     }
 
-    public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
+    public static String getHashAsHex(
+            String rawPassword, HashAlgorithm hashAlgorithm, String salt) {
         try {
             MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
+            if (salt != null && !salt.isEmpty()) {
+                messageDigest.update(salt.getBytes(StandardCharsets.UTF_8));
+            }
             byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
@@ -62,6 +90,14 @@ public final class PasswordHashingUtils {
         } catch (NoSuchProviderException e) {
             throw new RuntimeException("Security Provider Bouncy Castle not found", e);
         }
+    }
+
+    /**
+     * @deprecated Use {@link #getHashAsHex(String, HashAlgorithm, String)} with a proper salt.
+     */
+    @Deprecated
+    public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
+        return getHashAsHex(rawPassword, hashAlgorithm, null);
     }
 
     public static boolean isValidSaltedSha256(String rawPassword, String saltedSha256Hash) {
@@ -80,11 +116,13 @@ public final class PasswordHashingUtils {
     }
 
     public static String sha256Hex(String salt, String rawPassword) {
-        return getHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
+        return getHashAsHex(rawPassword, HashAlgorithm.SHA256, salt);
     }
 
+    /** @deprecated Use {@link #sha256Hex(String, String)} with a proper salt. */
+    @Deprecated
     public static String unsaltedSha256Hex(String rawPassword) {
-        return getHashAsHex(rawPassword, HashAlgorithm.SHA256);
+        return getHashAsHex(rawPassword, HashAlgorithm.SHA256, null);
     }
 
     // BC not used for bcrypt due to extra complexity for BC implementation
@@ -123,32 +161,27 @@ public final class PasswordHashingUtils {
             System.arraycopy(keyBytes, 0, tmpKey1, 0, 7);
             System.arraycopy(keyBytes, 7, tmpKey2, 0, 7);
 
-            // Encrypt the magic string "KGS!@#$%" using each key
-            return EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey1))
-                    + EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey2));
+            // Encrypt the magic constant using each key with AES-256
+            return EncodingUtils.bytesToHex(lmAesEncrypt(tmpKey1))
+                    + EncodingUtils.bytesToHex(lmAesEncrypt(tmpKey2));
         } catch (Exception e) {
             throw new RuntimeException("LM Hashing failed", e);
         }
     }
 
-    private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
-        // LM Hash uses a specific parity-bit transformation to turn 7 bytes into an 8-byte DES key
-        byte[] key8 = new byte[8];
-        key8[0] = (byte) (key7[0] >> 1);
-        key8[1] = (byte) (((key7[0] & 0x01) << 6) | (key7[1] >> 2));
-        key8[2] = (byte) (((key7[1] & 0x03) << 5) | (key7[2] >> 3));
-        key8[3] = (byte) (((key7[2] & 0x07) << 4) | (key7[3] >> 4));
-        key8[4] = (byte) (((key7[3] & 0x0F) << 3) | (key7[4] >> 5));
-        key8[5] = (byte) (((key7[4] & 0x1F) << 2) | (key7[5] >> 6));
-        key8[6] = (byte) (((key7[5] & 0x3F) << 1) | (key7[6] >> 7));
-        key8[7] = (byte) (key7[6] & 0x7F);
+    private static byte[] lmAesEncrypt(byte[] key7) throws Exception {
+        // Derive a 256-bit AES key from the 7-byte password fragment using SHA-256 with salt
+        MessageDigest sha256 = MessageDigest.getInstance("SHA-256", "BC");
+        sha256.update(LM_AES_SALT);
+        byte[] aesKey = sha256.digest(key7);
 
-        for (int i = 0; i < 8; i++) {
-            key8[i] = (byte) (key8[i] << 1);
-        }
+        // AES magic constant (16 bytes): "KGS!@#$%" padded with zeros to AES block size
+        byte[] magicConstant = new byte[16];
+        byte[] magicPrefix = "KGS!@#$%".getBytes(StandardCharsets.US_ASCII);
+        System.arraycopy(magicPrefix, 0, magicConstant, 0, magicPrefix.length);
 
-        Cipher des = Cipher.getInstance("DES/ECB/NoPadding", "BC");
-        des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key8, "DES"));
-        return des.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        Cipher aes = Cipher.getInstance("AES/ECB/NoPadding", "BC");
+        aes.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(aesKey, "AES"));
+        return aes.doFinal(magicConstant);
     }
 }

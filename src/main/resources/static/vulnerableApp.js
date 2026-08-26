@@ -187,7 +187,7 @@ function createColumn(detailedInformationArray, key) {
   span.classList.add(
     isSecure ? "secure-variant-tooltip-text" : "unsecure-variant-tooltip-text"
   );
-  span.innerHTML = isSecure ? variantTooltip.secure : variantTooltip.unsecure;
+  span.textContent = isSecure ? variantTooltip.secure : variantTooltip.unsecure;
   svgWithTooltip.appendChild(span);
   svgWithTooltip.appendChild(_getSvgElementForVariant(isSecure));
   column.appendChild(svgWithTooltip);
@@ -413,7 +413,9 @@ function _clearHelp() {
 function _addingEventListenerToShowHideHelpButton(vulnerableAppEndPointData) {
   document.getElementById("showHelp").addEventListener("click", function () {
     document.getElementById("showHelp").disabled = true;
-    let helpText = "<ol>";
+    let helpTextEl = document.getElementById("helpText");
+    helpTextEl.textContent = "";
+    let ol = document.createElement("ol");
     for (let index in vulnerableAppEndPointData[currentId][
       "Detailed Information"
     ][currentKey]["AttackVectors"]) {
@@ -423,16 +425,19 @@ function _addingEventListenerToShowHideHelpButton(vulnerableAppEndPointData) {
         ]["AttackVectors"][index];
       let curlPayload = attackVector["CurlPayload"];
       let description = attackVector["Description"];
-      helpText =
-        helpText +
-        "<li><b>Description about the attack:</b> " +
-        description +
-        "<br/><b>Payload:</b> " +
-        curlPayload +
-        "</li>";
+      let li = document.createElement("li");
+      let descLabel = document.createElement("b");
+      descLabel.textContent = "Description about the attack:";
+      li.appendChild(descLabel);
+      li.appendChild(document.createTextNode(" " + description));
+      li.appendChild(document.createElement("br"));
+      let payloadLabel = document.createElement("b");
+      payloadLabel.textContent = "Payload:";
+      li.appendChild(payloadLabel);
+      li.appendChild(document.createTextNode(" " + curlPayload));
+      ol.appendChild(li);
     }
-    helpText = helpText + "</ol>";
-    document.getElementById("helpText").innerHTML = helpText;
+    helpTextEl.appendChild(ol);
     document.getElementById("hideHelp").disabled = false;
   });
 

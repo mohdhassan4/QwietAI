@@ -39,12 +39,39 @@ class PasswordHashingUtilsTest {
     void isValidSaltedSha256_CorrectValidation() {
         String salt = "random_salt";
         String rawPassword = "securePassword123";
-        // Manual calculation of SHA-256(salt + password)
+        // Salted SHA-256: salt is fed via digest.update before digest.digest
         String hash = PasswordHashingUtils.sha256Hex(salt, rawPassword);
         String storedValue = salt + ":" + hash;
 
         assertTrue(PasswordHashingUtils.isValidSaltedSha256(rawPassword, storedValue));
         assertFalse(PasswordHashingUtils.isValidSaltedSha256("wrongPass", storedValue));
+    }
+
+    @Test
+    @DisplayName("MD5: Should generate different hashes with different salts")
+    void md5Hash_SaltedDiffers() {
+        String password = "password";
+        String saltA = "saltA";
+        String saltB = "saltB";
+
+        String hashA = PasswordHashingUtils.md5Hex(saltA, password);
+        String hashB = PasswordHashingUtils.md5Hex(saltB, password);
+        String hashNone = PasswordHashingUtils.md5Hex(password);
+
+        assertNotEquals(hashA, hashB);
+        assertNotEquals(hashA, hashNone);
+    }
+
+    @Test
+    @DisplayName("SHA-1: Should generate different hashes with different salts")
+    void sha1Hash_SaltedDiffers() {
+        String password = "password";
+        String salt = "mySalt";
+
+        String salted = PasswordHashingUtils.sha1Hex(salt, password);
+        String unsalted = PasswordHashingUtils.sha1Hex(password);
+
+        assertNotEquals(salted, unsalted);
     }
 
     @Test
@@ -63,14 +90,21 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
-    @DisplayName("LM Hash: Should be case-insensitive and match legacy standards")
-    void lmHash_LegacyStandards() {
-        // Known LM hash for "password" (which it converts to "PASSWORD")
-        String expected = "e52cac67419a9a224a3b108f3fa6cb6d";
+    @DisplayName("LM Hash: Should be case-insensitive and deterministic")
+    void lmHash_CaseInsensitiveAndDeterministic() {
+        // Hash must be deterministic: same input yields same output
+        String hash1 = PasswordHashingUtils.lmHash("password");
+        String hash2 = PasswordHashingUtils.lmHash("password");
+        assertEquals(hash1, hash2);
 
-        assertEquals(expected, PasswordHashingUtils.lmHash("password"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("PASSWORD"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("pAsSwOrD"));
+        // Hash must be case-insensitive (input is uppercased internally)
+        assertEquals(hash1, PasswordHashingUtils.lmHash("PASSWORD"));
+        assertEquals(hash1, PasswordHashingUtils.lmHash("pAsSwOrD"));
+
+        // Output must be a non-empty hex string (AES-256 produces 32 bytes = 64 hex chars)
+        assertNotNull(hash1);
+        assertTrue(hash1.length() > 0);
+        assertTrue(hash1.matches("[0-9a-f]+"));
     }
 
     @Test
