@@ -7,6 +7,8 @@ services:
     tmpfs:
       - /tmp
       - /run
+    security_opt:
+      - no-new-privileges:true
     networks:
       - internal
     restart: unless-stopped
@@ -33,6 +35,8 @@ services:
       - /run
       - /var/cache/nginx
       - /var/run
+    security_opt:
+      - no-new-privileges:true
     restart: unless-stopped
     volumes:
       - ./templates:/etc/nginx/templates:ro

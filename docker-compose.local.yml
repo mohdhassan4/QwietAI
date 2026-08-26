@@ -6,6 +6,8 @@ services:
       tmpfs:
         - /tmp
         - /run
+      security_opt:
+        - no-new-privileges:true
       networks:
         - app_net
 
@@ -15,6 +17,8 @@ services:
       tmpfs:
         - /tmp
         - /run
+      security_opt:
+        - no-new-privileges:true
       restart: unless-stopped
       expose:
         - "1025"
@@ -44,6 +48,8 @@ services:
         - /run
         - /var/cache/nginx
         - /var/run
+      security_opt:
+        - no-new-privileges:true
       volumes:
        - ./templates:/etc/nginx/templates
       ports:
