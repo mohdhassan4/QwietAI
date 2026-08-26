@@ -133,11 +133,9 @@ function _callbackForInnerMasterOnClickEvent(
         if (requestToken !== thisRequestToken) {
           return;
         }
-        detailTitle.textContent = "";
-        var parsed = new DOMParser().parseFromString(responseText, "text/html");
-        Array.from(parsed.body.childNodes).forEach(function (node) {
-          detailTitle.appendChild(document.importNode(node, true));
-        });
+        detailTitle.textContent = new DOMParser()
+          .parseFromString(responseText, "text/html")
+          .body.textContent || "";
         _loadDynamicJSAndCSS(urlToFetchHtmlTemplate, () => {
           // Re-check: the asset load itself is async, so navigation could
           // have moved on again between the AJAX response and now.
