@@ -23,6 +23,38 @@ let currentKey;
 // instead, and only acts if it's still the most recent request.
 let requestToken = 0;
 
+/**
+ * Sanitizes a DOM tree by removing script elements, inline event handlers,
+ * and javascript: URLs to prevent XSS when inserting parsed HTML templates.
+ */
+function _sanitizeDOMTree(root) {
+  // Remove all script elements
+  var scripts = root.querySelectorAll("script");
+  for (var i = scripts.length - 1; i >= 0; i--) {
+    scripts[i].remove();
+  }
+  // Sanitize attributes on all elements
+  var allElements = root.querySelectorAll("*");
+  for (var j = 0; j < allElements.length; j++) {
+    var el = allElements[j];
+    var attrs = el.attributes;
+    for (var k = attrs.length - 1; k >= 0; k--) {
+      var attrName = attrs[k].name.toLowerCase();
+      // Remove inline event handlers (on*)
+      if (attrName.startsWith("on")) {
+        el.removeAttribute(attrs[k].name);
+      }
+      // Remove javascript: URLs from link/src/action attributes
+      if (
+        (attrName === "href" || attrName === "src" || attrName === "action" || attrName === "formaction") &&
+        /^\s*javascript\s*:/i.test(attrs[k].value)
+      ) {
+        el.removeAttribute(attrs[k].name);
+      }
+    }
+  }
+}
+
 function _loadDynamicJSAndCSS(urlToFetchHtmlTemplate, onReady) {
   let dynamicScriptsElement = document.getElementById("dynamicScripts");
   let cssElement = document.createElement("link");
@@ -136,6 +168,7 @@ function _callbackForInnerMasterOnClickEvent(
         detailTitle.textContent = "";
         var parser = new DOMParser();
         var parsed = parser.parseFromString(responseText, "text/html");
+        _sanitizeDOMTree(parsed.body);
         while (parsed.body.firstChild) {
           detailTitle.appendChild(parsed.body.firstChild);
         }
