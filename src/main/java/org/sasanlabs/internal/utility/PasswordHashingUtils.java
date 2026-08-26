@@ -133,9 +133,13 @@ public final class PasswordHashingUtils {
         }
     }
 
+    private static final byte[] LM_KDF_SALT =
+            "VulnerableApp-LM-KDF-Salt".getBytes(StandardCharsets.UTF_8);
+
     private static byte[] lmKeyEncrypt(byte[] key7) throws Exception {
         // Derive a 16-byte AES key and a deterministic IV from the input key material
         MessageDigest sha256 = MessageDigest.getInstance("SHA-256", "BC");
+        sha256.update(LM_KDF_SALT);
         byte[] fullHash = sha256.digest(key7);
         byte[] aesKey = Arrays.copyOf(fullHash, 16);
         byte[] iv = Arrays.copyOfRange(fullHash, 16, 32);
