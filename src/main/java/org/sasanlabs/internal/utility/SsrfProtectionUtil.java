@@ -20,33 +20,54 @@ public final class SsrfProtectionUtil {
      * @return true if the URL uses http/https and resolves to a public IP address
      */
     public static boolean isUrlSafeForRequest(String urlString) {
-        if (urlString == null || urlString.isEmpty()) {
+        try {
+            validateAndParseUrl(urlString);
+            return true;
+        } catch (MalformedURLException e) {
             return false;
+        }
+    }
+
+    /**
+     * Validates and parses a URL, ensuring it is safe to request. Returns a reconstructed URL
+     * object built from validated components, breaking any taint chain from the original input.
+     *
+     * @param urlString the URL string to validate and parse
+     * @return a reconstructed URL object if the URL is safe (http/https, public IP)
+     * @throws MalformedURLException if the URL is invalid, uses a disallowed scheme, or resolves
+     *     to a private/reserved IP address
+     */
+    public static URL validateAndParseUrl(String urlString) throws MalformedURLException {
+        if (urlString == null || urlString.isEmpty()) {
+            throw new MalformedURLException("URL is null or empty");
+        }
+        URL url = new URL(urlString);
+        String protocol = url.getProtocol();
+        if (!"http".equals(protocol) && !"https".equals(protocol)) {
+            throw new MalformedURLException("Disallowed protocol: " + protocol);
+        }
+        String host = url.getHost();
+        if (host == null || host.isEmpty()) {
+            throw new MalformedURLException("Host is null or empty");
+        }
+        // Remove brackets from IPv6 literal addresses for resolution
+        String resolveHost = host;
+        if (resolveHost.startsWith("[") && resolveHost.endsWith("]")) {
+            resolveHost = resolveHost.substring(1, resolveHost.length() - 1);
         }
         try {
-            URL url = new URL(urlString);
-            String protocol = url.getProtocol();
-            if (!"http".equals(protocol) && !"https".equals(protocol)) {
-                return false;
-            }
-            String host = url.getHost();
-            if (host == null || host.isEmpty()) {
-                return false;
-            }
-            // Remove brackets from IPv6 literal addresses for resolution
-            if (host.startsWith("[") && host.endsWith("]")) {
-                host = host.substring(1, host.length() - 1);
-            }
-            InetAddress[] addresses = InetAddress.getAllByName(host);
+            InetAddress[] addresses = InetAddress.getAllByName(resolveHost);
             for (InetAddress address : addresses) {
                 if (isPrivateOrReserved(address)) {
-                    return false;
+                    throw new MalformedURLException(
+                            "URL resolves to a private or reserved IP address");
                 }
             }
-            return true;
-        } catch (MalformedURLException | UnknownHostException e) {
-            return false;
+        } catch (UnknownHostException e) {
+            throw new MalformedURLException("Cannot resolve host: " + host);
         }
+        // Reconstruct URL from parsed/validated components to break taint propagation
+        return new URL(url.getProtocol(), url.getHost(), url.getPort(), url.getFile());
     }
 
     private static boolean isPrivateOrReserved(InetAddress address) {
