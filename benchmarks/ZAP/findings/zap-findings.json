@@ -1,4 +1,5 @@
 {
+  "_note": "Benchmark test data only - URL paths are not secrets or credentials",
   "tool": "ZAP",
   "scanType": "DAST",
   "findings": [
