@@ -53,8 +53,16 @@ public final class PasswordHashingUtils {
     }
 
     public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
+        return getHashAsHex(null, rawPassword, hashAlgorithm);
+    }
+
+    public static String getHashAsHex(
+            byte[] salt, String rawPassword, HashAlgorithm hashAlgorithm) {
         try {
             MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
+            if (salt != null && salt.length > 0) {
+                messageDigest.update(salt);
+            }
             byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
@@ -80,14 +88,15 @@ public final class PasswordHashingUtils {
     }
 
     public static String sha256Hex(String salt, String rawPassword) {
-        return getHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
+        byte[] saltBytes = salt.getBytes(StandardCharsets.UTF_8);
+        return getHashAsHex(saltBytes, rawPassword, HashAlgorithm.SHA256);
     }
 
     public static String saltedSha256Hex(String rawPassword) {
         byte[] saltBytes = new byte[16];
         new SecureRandom().nextBytes(saltBytes);
         String salt = EncodingUtils.bytesToHex(saltBytes);
-        return salt + HASH_SEPARATOR + getHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
+        return salt + HASH_SEPARATOR + sha256Hex(salt, rawPassword);
     }
 
     // BC not used for bcrypt due to extra complexity for BC implementation

@@ -45,4 +45,9 @@ public class ScannerFindings {
     public List<Finding> getFindings() {
         return findings;
     }
+
+    @Override
+    public String toString() {
+        return "ScannerFindings[tool=<redacted>]";
+    }
 }

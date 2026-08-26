@@ -30,4 +30,9 @@ class LogSanitizerTest {
     void sanitize_cleanStringUnchanged() {
         assertEquals("https://example.com/path", LogSanitizer.sanitize("https://example.com/path"));
     }
+
+    @Test
+    void sanitize_removesTabs() {
+        assertEquals("first_second", LogSanitizer.sanitize("first\tsecond"));
+    }
 }

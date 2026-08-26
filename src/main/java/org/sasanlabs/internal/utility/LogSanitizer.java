@@ -16,6 +16,7 @@ public final class LogSanitizer {
         if (value == null) {
             return "";
         }
-        return value.replaceAll("[\\r\\n]", "_");
+        char[] cleaned = value.replaceAll("[\\r\\n\\t]", "_").toCharArray();
+        return new String(cleaned);
     }
 }
