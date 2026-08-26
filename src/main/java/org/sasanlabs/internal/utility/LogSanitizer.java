@@ -9,7 +9,7 @@ public final class LogSanitizer {
     private LogSanitizer() {}
 
     /**
-     * Replaces carriage-return, line-feed, and tab characters with underscores. Returns an empty
+     * Replaces all ASCII control characters (0x00-0x1F and 0x7F) with underscores. Returns an empty
      * string when the input is {@code null}.
      *
      * @param value the potentially tainted value
@@ -19,6 +19,6 @@ public final class LogSanitizer {
         if (value == null) {
             return "";
         }
-        return value.replaceAll("[\\r\\n\\t]", "_");
+        return value.replaceAll("[\\x00-\\x1f\\x7f]", "_");
     }
 }

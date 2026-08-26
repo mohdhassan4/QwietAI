@@ -38,6 +38,9 @@ public class BenchmarkController {
 
     @PostMapping("/scanner/benchmark")
     public ResponseEntity<?> benchmark(@RequestBody ScannerFindings input) throws IOException {
+        LOGGER.debug(
+                "Benchmark request received for tool: {}",
+                LogSanitizer.sanitize(input != null ? input.getTool() : null));
         if (input == null || input.getTool() == null || input.getTool().trim().isEmpty()) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Field 'tool' is required and must be non-empty"));
