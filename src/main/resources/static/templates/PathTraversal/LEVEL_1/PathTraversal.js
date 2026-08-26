@@ -1,3 +1,12 @@
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 function addingEventListenerToLoadImageButton() {
   document.getElementById("loadButton").addEventListener("click", function () {
     let url = getUrlForVulnerabilityLevel();
@@ -17,7 +26,7 @@ function appendResponseCallback(data) {
     if (content.length > 0) {
       for (let key in content[0]) {
         tableInformation =
-          tableInformation + '<th id="InfoColumn">' + key + "</th>";
+          tableInformation + '<th id="InfoColumn">' + escapeHtml(key) + "</th>";
       }
     }
     for (let index in content) {
@@ -26,7 +35,7 @@ function appendResponseCallback(data) {
         tableInformation =
           tableInformation +
           '<td id="InfoColumn">' +
-          content[index][key] +
+          escapeHtml(content[index][key]) +
           "</td>";
       }
       tableInformation = tableInformation + "</tr>";
