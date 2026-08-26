@@ -99,16 +99,16 @@ public final class PasswordHashingUtils {
         return verifyHashAsHex(rawPassword, storedHash, HashAlgorithm.SHA256);
     }
 
-    /**
-     * Computes a salted hash. The salt is fed via {@code MessageDigest.update} before digesting the
-     * data, making the salt usage explicit to static analysis.
-     */
     private static String computeRawHashAsHex(
             String salt, String data, HashAlgorithm hashAlgorithm) {
         try {
+            byte[] saltBytes = salt.getBytes(StandardCharsets.UTF_8);
+            byte[] dataBytes = data.getBytes(StandardCharsets.UTF_8);
+            byte[] saltedInput = new byte[saltBytes.length + dataBytes.length];
+            System.arraycopy(saltBytes, 0, saltedInput, 0, saltBytes.length);
+            System.arraycopy(dataBytes, 0, saltedInput, saltBytes.length, dataBytes.length);
             MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
-            messageDigest.update(salt.getBytes(StandardCharsets.UTF_8));
-            byte[] digest = messageDigest.digest(data.getBytes(StandardCharsets.UTF_8));
+            byte[] digest = messageDigest.digest(saltedInput);
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(hashAlgorithm + "Hash Algorithm Not Found", e);
