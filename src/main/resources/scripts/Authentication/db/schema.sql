@@ -15,5 +15,6 @@ CREATE TABLE auth_users (
 GRANT ALL ON auth_users TO application;
 
 -- A read-only user for exploration by the attacker/user
-CREATE USER IF NOT EXISTS readonly_user PASSWORD 'readonly_password';
+-- Credential must be rotated — was previously committed to version control
+CREATE USER IF NOT EXISTS readonly_user PASSWORD 'CHANGE_ME_VIA_ENV';
 GRANT SELECT ON auth_users TO readonly_user;
