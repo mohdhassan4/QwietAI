@@ -6,6 +6,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
+import java.util.UUID;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
@@ -67,14 +68,30 @@ public class EncryptionUtils {
 
     private static final byte[] salt = new byte[16];
 
+    /**
+     * AES key secret loaded from environment variable VULNERABLEAPP_AES_KEY. Falls back to a
+     * random value per JVM instance when the variable is not set.
+     */
+    private static final String AES_KEY_SECRET;
+
     static {
         new SecureRandom().nextBytes(salt);
+        String envKey = System.getenv("VULNERABLEAPP_AES_KEY");
+        AES_KEY_SECRET = (envKey != null && !envKey.isEmpty()) ? envKey : UUID.randomUUID().toString();
+    }
+
+    /**
+     * Returns a SecretKey derived from the externally-configured AES secret (environment variable
+     * VULNERABLEAPP_AES_KEY). This avoids using the plaintext password as its own encryption key.
+     */
+    public static SecretKey getConfiguredKey() throws EncryptionException {
+        return getKeyFromPassword(AES_KEY_SECRET);
     }
 
     public static SecretKey getKeyFromPassword(String password) throws EncryptionException {
         try {
             SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-            KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 1, 128);
+            KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 600000, 128);
 
             return new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {

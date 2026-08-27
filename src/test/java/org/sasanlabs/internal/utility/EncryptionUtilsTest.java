@@ -49,6 +49,21 @@ class EncryptionUtilsTest {
     }
 
     @Test
+    @DisplayName(
+            "Configured Key: Should derive an AES key from the externally-configured secret")
+    void getConfiguredKey_ValidKey() throws EncryptionException {
+        SecretKey key = EncryptionUtils.getConfiguredKey();
+
+        assertNotNull(key);
+        assertEquals("AES", key.getAlgorithm());
+        assertEquals(16, key.getEncoded().length);
+
+        // Calling again must return the same key (deterministic for same secret + salt)
+        SecretKey key2 = EncryptionUtils.getConfiguredKey();
+        assertArrayEquals(key.getEncoded(), key2.getEncoded());
+    }
+
+    @Test
     @DisplayName("AES Encryption: Should produce consistent ciphertext (ECB Mode Property)")
     void encrypt_EcbDeterminism() throws EncryptionException {
         SecretKey key = EncryptionUtils.getKeyFromPassword("fixed-password");
