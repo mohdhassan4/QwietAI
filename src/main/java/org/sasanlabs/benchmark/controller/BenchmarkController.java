@@ -37,7 +37,13 @@ public class BenchmarkController {
 
     @PostMapping("/scanner/benchmark")
     public ResponseEntity<?> benchmark(@RequestBody ScannerFindings input) throws IOException {
-        if (input == null || input.getTool() == null || input.getTool().trim().isEmpty()) {
+        if (input == null) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Field 'tool' is required and must be non-empty"));
+        }
+        String rawTool = input.getTool();
+        String safeTool = sanitizeForLog(rawTool);
+        if (rawTool == null || rawTool.trim().isEmpty()) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Field 'tool' is required and must be non-empty"));
         }
@@ -53,17 +59,25 @@ public class BenchmarkController {
 
         try {
             Path written = benchmarkResultWriter.write(result);
-            LOGGER.info("Wrote benchmark result for tool '{}' to {}", input.getTool(), written);
+            String safeWritten = sanitizeForLog(written.toString());
+            LOGGER.info("Wrote benchmark result for tool '{}' to {}", safeTool, safeWritten);
         } catch (IOException ioe) {
             LOGGER.error(
                     "Failed to persist benchmark result for tool '{}'; returning 500 with result"
                             + " in body",
-                    input.getTool(),
+                    safeTool,
                     ioe);
-            result.setPersistenceError("Failed to persist benchmark result: " + ioe.getMessage());
+            result.setPersistenceError("Failed to persist benchmark result");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
         }
 
         return ResponseEntity.ok(result);
+    }
+
+    private static String sanitizeForLog(String input) {
+        if (input == null) {
+            return "";
+        }
+        return input.replace("\r", "").replace("\n", "");
     }
 }
