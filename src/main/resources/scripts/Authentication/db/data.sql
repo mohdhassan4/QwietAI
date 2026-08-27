@@ -1,4 +1,5 @@
 -- Level 1: SQL Injection
+-- Intentional demo credentials for OWASP VulnerableApp training levels (not real secrets)
 -- Real password: 'not_needed_for_sqli'
 INSERT INTO auth_users VALUES (1, 'admin_sqli', 'not_needed_for_sqli', NULL, 'PLAIN', 1, 'admin_sqli@example.com', 'ADMIN');
 
