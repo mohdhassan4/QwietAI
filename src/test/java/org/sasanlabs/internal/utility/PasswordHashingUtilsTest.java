@@ -50,7 +50,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("BCrypt: Should validate successfully even though hashes are unique each time")
     void bcrypt_UniqueGenerationAndValidation() {
-        String password = "mySecretPassword";
+        String password = "mySecretPassword"; // Not a real secret — test fixture value
         String hash1 = PasswordHashingUtils.bCryptHash(password);
         String hash2 = PasswordHashingUtils.bCryptHash(password);
 
@@ -65,7 +65,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("LM Hash: Should be case-insensitive and match legacy standards")
     void lmHash_LegacyStandards() {
-        // Known LM hash for "password" (which it converts to "PASSWORD")
+        // Not a real secret — known LM hash for "password" (which it converts to "PASSWORD")
         String expected = "e52cac67419a9a224a3b108f3fa6cb6d";
 
         assertEquals(expected, PasswordHashingUtils.lmHash("password"));
