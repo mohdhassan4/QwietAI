@@ -75,6 +75,33 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
+    @DisplayName("MD5 with salt: Should produce different hash than unsalted")
+    void md5Hash_WithSalt_DiffersFromUnsalted() {
+        byte[] salt = "testSalt".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        String unsalted = PasswordHashingUtils.md5Hex("password");
+        String salted = PasswordHashingUtils.md5Hex("password", salt);
+        assertNotEquals(unsalted, salted);
+    }
+
+    @Test
+    @DisplayName("SHA-1 with salt: Should produce different hash than unsalted")
+    void sha1Hash_WithSalt_DiffersFromUnsalted() {
+        byte[] salt = "testSalt".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        String unsalted = PasswordHashingUtils.sha1Hex("password");
+        String salted = PasswordHashingUtils.sha1Hex("password", salt);
+        assertNotEquals(unsalted, salted);
+    }
+
+    @Test
+    @DisplayName("Salted hash: Same salt and input should produce same hash")
+    void saltedHash_Deterministic() {
+        byte[] salt = "fixedSalt".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        String hash1 = PasswordHashingUtils.md5Hex("password", salt);
+        String hash2 = PasswordHashingUtils.md5Hex("password", salt);
+        assertEquals(hash1, hash2);
+    }
+
+    @Test
     @DisplayName("Hex Utility: Should convert byte arrays to lowercase hex strings")
     void bytesToHex_Conversion() {
         byte[] input = {0, 15, 16, 127, -1}; // 00, 0f, 10, 7f, ff
