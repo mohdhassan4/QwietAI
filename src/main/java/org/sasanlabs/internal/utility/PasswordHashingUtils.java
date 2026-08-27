@@ -12,6 +12,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 public final class PasswordHashingUtils {
 
     private static final String HASH_SEPARATOR = ":";
+    private static final int SALT_SIZE = 16;
     private static final int bcryptWorkFactor = 12;
 
     private PasswordHashingUtils() {}
@@ -55,9 +56,50 @@ public final class PasswordHashingUtils {
 
     public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
         try {
+            SecureRandom random = new SecureRandom();
+            byte[] salt = new byte[SALT_SIZE];
+            random.nextBytes(salt);
             MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
+            messageDigest.update(salt);
+            byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
+            return EncodingUtils.bytesToHex(salt) + HASH_SEPARATOR + EncodingUtils.bytesToHex(digest);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(hashAlgorithm + "Hash Algorithm Not Found", e);
+        } catch (NoSuchProviderException e) {
+            throw new RuntimeException("Security Provider Bouncy Castle not found", e);
+        }
+    }
+
+    public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm, byte[] salt) {
+        try {
+            MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
+            if (salt != null && salt.length > 0) {
+                messageDigest.update(salt);
+            }
             byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
             return EncodingUtils.bytesToHex(digest);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(hashAlgorithm + "Hash Algorithm Not Found", e);
+        } catch (NoSuchProviderException e) {
+            throw new RuntimeException("Security Provider Bouncy Castle not found", e);
+        }
+    }
+
+    public static boolean verifySaltedHash(
+            String rawPassword, String saltedHash, HashAlgorithm hashAlgorithm) {
+        if (rawPassword == null || saltedHash == null) {
+            return false;
+        }
+        String[] parts = saltedHash.split(HASH_SEPARATOR, 2);
+        if (parts.length != 2) {
+            return false;
+        }
+        try {
+            byte[] salt = EncodingUtils.hexToBytes(parts[0]);
+            MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
+            messageDigest.update(salt);
+            byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
+            return parts[1].equalsIgnoreCase(EncodingUtils.bytesToHex(digest));
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(hashAlgorithm + "Hash Algorithm Not Found", e);
         } catch (NoSuchProviderException e) {
@@ -81,7 +123,8 @@ public final class PasswordHashingUtils {
     }
 
     public static String sha256Hex(String salt, String rawPassword) {
-        return getHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
+        byte[] saltBytes = (salt != null) ? salt.getBytes(StandardCharsets.UTF_8) : new byte[0];
+        return getHashAsHex(rawPassword, HashAlgorithm.SHA256, saltBytes);
     }
 
     public static String unsaltedSha256Hex(String rawPassword) {
