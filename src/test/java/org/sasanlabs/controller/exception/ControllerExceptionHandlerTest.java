@@ -32,22 +32,22 @@ class ControllerExceptionHandlerTest {
     }
 
     @Test
-    void shouldHandleControllerExceptions() {
-        // Arrange
-        when(messageBundle.getString(any(), any())).thenReturn("Exception occurred");
+    void shouldHandleControllerExceptionsWithGenericMessage() {
+        // Arrange - use a specific exception type but expect generic SYSTEM_ERROR response
+        when(messageBundle.getString("SYSTEM_ERROR", null)).thenReturn("System Error Occurred");
         ServiceApplicationException serviceApplicationException =
                 new ServiceApplicationException(
-                        ExceptionStatusCodeEnum.SYSTEM_ERROR, new NullPointerException("ex"));
+                        ExceptionStatusCodeEnum.INVALID_END_POINT, "sensitiveEndpoint");
 
         // Act
         ResponseEntity<String> responseEntity =
                 controllerExceptionHandler.handleControllerExceptions(
                         new ControllerException(serviceApplicationException), webRequest);
 
-        // Assert
+        // Assert - response must contain generic message, not exception-specific details
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, responseEntity.getStatusCode());
-        assertEquals("Exception occurred", responseEntity.getBody());
-        verify(messageBundle).getString(any(), any());
+        assertEquals("System Error Occurred", responseEntity.getBody());
+        verify(messageBundle).getString("SYSTEM_ERROR", null);
     }
 
     @Test
