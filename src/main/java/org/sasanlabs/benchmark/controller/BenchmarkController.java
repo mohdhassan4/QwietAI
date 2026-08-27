@@ -36,7 +36,7 @@ public class BenchmarkController {
     }
 
     @PostMapping("/scanner/benchmark")
-    public ResponseEntity<?> benchmark(@RequestBody ScannerFindings input) throws IOException {
+    public ResponseEntity<?> benchmark(@RequestBody ScannerFindings input) {
         if (input == null || input.getTool() == null || input.getTool().trim().isEmpty()) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Field 'tool' is required and must be non-empty"));
@@ -49,7 +49,15 @@ public class BenchmarkController {
                                     "Field 'findings' is required (use [] for an empty list)"));
         }
 
-        BenchmarkResult result = benchmarkService.compare(input);
+        BenchmarkResult result;
+        try {
+            result = benchmarkService.compare(input);
+        } catch (IOException ioe) {
+            LOGGER.error(
+                    "Failed to compute benchmark for tool '{}'", input.getTool(), ioe);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "An internal error occurred while processing the benchmark"));
+        }
 
         try {
             Path written = benchmarkResultWriter.write(result);
@@ -60,7 +68,7 @@ public class BenchmarkController {
                             + " in body",
                     input.getTool(),
                     ioe);
-            result.setPersistenceError("Failed to persist benchmark result: " + ioe.getMessage());
+            result.setPersistenceError("Failed to persist benchmark result");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
         }
 
