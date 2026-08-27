@@ -50,7 +50,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("BCrypt: Should validate successfully even though hashes are unique each time")
     void bcrypt_UniqueGenerationAndValidation() {
-        String password = "mySecretPassword";
+        String password = "mySecretPassword"; // nosecret: test-only value for hash verification
         String hash1 = PasswordHashingUtils.bCryptHash(password);
         String hash2 = PasswordHashingUtils.bCryptHash(password);
 
@@ -65,7 +65,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("LM Hash: Should be case-insensitive and deterministic (AES-based)")
     void lmHash_CaseInsensitiveAndDeterministic() {
-        // LM hash is case-insensitive: all casings of the same password produce the same hash
+        // nosecret: test-only values for hash algorithm verification (not real credentials)
         String hash1 = PasswordHashingUtils.lmHash("password");
         String hash2 = PasswordHashingUtils.lmHash("PASSWORD");
         String hash3 = PasswordHashingUtils.lmHash("pAsSwOrD");
