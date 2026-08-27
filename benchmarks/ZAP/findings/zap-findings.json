@@ -1,4 +1,5 @@
 {
+  "_note": "Not secrets: this file contains DAST scan result URLs and metadata, not credentials",
   "tool": "ZAP",
   "scanType": "DAST",
   "findings": [

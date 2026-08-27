@@ -71,10 +71,16 @@ public class EncryptionUtils {
         new SecureRandom().nextBytes(salt);
     }
 
+    private static final int PBKDF2_ITERATIONS = 600_000;
+
     public static SecretKey getKeyFromPassword(String password) throws EncryptionException {
+        if (password == null || password.isEmpty()) {
+            throw new EncryptionException(
+                    "Password must not be null or empty — load from environment or secrets manager");
+        }
         try {
             SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-            KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 1, 128);
+            KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, PBKDF2_ITERATIONS, 128);
 
             return new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
