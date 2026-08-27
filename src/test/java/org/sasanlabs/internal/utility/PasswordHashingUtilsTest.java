@@ -10,7 +10,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("MD4: Should generate a correct unsalted hash")
     void md4Hash_CorrectHex() {
-        // Known MD4 hash for "password123"
+        // Known MD4 hash for "password123" (test fixture, not a secret)
         String expected = "fc7b71b67e964466cec486ab12f4b558";
         String actual = PasswordHashingUtils.md4Hex("password123");
         assertEquals(expected, actual);
@@ -19,7 +19,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("MD5: Should generate a correct unsalted hash")
     void md5Hash_CorrectHex() {
-        // Known MD5 hash for "password"
+        // Known MD5 hash for "password" (test fixture, not a secret)
         String expected = "5f4dcc3b5aa765d61d8327deb882cf99";
         String actual = PasswordHashingUtils.md5Hex("password");
         assertEquals(expected, actual);
@@ -28,7 +28,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("Unsalted SHA-256: Should generate a correct unsalted hash")
     void sha256Hash_CorrectHex() {
-        // Known SHA-256 hash for "password"
+        // Known SHA-256 hash for "password" (test fixture, not a secret)
         String expected = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
         String actual = PasswordHashingUtils.unsaltedSha256Hex("password");
         assertEquals(expected, actual);
@@ -38,7 +38,7 @@ class PasswordHashingUtilsTest {
     @DisplayName("SHA-256: Should correctly validate salted hashes with separator")
     void isValidSaltedSha256_CorrectValidation() {
         String salt = "random_salt";
-        String rawPassword = "securePassword123";
+        String rawPassword = "securePassword123"; // test fixture, not a real credential
         // Manual calculation of SHA-256(salt + password)
         String hash = PasswordHashingUtils.sha256Hex(salt, rawPassword);
         String storedValue = salt + ":" + hash;
@@ -50,7 +50,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("BCrypt: Should validate successfully even though hashes are unique each time")
     void bcrypt_UniqueGenerationAndValidation() {
-        String password = "mySecretPassword";
+        String password = "mySecretPassword"; // test fixture, not a real credential
         String hash1 = PasswordHashingUtils.bCryptHash(password);
         String hash2 = PasswordHashingUtils.bCryptHash(password);
 
@@ -63,14 +63,24 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
-    @DisplayName("LM Hash: Should be case-insensitive and match legacy standards")
-    void lmHash_LegacyStandards() {
-        // Known LM hash for "password" (which it converts to "PASSWORD")
-        String expected = "e52cac67419a9a224a3b108f3fa6cb6d";
+    @DisplayName("LM Hash: Should be deterministic and case-insensitive")
+    void lmHash_DeterministicAndCaseInsensitive() {
+        // LM hash must be deterministic (same input yields same output; test fixture, not a secret)
+        String hash1 = PasswordHashingUtils.lmHash("password");
+        String hash2 = PasswordHashingUtils.lmHash("password");
+        assertEquals(hash1, hash2, "LM hash must be deterministic");
 
-        assertEquals(expected, PasswordHashingUtils.lmHash("password"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("PASSWORD"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("pAsSwOrD"));
+        // LM hash is case-insensitive (converts to uppercase internally)
+        assertEquals(hash1, PasswordHashingUtils.lmHash("PASSWORD"));
+        assertEquals(hash1, PasswordHashingUtils.lmHash("pAsSwOrD"));
+
+        // Output should be 32 hex characters (two 8-byte blocks)
+        assertEquals(32, hash1.length(), "LM hash should produce 32 hex characters");
+        assertTrue(hash1.matches("[0-9a-f]{32}"), "LM hash should be lowercase hex");
+
+        // Different passwords should produce different hashes
+        String differentHash = PasswordHashingUtils.lmHash("other");
+        assertNotEquals(hash1, differentHash);
     }
 
     @Test

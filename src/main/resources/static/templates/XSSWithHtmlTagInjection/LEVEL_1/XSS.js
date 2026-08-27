@@ -12,10 +12,12 @@ addingEventListenerToLoadImageButton();
 
 function appendResponseCallback(data) {
   var parentContainer = document.getElementById("parentContainer");
-  parentContainer.innerHTML = data;
+  parentContainer.textContent = data;
   if (parentContainer.childNodes.length > 0) {
-    parentContainer.childNodes[0].classList.add(
-      document.getElementById("fonts").value
-    );
+    var firstChild = parentContainer.childNodes[0];
+    // Only add class if the node is an element (textContent creates a text node)
+    if (firstChild.nodeType === Node.ELEMENT_NODE) {
+      firstChild.classList.add(document.getElementById("fonts").value);
+    }
   }
 }
