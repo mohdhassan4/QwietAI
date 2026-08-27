@@ -19,6 +19,20 @@ public final class UrlSsrfValidator {
     private UrlSsrfValidator() {}
 
     /**
+     * Validates a URL string is safe from SSRF attacks. Throws SecurityException if the URL is
+     * unsafe, ensuring taint analysis recognizes the validation at the sink.
+     *
+     * @param urlString the URL to validate
+     * @throws SecurityException if the URL is not safe for server-side requests
+     */
+    public static void validateUrl(String urlString) {
+        if (!isSafeUrl(urlString)) {
+            throw new SecurityException(
+                    "URL failed SSRF validation: request to internal/disallowed destination blocked");
+        }
+    }
+
+    /**
      * Validates a URL string is safe from SSRF attacks.
      *
      * @param urlString the URL to validate
