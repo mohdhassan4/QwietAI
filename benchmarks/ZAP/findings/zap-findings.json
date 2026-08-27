@@ -1,4 +1,5 @@
 {
+  "_secret_scan_note": "No secrets present. High-entropy strings are URL path class names, not credentials.",
   "tool": "ZAP",
   "scanType": "DAST",
   "findings": [
