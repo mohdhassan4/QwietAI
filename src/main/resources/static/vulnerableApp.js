@@ -1,3 +1,45 @@
+/**
+ * Escapes HTML special characters to prevent XSS when inserting
+ * untrusted data into HTML context.
+ */
+function escapeHtml(str) {
+  if (str == null) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
+/**
+ * Sanitizes an HTML string by removing script elements and event-handler
+ * attributes. Used for rendering trusted-origin HTML templates where
+ * structure must be preserved but script injection must be blocked.
+ */
+function sanitizeHtml(html) {
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(html, "text/html");
+  // Remove dangerous elements
+  var dangerous = doc.querySelectorAll(
+    "script, object, embed, applet, link[rel=import]"
+  );
+  dangerous.forEach(function (el) {
+    el.remove();
+  });
+  // Remove event-handler attributes (on*)
+  var allEls = doc.body.querySelectorAll("*");
+  allEls.forEach(function (el) {
+    var attrs = Array.from(el.attributes);
+    attrs.forEach(function (attr) {
+      if (/^on/i.test(attr.name)) {
+        el.removeAttribute(attr.name);
+      }
+    });
+  });
+  return doc.body.innerHTML;
+}
+
 const detail = document.querySelector(".detail");
 const detailTitle = document.querySelector(".detail-title");
 const master = document.querySelector(".master");
@@ -110,7 +152,7 @@ function _callbackForInnerMasterOnClickEvent(
       vulnerableAppEndPointData[id]["Detailed Information"][key][
         "HtmlTemplate"
       ];
-    document.getElementById("vulnerabilityDescription").innerHTML =
+    document.getElementById("vulnerabilityDescription").textContent =
       vulnerableAppEndPointData[id]["Description"];
     let urlToFetchHtmlTemplate = htmlTemplate
       ? "/VulnerableApp/templates/" + vulnerabilitySelected + "/" + htmlTemplate
@@ -133,7 +175,7 @@ function _callbackForInnerMasterOnClickEvent(
         if (requestToken !== thisRequestToken) {
           return;
         }
-        detailTitle.innerHTML = responseText;
+        detailTitle.innerHTML = sanitizeHtml(responseText);
         _loadDynamicJSAndCSS(urlToFetchHtmlTemplate, () => {
           // Re-check: the asset load itself is async, so navigation could
           // have moved on again between the AJAX response and now.
@@ -187,7 +229,7 @@ function createColumn(detailedInformationArray, key) {
   span.classList.add(
     isSecure ? "secure-variant-tooltip-text" : "unsecure-variant-tooltip-text"
   );
-  span.innerHTML = isSecure ? variantTooltip.secure : variantTooltip.unsecure;
+  span.textContent = isSecure ? variantTooltip.secure : variantTooltip.unsecure;
   svgWithTooltip.appendChild(span);
   svgWithTooltip.appendChild(_getSvgElementForVariant(isSecure));
   column.appendChild(svgWithTooltip);
@@ -241,13 +283,13 @@ function handleElementAutoSelection(vulnerableAppEndPointData, id = 0) {
   }
 
   if (id === 0) {
-    detailTitle.innerHTML = vulnerableAppEndPointData[id]["Description"];
+    detailTitle.textContent = vulnerableAppEndPointData[id]["Description"];
   } else {
     innerMaster.innerHTML = "";
   }
 
   vulnerabilitySelected = vulnerableAppEndPointData[id]["Name"];
-  detailTitle.innerHTML = vulnerableAppEndPointData[id]["Description"];
+  detailTitle.textContent = vulnerableAppEndPointData[id]["Description"];
   appendNewColumn(vulnerableAppEndPointData, id);
 }
 
@@ -406,7 +448,7 @@ function generateMasterDetail(vulnerableAppEndPointData) {
 
 function _clearHelp() {
   document.getElementById("showHelp").disabled = false;
-  document.getElementById("helpText").innerHTML = "";
+  document.getElementById("helpText").textContent = "";
   document.getElementById("hideHelp").disabled = true;
 }
 
@@ -426,13 +468,13 @@ function _addingEventListenerToShowHideHelpButton(vulnerableAppEndPointData) {
       helpText =
         helpText +
         "<li><b>Description about the attack:</b> " +
-        description +
+        escapeHtml(description) +
         "<br/><b>Payload:</b> " +
-        curlPayload +
+        escapeHtml(curlPayload) +
         "</li>";
     }
     helpText = helpText + "</ol>";
-    document.getElementById("helpText").innerHTML = helpText;
+    document.getElementById("helpText").innerHTML = sanitizeHtml(helpText);
     document.getElementById("hideHelp").disabled = false;
   });
 
