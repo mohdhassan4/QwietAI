@@ -5,7 +5,6 @@ import java.nio.file.Path;
 import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.sasanlabs.internal.utility.GenericUtils;
 import org.sasanlabs.benchmark.model.BenchmarkResult;
 import org.sasanlabs.benchmark.model.ScannerFindings;
 import org.sasanlabs.benchmark.service.BenchmarkResultWriter;
@@ -56,13 +55,13 @@ public class BenchmarkController {
             Path written = benchmarkResultWriter.write(result);
             LOGGER.info(
                     "Wrote benchmark result for tool '{}' to {}",
-                    GenericUtils.sanitizeForLog(input.getTool()),
+                    input.getTool().replaceAll("[\\r\\n]", ""),
                     written);
         } catch (IOException ioe) {
             LOGGER.error(
                     "Failed to persist benchmark result for tool '{}'; returning 500 with result"
                             + " in body",
-                    GenericUtils.sanitizeForLog(input.getTool()),
+                    input.getTool().replaceAll("[\\r\\n]", ""),
                     ioe);
             result.setPersistenceError("Failed to persist benchmark result: " + ioe.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
