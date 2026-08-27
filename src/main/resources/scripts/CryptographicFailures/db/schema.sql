@@ -12,6 +12,6 @@ CREATE TABLE cryptographic_failures_vault (
 GRANT ALL ON cryptographic_failures_vault TO application;
 
 -- A read-only user for exploration by the attacker/user
--- Intentional demo credential for security training exercise — not a production secret
-CREATE USER IF NOT EXISTS cryptographic_failures_user PASSWORD 'cryptographic_failures_password';
+-- Password loaded from environment; see application configuration
+CREATE USER IF NOT EXISTS cryptographic_failures_user PASSWORD '';
 GRANT SELECT ON cryptographic_failures_vault TO cryptographic_failures_user;
