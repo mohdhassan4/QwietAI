@@ -1,5 +1,7 @@
 package org.sasanlabs.internal.utility;
 
+import static org.sasanlabs.internal.utility.LogSanitizer.sanitize;
+
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
@@ -37,14 +39,14 @@ public final class UrlSafetyValidator {
             url = new URL(urlString);
             url.toURI();
         } catch (MalformedURLException | URISyntaxException e) {
-            LOGGER.error("URL is not valid: {}", urlString, e);
+            LOGGER.error("URL is not valid: {}", sanitize(urlString), e);
             return false;
         }
 
         // Only allow http and https schemes
         String scheme = url.getProtocol();
         if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
-            LOGGER.warn("Blocked URL with disallowed scheme: {}", scheme);
+            LOGGER.warn("Blocked URL with disallowed scheme: {}", sanitize(scheme));
             return false;
         }
 
@@ -64,12 +66,14 @@ public final class UrlSafetyValidator {
         try {
             resolvedAddress = InetAddress.getByName(hostForResolution);
         } catch (UnknownHostException e) {
-            LOGGER.warn("Cannot resolve hostname: {}", host);
+            LOGGER.warn("Cannot resolve hostname: {}", sanitize(host));
             return false;
         }
 
         if (isPrivateOrReservedAddress(resolvedAddress)) {
-            LOGGER.warn("Blocked URL targeting private/internal IP: {}", resolvedAddress);
+            LOGGER.warn(
+                    "Blocked URL targeting private/internal IP: {}",
+                    sanitize(resolvedAddress.toString()));
             return false;
         }
 
