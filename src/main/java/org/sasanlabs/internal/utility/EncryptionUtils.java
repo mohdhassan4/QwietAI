@@ -71,7 +71,23 @@ public class EncryptionUtils {
         new SecureRandom().nextBytes(salt);
     }
 
-    public static SecretKey getKeyFromPassword(String password) throws EncryptionException {
+    /**
+     * Derives an AES key from the encryption password stored in the ENCRYPTION_KEY environment
+     * variable. This avoids hardcoding credentials in source (CWE-259).
+     */
+    public static SecretKey getKeyFromPassword() throws EncryptionException {
+        String password = System.getenv("ENCRYPTION_KEY");
+        if (password == null || password.isEmpty()) {
+            throw new EncryptionException(
+                    "ENCRYPTION_KEY environment variable must be set for encryption operations");
+        }
+        return deriveKeyFromPassword(password);
+    }
+
+    /**
+     * Derives an AES key from the given password using PBKDF2. Package-private for unit testing.
+     */
+    static SecretKey deriveKeyFromPassword(String password) throws EncryptionException {
         try {
             SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
             KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 1, 128);

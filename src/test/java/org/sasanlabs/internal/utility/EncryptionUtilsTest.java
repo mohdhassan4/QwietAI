@@ -40,7 +40,7 @@ class EncryptionUtilsTest {
     @Test
     @DisplayName("Key Generation: Should derive an AES key from a string password")
     void getKeyFromPassword_ValidKey() throws EncryptionException {
-        SecretKey key = EncryptionUtils.getKeyFromPassword("my-secret-password");
+        SecretKey key = EncryptionUtils.deriveKeyFromPassword("my-secret-password");
 
         assertNotNull(key);
         assertEquals("AES", key.getAlgorithm());
@@ -51,7 +51,7 @@ class EncryptionUtilsTest {
     @Test
     @DisplayName("AES Encryption: Should produce consistent ciphertext (ECB Mode Property)")
     void encrypt_EcbDeterminism() throws EncryptionException {
-        SecretKey key = EncryptionUtils.getKeyFromPassword("fixed-password");
+        SecretKey key = EncryptionUtils.deriveKeyFromPassword("fixed-password");
         String plaintext = "This is a secret message that is exactly 32 bytes";
 
         String ciphertext1 = EncryptionUtils.encrypt(plaintext, key);
@@ -68,7 +68,7 @@ class EncryptionUtilsTest {
     @DisplayName(
             "AES Encryption: Identical blocks should produce identical ciphertext blocks (ECB Vulnerability)")
     void encrypt_EcbPatternLeakage() throws EncryptionException {
-        SecretKey key = EncryptionUtils.getKeyFromPassword("vulnerability-test");
+        SecretKey key = EncryptionUtils.deriveKeyFromPassword("vulnerability-test");
 
         // Create two identical 16-byte blocks (AES block size)
         String block = "identical-block-"; // 16 characters
