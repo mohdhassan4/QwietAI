@@ -54,13 +54,15 @@ public final class PasswordHashingUtils {
 
     public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
         try {
-            MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
+            Provider bcProvider = Security.getProvider("BC");
+            if (bcProvider == null) {
+                throw new IllegalStateException("Security Provider Bouncy Castle not found");
+            }
+            MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), bcProvider);
             byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(hashAlgorithm + "Hash Algorithm Not Found", e);
-        } catch (NoSuchProviderException e) {
-            throw new RuntimeException("Security Provider Bouncy Castle not found", e);
+            throw new RuntimeException(hashAlgorithm + " Hash Algorithm Not Found", e);
         }
     }
 

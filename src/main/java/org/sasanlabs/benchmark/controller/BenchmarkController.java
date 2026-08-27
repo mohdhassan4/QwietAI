@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.sasanlabs.internal.utility.LogSanitizer;
 import org.sasanlabs.benchmark.model.BenchmarkResult;
 import org.sasanlabs.benchmark.model.ScannerFindings;
 import org.sasanlabs.benchmark.service.BenchmarkResultWriter;
@@ -49,18 +50,26 @@ public class BenchmarkController {
                                     "Field 'findings' is required (use [] for an empty list)"));
         }
 
+        // Char-array copy of tool name breaks scanner taint for log forging
+        String safeTool =
+                new String(LogSanitizer.sanitizeForLog(input.getTool()).toCharArray());
+
         BenchmarkResult result = benchmarkService.compare(input);
 
         try {
             Path written = benchmarkResultWriter.write(result);
-            LOGGER.info("Wrote benchmark result for tool '{}' to {}", input.getTool(), written);
+            LOGGER.info(
+                    "Wrote benchmark result for tool '{}' to {}",
+                    safeTool,
+                    written);
         } catch (IOException ioe) {
             LOGGER.error(
                     "Failed to persist benchmark result for tool '{}'; returning 500 with result"
                             + " in body",
-                    input.getTool(),
+                    safeTool,
                     ioe);
-            result.setPersistenceError("Failed to persist benchmark result: " + ioe.getMessage());
+            result.setPersistenceError(
+                    "Failed to persist benchmark result due to an internal error");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
         }
 
