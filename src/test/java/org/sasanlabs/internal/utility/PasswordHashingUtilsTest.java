@@ -26,12 +26,20 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
-    @DisplayName("Unsalted SHA-256: Should generate a correct unsalted hash")
+    @DisplayName("SHA-256 with pepper: Should produce a deterministic peppered hash")
     void sha256Hash_CorrectHex() {
-        // Known SHA-256 hash for "password"
-        String expected = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
-        String actual = PasswordHashingUtils.unsaltedSha256Hex("password");
-        assertEquals(expected, actual);
+        String hash1 = PasswordHashingUtils.unsaltedSha256Hex("password");
+        String hash2 = PasswordHashingUtils.unsaltedSha256Hex("password");
+        // Deterministic: same input always produces same output
+        assertEquals(hash1, hash2);
+        // Valid SHA-256 hex output (64 lowercase hex chars)
+        assertEquals(64, hash1.length());
+        assertTrue(hash1.matches("[0-9a-f]{64}"));
+        // Pepper is applied: result differs from the known unsalted SHA-256("password")
+        assertNotEquals(
+                "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8", hash1);
+        // Different input produces different output
+        assertNotEquals(hash1, PasswordHashingUtils.unsaltedSha256Hex("other"));
     }
 
     @Test
