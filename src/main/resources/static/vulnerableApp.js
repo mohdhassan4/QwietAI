@@ -3,6 +3,54 @@ const detailTitle = document.querySelector(".detail-title");
 const master = document.querySelector(".master");
 const innerMaster = document.querySelector(".inner-master");
 
+/**
+ * Escape HTML entities to prevent XSS when inserting untrusted data
+ * into an HTML context.
+ */
+function escapeHtml(str) {
+  if (str == null) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
+/**
+ * Sanitize an HTML string by removing script elements and inline event handlers.
+ * Used when the content is expected to be structural HTML (e.g. templates loaded
+ * from the same origin) but should not execute arbitrary scripts.
+ */
+function sanitizeHtml(html) {
+  if (!html) return "";
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(html, "text/html");
+  doc.querySelectorAll("script").forEach(function (el) {
+    el.remove();
+  });
+  doc.querySelectorAll("*").forEach(function (el) {
+    Array.from(el.attributes).forEach(function (attr) {
+      if (attr.name.toLowerCase().startsWith("on")) {
+        el.removeAttribute(attr.name);
+      }
+    });
+    if (
+      el.hasAttribute("href") &&
+      el.getAttribute("href").trim().toLowerCase().startsWith("javascript:")
+    ) {
+      el.removeAttribute("href");
+    }
+    if (
+      el.hasAttribute("src") &&
+      el.getAttribute("src").trim().toLowerCase().startsWith("javascript:")
+    ) {
+      el.removeAttribute("src");
+    }
+  });
+  return doc.body.innerHTML;
+}
+
 const variantTooltip = {
   secure: "Secure implementation",
   unsecure: "Unsecure implementation",
@@ -110,7 +158,7 @@ function _callbackForInnerMasterOnClickEvent(
       vulnerableAppEndPointData[id]["Detailed Information"][key][
         "HtmlTemplate"
       ];
-    document.getElementById("vulnerabilityDescription").innerHTML =
+    document.getElementById("vulnerabilityDescription").textContent =
       vulnerableAppEndPointData[id]["Description"];
     let urlToFetchHtmlTemplate = htmlTemplate
       ? "/VulnerableApp/templates/" + vulnerabilitySelected + "/" + htmlTemplate
@@ -133,7 +181,7 @@ function _callbackForInnerMasterOnClickEvent(
         if (requestToken !== thisRequestToken) {
           return;
         }
-        detailTitle.innerHTML = responseText;
+        detailTitle.innerHTML = sanitizeHtml(responseText);
         _loadDynamicJSAndCSS(urlToFetchHtmlTemplate, () => {
           // Re-check: the asset load itself is async, so navigation could
           // have moved on again between the AJAX response and now.
@@ -187,7 +235,7 @@ function createColumn(detailedInformationArray, key) {
   span.classList.add(
     isSecure ? "secure-variant-tooltip-text" : "unsecure-variant-tooltip-text"
   );
-  span.innerHTML = isSecure ? variantTooltip.secure : variantTooltip.unsecure;
+  span.textContent = isSecure ? variantTooltip.secure : variantTooltip.unsecure;
   svgWithTooltip.appendChild(span);
   svgWithTooltip.appendChild(_getSvgElementForVariant(isSecure));
   column.appendChild(svgWithTooltip);
@@ -241,13 +289,13 @@ function handleElementAutoSelection(vulnerableAppEndPointData, id = 0) {
   }
 
   if (id === 0) {
-    detailTitle.innerHTML = vulnerableAppEndPointData[id]["Description"];
+    detailTitle.textContent = vulnerableAppEndPointData[id]["Description"];
   } else {
-    innerMaster.innerHTML = "";
+    innerMaster.textContent = "";
   }
 
   vulnerabilitySelected = vulnerableAppEndPointData[id]["Name"];
-  detailTitle.innerHTML = vulnerableAppEndPointData[id]["Description"];
+  detailTitle.textContent = vulnerableAppEndPointData[id]["Description"];
   appendNewColumn(vulnerableAppEndPointData, id);
 }
 
@@ -406,7 +454,7 @@ function generateMasterDetail(vulnerableAppEndPointData) {
 
 function _clearHelp() {
   document.getElementById("showHelp").disabled = false;
-  document.getElementById("helpText").innerHTML = "";
+  document.getElementById("helpText").textContent = "";
   document.getElementById("hideHelp").disabled = true;
 }
 
@@ -426,9 +474,9 @@ function _addingEventListenerToShowHideHelpButton(vulnerableAppEndPointData) {
       helpText =
         helpText +
         "<li><b>Description about the attack:</b> " +
-        description +
+        escapeHtml(description) +
         "<br/><b>Payload:</b> " +
-        curlPayload +
+        escapeHtml(curlPayload) +
         "</li>";
     }
     helpText = helpText + "</ol>";
@@ -492,7 +540,7 @@ function _buildSingleChallengeCard(card, index) {
     payloadEl.classList.add("challenge-card-payload", "hide-component");
 
     showPayloadBtn.addEventListener("click", function () {
-      payloadEl.innerHTML = "";
+      payloadEl.textContent = "";
       let desc = document.createElement("p");
       desc.classList.add("challenge-card-payload-description");
       desc.textContent = payload["description"] || "";
@@ -589,7 +637,7 @@ function _renderDetailMode(vulnerableAppEndPointData) {
     currentKey
   );
 
-  challengeCardsContainer.innerHTML = "";
+  challengeCardsContainer.textContent = "";
   if (appMode === MODE_CHALLENGE) {
     if (_isChallengeAvailable(challengeCards)) {
       challengeCardsContainer.appendChild(buildChallengeCards(challengeCards));
