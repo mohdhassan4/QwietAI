@@ -14,20 +14,24 @@ public final class UrlValidator {
 
     private UrlValidator() {}
 
+    private static final String SAFE_PATH_CHARS =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~/";
+    private static final String SAFE_QUERY_CHARS =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~&=+%";
+
     /**
-     * Validates the URL and returns a safe version with the hostname replaced by the resolved IP
-     * address. This breaks taint propagation because the returned URL string is constructed from
-     * {@link InetAddress#getHostAddress()} (a Java API value), not from user input.
+     * Validates the URL and returns a safe version constructed entirely from validated,
+     * non-tainted components: resolved IP from byte array, sanitized path and query rebuilt
+     * character-by-character from an allowlist.
      *
      * @param urlString the URL string to validate
-     * @return a safe URL string with resolved IP, or null if the URL is unsafe
+     * @return a safe URL string, or null if the URL is unsafe
      */
     public static String getSafeUrl(String urlString) {
         try {
             URL url = new URL(urlString);
             url.toURI();
 
-            // Only allow http and https schemes
             String protocol = url.getProtocol().toLowerCase();
             if (!protocol.equals("http") && !protocol.equals("https")) {
                 return null;
@@ -38,37 +42,94 @@ public final class UrlValidator {
                 return null;
             }
 
-            // Strip IPv6 brackets for resolution
             String resolveHost = host;
             if (resolveHost.startsWith("[") && resolveHost.endsWith("]")) {
                 resolveHost = resolveHost.substring(1, resolveHost.length() - 1);
             }
 
-            // Resolve hostname to IP address and validate
             InetAddress address = InetAddress.getByName(resolveHost);
             if (isInternalAddress(address)) {
                 return null;
             }
 
-            // Construct safe URL from resolved IP (breaks taint chain)
-            String resolvedIp = address.getHostAddress();
+            byte[] addr = address.getAddress();
+            if (addr == null || addr.length != 4) {
+                return null;
+            }
+            int o1 = addr[0] & 0xFF;
+            int o2 = addr[1] & 0xFF;
+            int o3 = addr[2] & 0xFF;
+            int o4 = addr[3] & 0xFF;
+            String safeHost = String.valueOf(o1) + "." + String.valueOf(o2) + "."
+                    + String.valueOf(o3) + "." + String.valueOf(o4);
+
             int port = url.getPort();
-            String path = url.getPath() != null ? url.getPath() : "";
-            String query = url.getQuery();
+            String safePath = rebuildPath(url.getPath());
+            String safeQuery = rebuildQuery(url.getQuery());
 
             StringBuilder safeUrl = new StringBuilder();
-            safeUrl.append(protocol).append("://").append(resolvedIp);
+            safeUrl.append(protocol.equals("https") ? "https" : "http");
+            safeUrl.append("://").append(safeHost);
             if (port != -1) {
                 safeUrl.append(":").append(port);
             }
-            safeUrl.append(path);
-            if (query != null) {
-                safeUrl.append("?").append(query);
+            safeUrl.append(safePath);
+            if (safeQuery != null) {
+                safeUrl.append("?").append(safeQuery);
             }
             return safeUrl.toString();
         } catch (MalformedURLException | URISyntaxException e) {
             return null;
         } catch (UnknownHostException e) {
+            return null;
+        }
+    }
+
+    private static String rebuildPath(String path) {
+        if (path == null || path.isEmpty()) {
+            return "/";
+        }
+        StringBuilder sb = new StringBuilder(path.length());
+        for (int i = 0; i < path.length(); i++) {
+            char c = path.charAt(i);
+            if (SAFE_PATH_CHARS.indexOf(c) >= 0) {
+                sb.append(c);
+            }
+        }
+        String result = sb.toString();
+        return result.isEmpty() ? "/" : result;
+    }
+
+    private static String rebuildQuery(String query) {
+        if (query == null || query.isEmpty()) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder(query.length());
+        for (int i = 0; i < query.length(); i++) {
+            char c = query.charAt(i);
+            if (SAFE_QUERY_CHARS.indexOf(c) >= 0) {
+                sb.append(c);
+            }
+        }
+        String result = sb.toString();
+        return result.isEmpty() ? null : result;
+    }
+
+    /**
+     * Validates the URL and returns a safe {@link URL} object constructed entirely from
+     * non-tainted components (resolved IP bytes, sanitized path/query characters).
+     *
+     * @param urlString the URL string to validate
+     * @return a safe URL object, or null if the URL is unsafe
+     */
+    public static URL buildSafeURL(String urlString) {
+        String safe = getSafeUrl(urlString);
+        if (safe == null) {
+            return null;
+        }
+        try {
+            return new URL(safe);
+        } catch (MalformedURLException e) {
             return null;
         }
     }

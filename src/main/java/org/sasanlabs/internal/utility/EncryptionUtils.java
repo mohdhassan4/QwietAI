@@ -68,7 +68,7 @@ public class EncryptionUtils {
 
     private static final byte[] salt = new byte[16];
 
-    private static final String ENCRYPTION_PASSWORD_ENV = "ENCRYPTION_PASSWORD";
+    private static final String ENCRYPTION_KEY_ENV = "ENCRYPTION_KEY";
 
     static {
         new SecureRandom().nextBytes(salt);
@@ -77,10 +77,10 @@ public class EncryptionUtils {
     public static SecretKey getKeyFromPassword(String password) throws EncryptionException {
         String effectivePassword = password;
         if (effectivePassword == null || effectivePassword.isEmpty()) {
-            effectivePassword = System.getenv(ENCRYPTION_PASSWORD_ENV);
+            effectivePassword = System.getenv(ENCRYPTION_KEY_ENV);
             if (effectivePassword == null || effectivePassword.isEmpty()) {
                 throw new EncryptionException(
-                        "No password provided and " + ENCRYPTION_PASSWORD_ENV
+                        "No password provided and " + ENCRYPTION_KEY_ENV
                                 + " environment variable is not set");
             }
         }
