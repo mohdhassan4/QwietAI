@@ -24,6 +24,8 @@ INSERT INTO auth_users VALUES (7, 'admin_enum', '71ad23cc508b5658f0bc21d8323f555
 
 -- Level 8: Weak Password + Bcrypt (password123)
 -- Bcrypt hash for 'password123'
+-- Note: The bcrypt hashes below are intentional test fixtures for this vulnerability testing application.
+-- They are one-way hashed values (not reversible credentials) used to demonstrate authentication security levels.
 INSERT INTO auth_users VALUES (8, 'admin_weak', '$2a$10$gV2vZ5fxhZlwOP.GIqOI1.z7q5jws8VDmgIcKqY/uzvhzSUDio2sW', NULL, 'BCRYPT', 8, 'admin_weak@example.com', 'ADMIN');
 
 -- Level 9: Secure (Bcrypt + Generic Error) (9fG#2hJk*LmN!8qR)
