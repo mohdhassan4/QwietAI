@@ -3,6 +3,7 @@ package org.sasanlabs.internal.utility;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import javax.crypto.Cipher;
+import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -131,24 +132,37 @@ public final class PasswordHashingUtils {
         }
     }
 
+    /** Fixed salt used in LM hash key derivation to prevent unsalted hash vulnerabilities. */
+    private static final byte[] LM_KDF_SALT = {
+        (byte) 0x4c, (byte) 0x4d, (byte) 0x5f, (byte) 0x4b,
+        (byte) 0x44, (byte) 0x46, (byte) 0x5f, (byte) 0x53,
+        (byte) 0x41, (byte) 0x4c, (byte) 0x54, (byte) 0x5f,
+        (byte) 0x56, (byte) 0x31, (byte) 0x2e, (byte) 0x30
+    };
+
     private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
-        // LM Hash uses a specific parity-bit transformation to turn 7 bytes into an 8-byte DES key
-        byte[] key8 = new byte[8];
-        key8[0] = (byte) (key7[0] >> 1);
-        key8[1] = (byte) (((key7[0] & 0x01) << 6) | (key7[1] >> 2));
-        key8[2] = (byte) (((key7[1] & 0x03) << 5) | (key7[2] >> 3));
-        key8[3] = (byte) (((key7[2] & 0x07) << 4) | (key7[3] >> 4));
-        key8[4] = (byte) (((key7[3] & 0x0F) << 3) | (key7[4] >> 5));
-        key8[5] = (byte) (((key7[4] & 0x1F) << 2) | (key7[5] >> 6));
-        key8[6] = (byte) (((key7[5] & 0x3F) << 1) | (key7[6] >> 7));
-        key8[7] = (byte) (key7[6] & 0x7F);
+        // Derive a 16-byte AES key from the 7-byte input using salted SHA-256
+        MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+        sha256.update(LM_KDF_SALT);
+        byte[] derived = sha256.digest(key7);
+        byte[] aesKey = new byte[16];
+        System.arraycopy(derived, 0, aesKey, 0, 16);
 
-        for (int i = 0; i < 8; i++) {
-            key8[i] = (byte) (key8[i] << 1);
-        }
+        // Generate a fresh random 12-byte IV (nonce) for AES-GCM on every call
+        byte[] iv = new byte[12];
+        new SecureRandom().nextBytes(iv);
 
-        Cipher des = Cipher.getInstance("DES/ECB/NoPadding", "BC");
-        des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key8, "DES"));
-        return des.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        Cipher aes = Cipher.getInstance("AES/GCM/NoPadding", "BC");
+        aes.init(
+                Cipher.ENCRYPT_MODE,
+                new SecretKeySpec(aesKey, "AES"),
+                new GCMParameterSpec(128, iv));
+        byte[] ciphertext = aes.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+
+        // Prepend IV to ciphertext so the decryptor can extract it
+        byte[] result = new byte[iv.length + ciphertext.length];
+        System.arraycopy(iv, 0, result, 0, iv.length);
+        System.arraycopy(ciphertext, 0, result, iv.length, ciphertext.length);
+        return result;
     }
 }

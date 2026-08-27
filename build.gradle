@@ -176,6 +176,8 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    // Forward JWT keystore password for tests that load sasanlabs.p12
+    environment 'JWT_KEY_STORE_PASSWORD', System.getenv().getOrDefault('JWT_KEY_STORE_PASSWORD', 'changeIt')
     finalizedBy jacocoTestReport
 }
 

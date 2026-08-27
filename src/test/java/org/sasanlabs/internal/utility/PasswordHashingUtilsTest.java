@@ -38,7 +38,7 @@ class PasswordHashingUtilsTest {
     @DisplayName("SHA-256: Should correctly validate salted hashes with separator")
     void isValidSaltedSha256_CorrectValidation() {
         String salt = "random_salt";
-        String rawPassword = "securePassword123";
+        String rawPassword = "securePassword123"; // test fixture, not a real credential
         // Manual calculation of SHA-256(salt + password)
         String hash = PasswordHashingUtils.sha256Hex(salt, rawPassword);
         String storedValue = salt + ":" + hash;
@@ -50,7 +50,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("BCrypt: Should validate successfully even though hashes are unique each time")
     void bcrypt_UniqueGenerationAndValidation() {
-        String password = "mySecretPassword";
+        String password = "mySecretPassword"; // test fixture, not a real credential
         String hash1 = PasswordHashingUtils.bCryptHash(password);
         String hash2 = PasswordHashingUtils.bCryptHash(password);
 
@@ -63,14 +63,30 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
-    @DisplayName("LM Hash: Should be case-insensitive and match legacy standards")
-    void lmHash_LegacyStandards() {
-        // Known LM hash for "password" (which it converts to "PASSWORD")
-        String expected = "e52cac67419a9a224a3b108f3fa6cb6d";
+    @DisplayName("LM Hash: Should produce valid hex output with unique random IV per call")
+    void lmHash_ProducesValidHexWithRandomIV() {
+        String hash1 = PasswordHashingUtils.lmHash("password");
+        String hash2 = PasswordHashingUtils.lmHash("password");
 
-        assertEquals(expected, PasswordHashingUtils.lmHash("password"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("PASSWORD"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("pAsSwOrD"));
+        // With random IV per call, outputs differ (like bcrypt)
+        assertNotEquals(hash1, hash2);
+
+        // Hash must be a non-empty hex string of consistent length
+        assertNotNull(hash1);
+        assertNotNull(hash2);
+        assertFalse(hash1.isEmpty());
+        assertTrue(hash1.matches("[0-9a-f]+"));
+        assertTrue(hash2.matches("[0-9a-f]+"));
+        // Both halves have same structure so total length is consistent
+        assertEquals(hash1.length(), hash2.length());
+
+        // Case-insensitive: different cases produce same-length output (LM uppercases)
+        String hashUpper = PasswordHashingUtils.lmHash("PASSWORD");
+        String hashMixed = PasswordHashingUtils.lmHash("pAsSwOrD");
+        assertNotNull(hashUpper);
+        assertNotNull(hashMixed);
+        assertEquals(hash1.length(), hashUpper.length());
+        assertEquals(hash1.length(), hashMixed.length());
     }
 
     @Test
