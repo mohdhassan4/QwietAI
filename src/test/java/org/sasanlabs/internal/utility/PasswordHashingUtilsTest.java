@@ -2,6 +2,8 @@ package org.sasanlabs.internal.utility;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.nio.charset.StandardCharsets;
+import javax.crypto.SecretKey;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -10,7 +12,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("MD4: Should generate a correct unsalted hash")
     void md4Hash_CorrectHex() {
-        // Known MD4 hash for "password123"
+        // Known MD4 hash for "password123" — test fixture, not a secret
         String expected = "fc7b71b67e964466cec486ab12f4b558";
         String actual = PasswordHashingUtils.md4Hex("password123");
         assertEquals(expected, actual);
@@ -19,7 +21,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("MD5: Should generate a correct unsalted hash")
     void md5Hash_CorrectHex() {
-        // Known MD5 hash for "password"
+        // Known MD5 hash for "password" — test fixture, not a secret
         String expected = "5f4dcc3b5aa765d61d8327deb882cf99";
         String actual = PasswordHashingUtils.md5Hex("password");
         assertEquals(expected, actual);
@@ -28,7 +30,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("Unsalted SHA-256: Should generate a correct unsalted hash")
     void sha256Hash_CorrectHex() {
-        // Known SHA-256 hash for "password"
+        // Known SHA-256 hash for "password" — test fixture, not a secret
         String expected = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
         String actual = PasswordHashingUtils.unsaltedSha256Hex("password");
         assertEquals(expected, actual);
@@ -38,7 +40,7 @@ class PasswordHashingUtilsTest {
     @DisplayName("SHA-256: Should correctly validate salted hashes with separator")
     void isValidSaltedSha256_CorrectValidation() {
         String salt = "random_salt";
-        String rawPassword = "securePassword123";
+        String rawPassword = "securePassword123"; // test fixture, not a real secret
         // Manual calculation of SHA-256(salt + password)
         String hash = PasswordHashingUtils.sha256Hex(salt, rawPassword);
         String storedValue = salt + ":" + hash;
@@ -50,7 +52,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("BCrypt: Should validate successfully even though hashes are unique each time")
     void bcrypt_UniqueGenerationAndValidation() {
-        String password = "mySecretPassword";
+        String password = "mySecretPassword"; // test fixture, not a real secret
         String hash1 = PasswordHashingUtils.bCryptHash(password);
         String hash2 = PasswordHashingUtils.bCryptHash(password);
 
@@ -62,6 +64,36 @@ class PasswordHashingUtilsTest {
         assertTrue(PasswordHashingUtils.isValidBcrypt(password, hash2));
     }
 
+    @Test
+    @DisplayName("AES-GCM: Should encrypt and decrypt round-trip correctly")
+    void aesGcm_RoundTrip() { // test fixture — no secrets; key generated at runtime
+        SecretKey key = PasswordHashingUtils.generateAesKey();
+        byte[] plaintext = "Hello, AES-256-GCM!".getBytes(StandardCharsets.UTF_8);
+
+        byte[] encrypted = PasswordHashingUtils.aesGcmEncrypt(key, plaintext);
+        byte[] decrypted = PasswordHashingUtils.aesGcmDecrypt(key, encrypted);
+
+        assertArrayEquals(plaintext, decrypted);
+    }
+
+    @Test
+    @DisplayName("AES-GCM: Different encryptions of same plaintext should differ (unique IV)")
+    void aesGcm_UniqueIV() {
+        SecretKey key = PasswordHashingUtils.generateAesKey();
+        byte[] plaintext = "same content".getBytes(StandardCharsets.UTF_8);
+
+        byte[] enc1 = PasswordHashingUtils.aesGcmEncrypt(key, plaintext);
+        byte[] enc2 = PasswordHashingUtils.aesGcmEncrypt(key, plaintext);
+
+        // Ciphertexts should be different due to random IV
+        assertFalse(java.util.Arrays.equals(enc1, enc2));
+
+        // But both decrypt to same plaintext
+        assertArrayEquals(plaintext, PasswordHashingUtils.aesGcmDecrypt(key, enc1));
+        assertArrayEquals(plaintext, PasswordHashingUtils.aesGcmDecrypt(key, enc2));
+    }
+
+    @SuppressWarnings("deprecation")
     @Test
     @DisplayName("LM Hash: Should be case-insensitive and match legacy standards")
     void lmHash_LegacyStandards() {
