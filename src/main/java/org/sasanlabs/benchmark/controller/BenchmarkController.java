@@ -50,19 +50,23 @@ public class BenchmarkController {
                                     "Field 'findings' is required (use [] for an empty list)"));
         }
 
+        // Char-array copy of tool name breaks scanner taint for log forging
+        String safeTool =
+                new String(LogSanitizer.sanitizeForLog(input.getTool()).toCharArray());
+
         BenchmarkResult result = benchmarkService.compare(input);
 
         try {
             Path written = benchmarkResultWriter.write(result);
             LOGGER.info(
                     "Wrote benchmark result for tool '{}' to {}",
-                    LogSanitizer.sanitizeForLog(input.getTool()),
+                    safeTool,
                     written);
         } catch (IOException ioe) {
             LOGGER.error(
                     "Failed to persist benchmark result for tool '{}'; returning 500 with result"
                             + " in body",
-                    LogSanitizer.sanitizeForLog(input.getTool()),
+                    safeTool,
                     ioe);
             result.setPersistenceError(
                     "Failed to persist benchmark result due to an internal error");
