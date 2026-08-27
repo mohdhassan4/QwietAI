@@ -430,14 +430,16 @@ function generateMasterDetail(vulnerableAppEndPointData) {
 
 function _clearHelp() {
   document.getElementById("showHelp").disabled = false;
-  document.getElementById("helpText").innerHTML = "";
+  document.getElementById("helpText").textContent = "";
   document.getElementById("hideHelp").disabled = true;
 }
 
 function _addingEventListenerToShowHideHelpButton(vulnerableAppEndPointData) {
   document.getElementById("showHelp").addEventListener("click", function () {
     document.getElementById("showHelp").disabled = true;
-    let helpText = "<ol>";
+    var helpContainer = document.getElementById("helpText");
+    helpContainer.textContent = "";
+    var ol = document.createElement("ol");
     if (
       !Object.hasOwn(vulnerableAppEndPointData, currentId) ||
       !Object.hasOwn(
@@ -445,7 +447,7 @@ function _addingEventListenerToShowHideHelpButton(vulnerableAppEndPointData) {
         currentKey
       )
     ) {
-      document.getElementById("helpText").innerHTML = helpText + "</ol>";
+      helpContainer.appendChild(ol);
       document.getElementById("hideHelp").disabled = false;
       return;
     }
@@ -460,16 +462,19 @@ function _addingEventListenerToShowHideHelpButton(vulnerableAppEndPointData) {
       let attackVector = attackVectors[index];
       let curlPayload = attackVector["CurlPayload"];
       let description = attackVector["Description"];
-      helpText =
-        helpText +
-        "<li><b>Description about the attack:</b> " +
-        description +
-        "<br/><b>Payload:</b> " +
-        curlPayload +
-        "</li>";
+      var li = document.createElement("li");
+      var descLabel = document.createElement("b");
+      descLabel.textContent = "Description about the attack:";
+      li.appendChild(descLabel);
+      li.appendChild(document.createTextNode(" " + description));
+      li.appendChild(document.createElement("br"));
+      var payloadLabel = document.createElement("b");
+      payloadLabel.textContent = "Payload:";
+      li.appendChild(payloadLabel);
+      li.appendChild(document.createTextNode(" " + curlPayload));
+      ol.appendChild(li);
     }
-    helpText = helpText + "</ol>";
-    document.getElementById("helpText").innerHTML = helpText;
+    helpContainer.appendChild(ol);
     document.getElementById("hideHelp").disabled = false;
   });
 
