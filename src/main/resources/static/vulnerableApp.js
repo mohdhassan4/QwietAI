@@ -120,8 +120,8 @@ function _callbackForInnerMasterOnClickEvent(
     _updateChallengeToggleAvailability(levelChallengeCards);
     _renderDetailMode(vulnerableAppEndPointData);
     let htmlTemplate = _levelInfo && _levelInfo["HtmlTemplate"];
-    document.getElementById("vulnerabilityDescription").innerHTML =
-      _entry && _entry["Description"];
+    document.getElementById("vulnerabilityDescription").textContent =
+      (_entry && _entry["Description"]) || "";
     let urlToFetchHtmlTemplate = htmlTemplate
       ? "/VulnerableApp/templates/" + vulnerabilitySelected + "/" + htmlTemplate
       : "error";
