@@ -132,9 +132,18 @@ public final class PasswordHashingUtils {
         }
     }
 
+    /** Fixed salt used in LM hash key derivation to prevent unsalted hash vulnerabilities. */
+    private static final byte[] LM_KDF_SALT = {
+        (byte) 0x4c, (byte) 0x4d, (byte) 0x5f, (byte) 0x4b,
+        (byte) 0x44, (byte) 0x46, (byte) 0x5f, (byte) 0x53,
+        (byte) 0x41, (byte) 0x4c, (byte) 0x54, (byte) 0x5f,
+        (byte) 0x56, (byte) 0x31, (byte) 0x2e, (byte) 0x30
+    };
+
     private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
-        // Derive a 16-byte AES key and 16-byte IV from the 7-byte input using SHA-256
+        // Derive a 16-byte AES key and 16-byte IV from the 7-byte input using salted SHA-256
         MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+        sha256.update(LM_KDF_SALT);
         byte[] derived = sha256.digest(key7);
         byte[] aesKey = new byte[16];
         byte[] iv = new byte[16];
