@@ -66,6 +66,7 @@ class PasswordHashingUtilsTest {
     @DisplayName("LM Hash: Should be deterministic and case-insensitive")
     void lmHash_DeterministicAndCaseInsensitive() {
         // LM hash is case-insensitive: all casings of the same password produce the same hash
+        // Non-secret: LM hashes of well-known demo inputs, used only for deterministic test verification
         String hash1 = PasswordHashingUtils.lmHash("password");
         String hash2 = PasswordHashingUtils.lmHash("PASSWORD");
         String hash3 = PasswordHashingUtils.lmHash("pAsSwOrD");
@@ -86,6 +87,7 @@ class PasswordHashingUtilsTest {
     @DisplayName("Hex Utility: Should convert byte arrays to lowercase hex strings")
     void bytesToHex_Conversion() {
         byte[] input = {0, 15, 16, 127, -1}; // 00, 0f, 10, 7f, ff
+        // Non-secret: trivial hex encoding of known byte array for test verification
         String expected = "000f107fff";
         assertEquals(expected, EncodingUtils.bytesToHex(input));
     }
