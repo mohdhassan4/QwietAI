@@ -51,18 +51,12 @@ public class BenchmarkController {
 
         BenchmarkResult result = benchmarkService.compare(input);
 
-        // Derive a safe log-friendly tool identifier: allowlist alphanumeric/hyphen/underscore,
-        // truncate to 64 chars, and construct a new String to break taint propagation.
-        String safeToolId = toSafeLogToken(input.getTool());
-
         try {
             Path written = benchmarkResultWriter.write(result);
-            LOGGER.info("Wrote benchmark result for tool [{}] to {}", safeToolId, written);
+            LOGGER.info("Wrote benchmark result to {}", written);
         } catch (IOException ioe) {
             LOGGER.error(
-                    "Failed to persist benchmark result for tool [{}]; returning 500 with result"
-                            + " in body",
-                    safeToolId,
+                    "Failed to persist benchmark result; returning 500 with result in body",
                     ioe);
             result.setPersistenceError("Failed to persist benchmark result: " + ioe.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
@@ -71,30 +65,4 @@ public class BenchmarkController {
         return ResponseEntity.ok(result);
     }
 
-    /**
-     * Produces a safe, non-tainted log token from untrusted input. Only alphanumeric characters,
-     * hyphens, and underscores are retained; everything else is replaced with '_'. The result is
-     * truncated to 64 characters and constructed via a new char array to break taint propagation.
-     */
-    private static String toSafeLogToken(String untrusted) {
-        if (untrusted == null || untrusted.isEmpty()) {
-            return "(empty)";
-        }
-        int maxLen = Math.min(untrusted.length(), 64);
-        char[] safe = new char[maxLen];
-        for (int i = 0; i < maxLen; i++) {
-            char c = untrusted.charAt(i);
-            if ((c >= 'a' && c <= 'z')
-                    || (c >= 'A' && c <= 'Z')
-                    || (c >= '0' && c <= '9')
-                    || c == '-'
-                    || c == '_'
-                    || c == '.') {
-                safe[i] = c;
-            } else {
-                safe[i] = '_';
-            }
-        }
-        return new String(safe);
-    }
 }
