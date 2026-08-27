@@ -3,11 +3,9 @@
 INSERT INTO auth_users VALUES (1, 'admin_sqli', 'not_needed_for_sqli', NULL, 'PLAIN', 1, 'admin_sqli@example.com', 'ADMIN');
 
 -- Level 2: Sensitive Data Logging
--- Real password: 'v9K#2mLp!8zQ' (stored as bcrypt hash)
 INSERT INTO auth_users VALUES (2, 'admin_logs', '$2a$10$srWVJ5N2J891SUpVl9LsfORqe2FYLMAwXyb7kllcuPhN4ZdmxnbyS', NULL, 'PLAIN', 2, 'admin_logs@example.com', 'ADMIN');
 
 -- Level 3: Plaintext Storage (now uses bcrypt hash)
--- Real password: 'b7X$4nRj-6mW' (stored as bcrypt hash)
 INSERT INTO auth_users VALUES (3, 'admin_plain', '$2a$10$bu/qIzsvhJBjjVEd5zfbV.e0AxgevmpRNBT5.3ZcrBU1v4F4LpsNS', NULL, 'PLAIN', 3, 'admin_plain@example.com', 'ADMIN');
 
 -- Level 4: MD5 Hashing (f2C@9tYk*1hP)
