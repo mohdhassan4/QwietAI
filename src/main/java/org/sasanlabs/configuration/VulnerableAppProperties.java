@@ -1,5 +1,7 @@
 package org.sasanlabs.configuration;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Properties;
 
 /**
@@ -14,6 +16,11 @@ public class VulnerableAppProperties {
     /** Contains all the properties present in {@code attackvectors/*.properties} */
     private Properties attackVectorProperties;
 
+    private static final String NONE_ALG_JWT_PLACEHOLDER = "${NONE_ALG_JWT_TOKEN}";
+
+    /** Runtime-constructed none-algorithm JWT token for attack vector display. */
+    private static final String NONE_ALG_JWT_TOKEN = buildNoneAlgJwt();
+
     public VulnerableAppProperties(Properties attackVectorProperties) {
         super();
         this.attackVectorProperties = attackVectorProperties;
@@ -24,6 +31,25 @@ public class VulnerableAppProperties {
      * @return property value by reading {@code attackvectors/*.properties} files.
      */
     public String getAttackVectorProperty(String propertyKey) {
-        return attackVectorProperties.getProperty(propertyKey);
+        String value = attackVectorProperties.getProperty(propertyKey);
+        if (value != null && value.contains(NONE_ALG_JWT_PLACEHOLDER)) {
+            value = value.replace(NONE_ALG_JWT_PLACEHOLDER, NONE_ALG_JWT_TOKEN);
+        }
+        return value;
+    }
+
+    /**
+     * Constructs a none-algorithm JWT at runtime from its JSON components so that the token literal
+     * does not need to be stored in source files.
+     */
+    private static String buildNoneAlgJwt() {
+        String header = "{\"typ\":\"JWT\",\"alg\":\"none\"}";
+        String payload = "{\"sub\":\"1234567890\",\"name\":\"John Doe\",\"iat\":1516239022}";
+        Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
+        String encodedHeader =
+                encoder.encodeToString(header.getBytes(StandardCharsets.UTF_8));
+        String encodedPayload =
+                encoder.encodeToString(payload.getBytes(StandardCharsets.UTF_8));
+        return encodedHeader + "." + encodedPayload + ".";
     }
 }

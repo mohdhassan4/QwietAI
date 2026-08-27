@@ -131,8 +131,15 @@ public class VulnerableAppConfiguration {
             @Value("${spring.datasource.application.password}") String appPassword) {
         ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
         JdbcTemplate adminJdbcTemplate = new JdbcTemplate(adminDataSource);
+        // Validate password contains only safe characters (alphanumeric + common symbols).
+        // This value comes from Spring @Value config, not user input, but we enforce a
+        // strict allowlist to prevent any injection in the DDL statement.
+        if (!appPassword.matches("[a-zA-Z0-9!@#$%^&*()_+=\\-]{1,128}")) {
+            throw new IllegalArgumentException(
+                    "Application datasource password contains disallowed characters");
+        }
         adminJdbcTemplate.execute(
-                String.format("CREATE USER application PASSWORD '%s'", appPassword));
+                "CREATE USER IF NOT EXISTS application PASSWORD '" + appPassword + "'");
         populator.addScript(new ClassPathResource("scripts/SQLInjection/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/xss/PersistentXSS/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/XXEVulnerability/schema.sql"));

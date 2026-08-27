@@ -42,6 +42,12 @@ public class PasswordResetReferrerPolicyFilter extends OncePerRequestFilter {
             return false;
         }
 
+        // Validate input: trim whitespace, reject excessively long or non-numeric values
+        level = level.trim();
+        if (level.isEmpty() || level.length() > 10 || !level.matches("^-?\\d+$")) {
+            return false;
+        }
+
         try {
             return Integer.parseInt(level) == REFERRER_LEAK_LEVEL;
         } catch (NumberFormatException exception) {
