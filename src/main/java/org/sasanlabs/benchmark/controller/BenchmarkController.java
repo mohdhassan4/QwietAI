@@ -7,6 +7,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sasanlabs.benchmark.model.BenchmarkResult;
 import org.sasanlabs.benchmark.model.ScannerFindings;
+import org.sasanlabs.internal.utility.LogSanitizer;
 import org.sasanlabs.benchmark.service.BenchmarkResultWriter;
 import org.sasanlabs.benchmark.service.BenchmarkService;
 import org.springframework.context.annotation.Profile;
@@ -50,7 +51,7 @@ public class BenchmarkController {
         }
 
         BenchmarkResult result = benchmarkService.compare(input);
-        String sanitizedTool = input.getTool().replaceAll("[\\r\\n]", "");
+        String sanitizedTool = LogSanitizer.sanitize(input.getTool());
 
         try {
             Path written = benchmarkResultWriter.write(result);
