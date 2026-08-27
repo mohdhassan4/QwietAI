@@ -19,8 +19,8 @@ INSERT INTO auth_users VALUES (5, 'admin_sha1', '632e10860bd26278451d3f89d1c46f1
 -- Level 6: SHA-256 (No Salt) (m8D!4kLr#2jZ)
 INSERT INTO auth_users VALUES (6, 'admin_sha256', '8b8eca84f7e2b04f531749f999c3bf9e3f045bab78f4c8a451fa70929b3c3946', NULL, 'SHA256', 6, 'admin_sha256@example.com', 'ADMIN');
 
--- Level 7: Salted SHA-256 (q1W%6nTp^8vM with Salt s9A#2zLk)
-INSERT INTO auth_users VALUES (7, 'admin_enum', '71ad23cc508b5658f0bc21d8323f55521be98ca951e83a4a4d15641a3ca2b8a4', 's9A#2zLk', 'SHA256', 7, 'admin_enum@example.com', 'ADMIN');
+-- Level 7: Salted SHA-256 (test password: changeme, salt: testsalt)
+INSERT INTO auth_users VALUES (7, 'admin_enum', 'd02df86216b54b1ff06e7b75044d47718757bd96f99079237b842d97a8f551f9', 'testsalt', 'SHA256', 7, 'admin_enum@example.com', 'ADMIN');
 
 -- Level 8: Weak Password + Bcrypt (password123)
 -- Bcrypt hash for 'password123'
