@@ -8,30 +8,74 @@ import org.junit.jupiter.api.Test;
 class PasswordHashingUtilsTest {
 
     @Test
-    @DisplayName("MD4: Should generate a correct unsalted hash")
-    void md4Hash_CorrectHex() {
-        // Known MD4 hash for "password123"
-        String expected = "fc7b71b67e964466cec486ab12f4b558";
-        String actual = PasswordHashingUtils.md4Hex("password123");
-        assertEquals(expected, actual);
+    @DisplayName("MD4: Should generate a salted hash in salt:hash format")
+    void md4Hash_SaltedFormat() {
+        String result = PasswordHashingUtils.md4Hex("password123");
+        assertTrue(result.contains(":"), "Expected salt:hash format");
+        String[] parts = result.split(":", 2);
+        assertEquals(2, parts.length);
+        assertFalse(parts[0].isEmpty(), "Salt should not be empty");
+        assertFalse(parts[1].isEmpty(), "Hash should not be empty");
     }
 
     @Test
-    @DisplayName("MD5: Should generate a correct unsalted hash")
-    void md5Hash_CorrectHex() {
-        // Known MD5 hash for "password"
-        String expected = "5f4dcc3b5aa765d61d8327deb882cf99";
-        String actual = PasswordHashingUtils.md5Hex("password");
-        assertEquals(expected, actual);
+    @DisplayName("MD4: Two calls should produce different hashes due to random salt")
+    void md4Hash_RandomSalt() {
+        String hash1 = PasswordHashingUtils.md4Hex("password123");
+        String hash2 = PasswordHashingUtils.md4Hex("password123");
+        assertNotEquals(hash1, hash2, "Random salts should produce unique outputs");
     }
 
     @Test
-    @DisplayName("Unsalted SHA-256: Should generate a correct unsalted hash")
-    void sha256Hash_CorrectHex() {
-        // Known SHA-256 hash for "password"
-        String expected = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
-        String actual = PasswordHashingUtils.unsaltedSha256Hex("password");
-        assertEquals(expected, actual);
+    @DisplayName("MD4: isValidSaltedHash should verify generated hash")
+    void md4Hash_Verification() {
+        String storedHash = PasswordHashingUtils.md4Hex("password123");
+        assertTrue(PasswordHashingUtils.isValidSaltedHash(
+                "password123", storedHash, PasswordHashingUtils.HashAlgorithm.MD4));
+        assertFalse(PasswordHashingUtils.isValidSaltedHash(
+                "wrongpass", storedHash, PasswordHashingUtils.HashAlgorithm.MD4));
+    }
+
+    @Test
+    @DisplayName("MD5: Should generate a salted hash in salt:hash format")
+    void md5Hash_SaltedFormat() {
+        String result = PasswordHashingUtils.md5Hex("password");
+        assertTrue(result.contains(":"), "Expected salt:hash format");
+        String[] parts = result.split(":", 2);
+        assertEquals(2, parts.length);
+        assertFalse(parts[0].isEmpty(), "Salt should not be empty");
+        assertFalse(parts[1].isEmpty(), "Hash should not be empty");
+    }
+
+    @Test
+    @DisplayName("MD5: isValidSaltedHash should verify generated hash")
+    void md5Hash_Verification() {
+        String storedHash = PasswordHashingUtils.md5Hex("password");
+        assertTrue(PasswordHashingUtils.isValidSaltedHash(
+                "password", storedHash, PasswordHashingUtils.HashAlgorithm.MD5));
+        assertFalse(PasswordHashingUtils.isValidSaltedHash(
+                "wrongpass", storedHash, PasswordHashingUtils.HashAlgorithm.MD5));
+    }
+
+    @Test
+    @DisplayName("Salted SHA-256: Should generate a salted hash in salt:hash format")
+    void saltedSha256Hash_Format() {
+        String result = PasswordHashingUtils.saltedSha256Hex("password");
+        assertTrue(result.contains(":"), "Expected salt:hash format");
+        String[] parts = result.split(":", 2);
+        assertEquals(2, parts.length);
+        assertFalse(parts[0].isEmpty(), "Salt should not be empty");
+        assertFalse(parts[1].isEmpty(), "Hash should not be empty");
+    }
+
+    @Test
+    @DisplayName("Salted SHA-256: isValidSaltedHash should verify generated hash")
+    void saltedSha256Hash_Verification() {
+        String storedHash = PasswordHashingUtils.saltedSha256Hex("password");
+        assertTrue(PasswordHashingUtils.isValidSaltedHash(
+                "password", storedHash, PasswordHashingUtils.HashAlgorithm.SHA256));
+        assertFalse(PasswordHashingUtils.isValidSaltedHash(
+                "wrongpass", storedHash, PasswordHashingUtils.HashAlgorithm.SHA256));
     }
 
     @Test
@@ -50,6 +94,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("BCrypt: Should validate successfully even though hashes are unique each time")
     void bcrypt_UniqueGenerationAndValidation() {
+        // Intentional test fixture password (not a real secret)
         String password = "mySecretPassword";
         String hash1 = PasswordHashingUtils.bCryptHash(password);
         String hash2 = PasswordHashingUtils.bCryptHash(password);
@@ -65,12 +110,49 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("LM Hash: Should be case-insensitive and match legacy standards")
     void lmHash_LegacyStandards() {
-        // Known LM hash for "password" (which it converts to "PASSWORD")
+        // Known LM hash for "password" (which it converts to "PASSWORD") - test fixture, not a real secret
         String expected = "e52cac67419a9a224a3b108f3fa6cb6d";
 
         assertEquals(expected, PasswordHashingUtils.lmHash("password"));
         assertEquals(expected, PasswordHashingUtils.lmHash("PASSWORD"));
         assertEquals(expected, PasswordHashingUtils.lmHash("pAsSwOrD"));
+    }
+
+    @Test
+    @DisplayName("MD5 with explicit salt: Should produce deterministic hash")
+    void md5Hash_WithExplicitSalt_Deterministic() {
+        byte[] salt = "testSalt".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        String hash1 = PasswordHashingUtils.md5Hex("password", salt);
+        String hash2 = PasswordHashingUtils.md5Hex("password", salt);
+        assertEquals(hash1, hash2);
+    }
+
+    @Test
+    @DisplayName("SHA-1: Should generate a salted hash in salt:hash format")
+    void sha1Hash_SaltedFormat() {
+        String result = PasswordHashingUtils.sha1Hex("password");
+        assertTrue(result.contains(":"), "Expected salt:hash format");
+        String[] parts = result.split(":", 2);
+        assertEquals(2, parts.length);
+    }
+
+    @Test
+    @DisplayName("SHA-1: isValidSaltedHash should verify generated hash")
+    void sha1Hash_Verification() {
+        String storedHash = PasswordHashingUtils.sha1Hex("password");
+        assertTrue(PasswordHashingUtils.isValidSaltedHash(
+                "password", storedHash, PasswordHashingUtils.HashAlgorithm.SHA1));
+        assertFalse(PasswordHashingUtils.isValidSaltedHash(
+                "wrongpass", storedHash, PasswordHashingUtils.HashAlgorithm.SHA1));
+    }
+
+    @Test
+    @DisplayName("Salted hash: Same explicit salt and input should produce same hash")
+    void saltedHash_Deterministic() {
+        byte[] salt = "fixedSalt".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        String hash1 = PasswordHashingUtils.md5Hex("password", salt);
+        String hash2 = PasswordHashingUtils.md5Hex("password", salt);
+        assertEquals(hash1, hash2);
     }
 
     @Test
@@ -86,5 +168,16 @@ class PasswordHashingUtilsTest {
     void validation_NullInputs() {
         assertFalse(PasswordHashingUtils.isValidSaltedSha256(null, "someHash"));
         assertFalse(PasswordHashingUtils.isValidSaltedSha256("somePass", null));
+        assertFalse(PasswordHashingUtils.isValidSaltedHash(
+                null, "salt:hash", PasswordHashingUtils.HashAlgorithm.SHA256));
+        assertFalse(PasswordHashingUtils.isValidSaltedHash(
+                "password", null, PasswordHashingUtils.HashAlgorithm.SHA256));
+    }
+
+    @Test
+    @DisplayName("isValidSaltedHash: Should reject malformed stored values without separator")
+    void isValidSaltedHash_NoSeparator() {
+        assertFalse(PasswordHashingUtils.isValidSaltedHash(
+                "password", "noseparator", PasswordHashingUtils.HashAlgorithm.SHA256));
     }
 }
