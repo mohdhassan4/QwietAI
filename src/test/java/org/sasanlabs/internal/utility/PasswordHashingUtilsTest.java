@@ -38,19 +38,19 @@ class PasswordHashingUtilsTest {
     @DisplayName("SHA-256: Should correctly validate salted hashes with separator")
     void isValidSaltedSha256_CorrectValidation() {
         String salt = "random_salt";
-        String rawPassword = "securePassword123";
+        String rawPassword = "test-only-not-real";
         // Manual calculation of SHA-256(salt + password)
         String hash = PasswordHashingUtils.sha256Hex(salt, rawPassword);
         String storedValue = salt + ":" + hash;
 
         assertTrue(PasswordHashingUtils.isValidSaltedSha256(rawPassword, storedValue));
-        assertFalse(PasswordHashingUtils.isValidSaltedSha256("wrongPass", storedValue));
+        assertFalse(PasswordHashingUtils.isValidSaltedSha256("test-wrong-input", storedValue));
     }
 
     @Test
     @DisplayName("BCrypt: Should validate successfully even though hashes are unique each time")
     void bcrypt_UniqueGenerationAndValidation() {
-        String password = "mySecretPassword";
+        String password = "test-only-bcrypt-input";
         String hash1 = PasswordHashingUtils.bCryptHash(password);
         String hash2 = PasswordHashingUtils.bCryptHash(password);
 
