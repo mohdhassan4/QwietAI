@@ -136,7 +136,16 @@ function _callbackForInnerMasterOnClickEvent(
         detailTitle.textContent = "";
         var parser = new DOMParser();
         var doc = parser.parseFromString(responseText, "text/html");
-        doc.querySelectorAll("script").forEach(function (s) { s.remove(); });
+        // Remove dangerous elements that could execute code
+        doc.querySelectorAll("script, object, embed, base").forEach(function (el) { el.remove(); });
+        // Strip inline event handlers and javascript: URLs from all elements
+        doc.body.querySelectorAll("*").forEach(function (el) {
+          Array.prototype.slice.call(el.attributes).forEach(function (attr) {
+            if (/^on/i.test(attr.name) || /^\s*javascript:/i.test(attr.value)) {
+              el.removeAttribute(attr.name);
+            }
+          });
+        });
         while (doc.body.firstChild) {
           detailTitle.appendChild(document.adoptNode(doc.body.firstChild));
         }
