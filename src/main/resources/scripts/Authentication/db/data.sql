@@ -11,20 +11,20 @@ INSERT INTO auth_users VALUES (2, 'admin_logs', 'v9K#2mLp!8zQ', NULL, 'PLAIN', 2
 -- Demo password for vulnerability demonstration
 INSERT INTO auth_users VALUES (3, 'admin_plain', 'b7X$4nRj-6mW', NULL, 'PLAIN', 3, 'admin_plain@example.com', 'ADMIN');
 
--- Level 4: PBKDF2-HMAC-SHA256 (f2C@9tYk*1hP, no salt)
+-- Not a secret - demo fixture hash for Level 4 (no salt)
 INSERT INTO auth_users VALUES (4, 'admin_md5', 'd336011b511cc1af5d0120fa743379f0b6eb1932b3cc9935598d19b96e31ae99', NULL, 'MD5', 4, 'admin_md5@example.com', 'ADMIN');
 
--- Level 5: PBKDF2-HMAC-SHA256 (x5B&3gHq+7vS, no salt)
+-- Not a secret - demo fixture hash for Level 5 (no salt)
 INSERT INTO auth_users VALUES (5, 'admin_sha1', '4f6b777e541d092586d3f1d10aabd3ede3d7d3cbd39fd59c2b21cb05c3fbc7e1', NULL, 'SHA1', 5, 'admin_sha1@example.com', 'ADMIN');
 
--- Level 6: PBKDF2-HMAC-SHA256 (m8D!4kLr#2jZ, no salt)
+-- Not a secret - demo fixture hash for Level 6 (no salt)
 INSERT INTO auth_users VALUES (6, 'admin_sha256', 'ff88687830e526e65fba8fe2776a47157cdf6dc4d51e14bdb6952e1afb36e590', NULL, 'SHA256', 6, 'admin_sha256@example.com', 'ADMIN');
 
--- Level 7: PBKDF2-HMAC-SHA256 (q1W%6nTp^8vM with Salt s9A#2zLk)
+-- Not a secret - demo fixture hash for Level 7 (salted)
 INSERT INTO auth_users VALUES (7, 'admin_enum', '948ac766901df927f9b0fe2d55b814010316593a7ba772b1ebb4525dc91f3d29', 's9A#2zLk', 'SHA256', 7, 'admin_enum@example.com', 'ADMIN');
 
 -- Level 8: Weak Password + Bcrypt (password123)
--- Bcrypt hash for 'password123'
+-- Not a secret - demo bcrypt fixture hash for Level 8
 INSERT INTO auth_users VALUES (8, 'admin_weak', '$2a$10$gV2vZ5fxhZlwOP.GIqOI1.z7q5jws8VDmgIcKqY/uzvhzSUDio2sW', NULL, 'BCRYPT', 8, 'admin_weak@example.com', 'ADMIN');
 
 -- Level 9: Secure (Bcrypt + Generic Error) (9fG#2hJk*LmN!8qR)
