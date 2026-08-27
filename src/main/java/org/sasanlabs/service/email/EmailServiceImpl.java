@@ -1,5 +1,7 @@
 package org.sasanlabs.service.email;
 
+import static org.sasanlabs.internal.utility.LogSanitizer.sanitize;
+
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import javax.mail.MessagingException;
@@ -42,7 +44,7 @@ public class EmailServiceImpl implements EmailService {
         try {
             javaMailSender.send(message);
         } catch (MailSendException ex) {
-            LOGGER.warn("Mail server unavailable while sending email to {}", to, ex);
+            LOGGER.warn("Mail server unavailable while sending email to {}", sanitize(to), ex);
         }
     }
 
@@ -57,7 +59,7 @@ public class EmailServiceImpl implements EmailService {
             helper.setSubject(subject);
             helper.setText(htmlBody, true);
         } catch (MessagingException ex) {
-            LOGGER.warn("Mail server unavailable while sending email to {}", to, ex);
+            LOGGER.warn("Mail server unavailable while sending email to {}", sanitize(to), ex);
         }
         javaMailSender.send(message);
     }

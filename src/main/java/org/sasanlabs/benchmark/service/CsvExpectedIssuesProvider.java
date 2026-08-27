@@ -1,5 +1,7 @@
 package org.sasanlabs.benchmark.service;
 
+import static org.sasanlabs.internal.utility.LogSanitizer.sanitize;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -129,7 +131,7 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
                 issues.add(issue);
             }
         }
-        LOGGER.info("Loaded {} expected SAST issues from {}", issues.size(), csvPath);
+        LOGGER.info("Loaded {} expected SAST issues from {}", issues.size(), sanitize(csvPath));
         return issues;
     }
 
@@ -142,7 +144,7 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
             LOGGER.warn(
                     "Skipping malformed SAST CSV row at line {} of {}: missing required columns",
                     row.getRecordNumber(),
-                    csvPath);
+                    sanitize(csvPath));
             return null;
         }
         try {
@@ -157,8 +159,8 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
                     "Skipping SAST CSV row at line {} of {}: non-integer line or sources column"
                             + " ({})",
                     row.getRecordNumber(),
-                    csvPath,
-                    nfe.getMessage());
+                    sanitize(csvPath),
+                    sanitize(nfe.getMessage()));
             return null;
         }
     }

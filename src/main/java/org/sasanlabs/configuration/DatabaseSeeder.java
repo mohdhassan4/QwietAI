@@ -1,5 +1,7 @@
 package org.sasanlabs.configuration;
 
+import static org.sasanlabs.internal.utility.LogSanitizer.sanitize;
+
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -33,16 +35,16 @@ public class DatabaseSeeder {
                     seeder.seed();
                     LOGGER.info(
                             "{} seeded module: {} (Table: {})",
-                            seeder.toString(),
-                            seeder.getModuleName(),
-                            seeder.getModuleTable());
+                            sanitize(seeder.toString()),
+                            sanitize(seeder.getModuleName()),
+                            sanitize(seeder.getModuleTable()));
                 }
             } catch (Exception e) {
                 LOGGER.error(
                         "{} failed to seed module: {} (Table: {}). Aborting startup.",
-                        seeder.toString(),
-                        seeder.getModuleName(),
-                        seeder.getModuleTable(),
+                        sanitize(seeder.toString()),
+                        sanitize(seeder.getModuleName()),
+                        sanitize(seeder.getModuleTable()),
                         e);
                 throw e;
             }
