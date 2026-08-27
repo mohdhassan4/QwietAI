@@ -15,22 +15,22 @@ function appendResponseCallback(data) {
     let tableInformation = '<table id="InfoTable">';
     let content = JSON.parse(data.content);
     if (content.length > 0) {
-      for (let key in content[0]) {
+      Object.keys(content[0]).forEach(function (key) {
         tableInformation =
           tableInformation + '<th id="InfoColumn">' + key + "</th>";
-      }
+      });
     }
-    for (let index in content) {
+    content.forEach(function (row) {
       tableInformation = tableInformation + '<tr id="Info">';
-      for (let key in content[index]) {
+      Object.entries(row).forEach(function ([key, value]) {
         tableInformation =
           tableInformation +
           '<td id="InfoColumn">' +
-          content[index][key] +
+          value +
           "</td>";
-      }
+      });
       tableInformation = tableInformation + "</tr>";
-    }
+    });
     tableInformation = tableInformation + "</table>";
     document.getElementById("Information").innerHTML = tableInformation;
   } else {
