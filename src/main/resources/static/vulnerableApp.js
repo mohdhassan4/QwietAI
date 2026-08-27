@@ -14,8 +14,9 @@ function escapeHtml(str) {
 
 /**
  * Sanitizes an HTML string by removing script elements and event-handler
- * attributes. Used for rendering trusted-origin HTML templates where
- * structure must be preserved but script injection must be blocked.
+ * attributes, and returns a DocumentFragment of the safe nodes.
+ * Used for rendering trusted-origin HTML templates where structure must
+ * be preserved but script injection must be blocked.
  */
 function sanitizeHtml(html) {
   var parser = new DOMParser();
@@ -37,7 +38,11 @@ function sanitizeHtml(html) {
       }
     });
   });
-  return doc.body.innerHTML;
+  var fragment = document.createDocumentFragment();
+  while (doc.body.firstChild) {
+    fragment.appendChild(document.adoptNode(doc.body.firstChild));
+  }
+  return fragment;
 }
 
 const detail = document.querySelector(".detail");
@@ -175,7 +180,8 @@ function _callbackForInnerMasterOnClickEvent(
         if (requestToken !== thisRequestToken) {
           return;
         }
-        detailTitle.innerHTML = sanitizeHtml(responseText);
+        detailTitle.textContent = "";
+        detailTitle.appendChild(sanitizeHtml(responseText));
         _loadDynamicJSAndCSS(urlToFetchHtmlTemplate, () => {
           // Re-check: the asset load itself is async, so navigation could
           // have moved on again between the AJAX response and now.
@@ -474,7 +480,9 @@ function _addingEventListenerToShowHideHelpButton(vulnerableAppEndPointData) {
         "</li>";
     }
     helpText = helpText + "</ol>";
-    document.getElementById("helpText").innerHTML = sanitizeHtml(helpText);
+    var helpEl = document.getElementById("helpText");
+    helpEl.textContent = "";
+    helpEl.appendChild(sanitizeHtml(helpText));
     document.getElementById("hideHelp").disabled = false;
   });
 
