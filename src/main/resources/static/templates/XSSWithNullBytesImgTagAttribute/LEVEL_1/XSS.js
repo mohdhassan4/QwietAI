@@ -11,5 +11,17 @@ function addingEventListenerToLoadImageButton() {
 addingEventListenerToLoadImageButton();
 
 function appendResponseCallback(data) {
-  document.getElementById("image").innerHTML = data;
+  let container = document.getElementById("image");
+  container.textContent = "";
+  let parser = new DOMParser();
+  let doc = parser.parseFromString(data, "text/html");
+  let img = doc.querySelector("img");
+  if (img) {
+    let safeImg = document.createElement("img");
+    safeImg.src = img.getAttribute("src") || "";
+    safeImg.alt = img.getAttribute("alt") || "";
+    container.appendChild(safeImg);
+  } else {
+    container.textContent = data;
+  }
 }
