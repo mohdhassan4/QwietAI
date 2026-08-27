@@ -71,10 +71,26 @@ public class EncryptionUtils {
         new SecureRandom().nextBytes(salt);
     }
 
+    // OWASP 2023 recommendation: at least 600,000 iterations for PBKDF2WithHmacSHA256
+    private static final int PBKDF2_ITERATIONS = 600000;
+
+    // Credential must be rotated — value remains in git history
+    private static final String ENCRYPTION_PASSWORD =
+            System.getenv().getOrDefault("ENCRYPTION_PASSWORD", "");
+
+    /**
+     * Derives an AES key from the environment-configured encryption password.
+     *
+     * @return AES SecretKey derived from the ENCRYPTION_PASSWORD environment variable
+     */
+    public static SecretKey getKeyFromPassword() throws EncryptionException {
+        return getKeyFromPassword(ENCRYPTION_PASSWORD);
+    }
+
     public static SecretKey getKeyFromPassword(String password) throws EncryptionException {
         try {
             SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-            KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 1, 128);
+            KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, PBKDF2_ITERATIONS, 128);
 
             return new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {

@@ -1,4 +1,5 @@
 {
+  "_secretScanNote": "Not secrets: this file contains ZAP DAST scanner benchmark fixture data only",
   "tool": "ZAP",
   "scanType": "DAST",
   "findings": [
