@@ -254,13 +254,13 @@ function handleElementAutoSelection(vulnerableAppEndPointData, id = 0) {
   }
 
   if (id === 0) {
-    detailTitle.innerHTML = (safeGet(vulnerableAppEndPointData, id) || {})["Description"];
+    detailTitle.textContent = (safeGet(vulnerableAppEndPointData, id) || {})["Description"];
   } else {
     innerMaster.innerHTML = "";
   }
 
   vulnerabilitySelected = (safeGet(vulnerableAppEndPointData, id) || {})["Name"];
-  detailTitle.innerHTML = (safeGet(vulnerableAppEndPointData, id) || {})["Description"];
+  detailTitle.textContent = (safeGet(vulnerableAppEndPointData, id) || {})["Description"];
   appendNewColumn(vulnerableAppEndPointData, id);
 }
 
