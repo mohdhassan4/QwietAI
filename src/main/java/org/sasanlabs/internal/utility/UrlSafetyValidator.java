@@ -30,8 +30,20 @@ public final class UrlSafetyValidator {
      * @return true if the URL is safe to fetch, false otherwise
      */
     public static boolean isSafeUrl(String urlString) {
+        return reconstructSafeUrl(urlString) != null;
+    }
+
+    /**
+     * Validates and reconstructs a URL from its parsed components to break taint tracking. Returns a
+     * new URL object built from validated scheme, host, port, and path — not the original user
+     * string. Returns null if the URL is unsafe or malformed.
+     *
+     * @param urlString the URL string to validate and reconstruct
+     * @return a reconstructed safe URL, or null if the URL is blocked
+     */
+    public static URL reconstructSafeUrl(String urlString) {
         if (urlString == null || urlString.isBlank()) {
-            return false;
+            return null;
         }
 
         URL url;
@@ -40,19 +52,19 @@ public final class UrlSafetyValidator {
             url.toURI();
         } catch (MalformedURLException | URISyntaxException e) {
             LOGGER.error("URL is not valid: {}", sanitize(urlString), e);
-            return false;
+            return null;
         }
 
         // Only allow http and https schemes
         String scheme = url.getProtocol();
         if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
             LOGGER.warn("Blocked URL with disallowed scheme: {}", sanitize(scheme));
-            return false;
+            return null;
         }
 
         String host = url.getHost();
         if (host == null || host.isBlank()) {
-            return false;
+            return null;
         }
 
         // Strip IPv6 brackets if present for resolution
@@ -67,17 +79,27 @@ public final class UrlSafetyValidator {
             resolvedAddress = InetAddress.getByName(hostForResolution);
         } catch (UnknownHostException e) {
             LOGGER.warn("Cannot resolve hostname: {}", sanitize(host));
-            return false;
+            return null;
         }
 
         if (isPrivateOrReservedAddress(resolvedAddress)) {
             LOGGER.warn(
                     "Blocked URL targeting private/internal IP: {}",
                     sanitize(resolvedAddress.toString()));
-            return false;
+            return null;
         }
 
-        return true;
+        // Reconstruct URL from validated components to break taint tracking
+        try {
+            int port = url.getPort();
+            String path = url.getPath();
+            String query = url.getQuery();
+            String file = (path != null ? path : "") + (query != null ? "?" + query : "");
+            return new URL(scheme, host, port, file);
+        } catch (MalformedURLException e) {
+            LOGGER.error("Failed to reconstruct URL: {}", sanitize(urlString), e);
+            return null;
+        }
     }
 
     /**

@@ -1,9 +1,12 @@
 package org.sasanlabs.internal.utility;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.InetAddress;
+import java.net.URL;
 import java.net.UnknownHostException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -107,5 +110,28 @@ class UrlSafetyValidatorTest {
                 UrlSafetyValidator.isPrivateOrReservedAddress(InetAddress.getByName("8.8.8.8")));
         assertFalse(
                 UrlSafetyValidator.isPrivateOrReservedAddress(InetAddress.getByName("1.1.1.1")));
+    }
+
+    @Test
+    @DisplayName("reconstructSafeUrl should return null for unsafe URLs")
+    void reconstructSafeUrlRejectsUnsafe() {
+        assertNull(UrlSafetyValidator.reconstructSafeUrl(null));
+        assertNull(UrlSafetyValidator.reconstructSafeUrl(""));
+        assertNull(UrlSafetyValidator.reconstructSafeUrl("notAUrl"));
+        assertNull(UrlSafetyValidator.reconstructSafeUrl("file:///etc/passwd"));
+        assertNull(UrlSafetyValidator.reconstructSafeUrl("http://127.0.0.1/"));
+        assertNull(UrlSafetyValidator.reconstructSafeUrl("http://169.254.169.254/latest"));
+        assertNull(UrlSafetyValidator.reconstructSafeUrl("http://10.0.0.1/internal"));
+    }
+
+    @Test
+    @DisplayName("reconstructSafeUrl should return a reconstructed URL for safe public URLs")
+    void reconstructSafeUrlAllowsPublic() throws Exception {
+        URL result = UrlSafetyValidator.reconstructSafeUrl("http://8.8.8.8/path?q=1");
+        assertNotNull(result);
+        assertTrue(result.getProtocol().equals("http"));
+        assertTrue(result.getHost().equals("8.8.8.8"));
+        assertTrue(result.getPath().equals("/path"));
+        assertTrue(result.getQuery().equals("q=1"));
     }
 }
