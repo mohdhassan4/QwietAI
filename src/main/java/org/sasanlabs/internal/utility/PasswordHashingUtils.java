@@ -2,7 +2,7 @@ package org.sasanlabs.internal.utility;
 
 import java.nio.charset.StandardCharsets;
 import java.security.*;
-import javax.crypto.Cipher;
+import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -103,11 +103,10 @@ public final class PasswordHashingUtils {
     }
 
     /**
-     * Computes an LM hash for the given password.
+     * Computes a legacy-style split hash for the given password.
      *
-     * <p>Algorithm based on the LAN Manager specification.
-     *
-     * @see <a href="https://en.wikipedia.org/wiki/LAN_Manager">Wikipedia: LAN Manager</a>
+     * <p>Demonstrates weak password handling: case-insensitive, max 14 chars, split into halves.
+     * Uses HMAC-SHA256 internally (replacing the original insecure DES cipher).
      */
     public static String lmHash(String rawPassword) {
         try {
@@ -123,32 +122,17 @@ public final class PasswordHashingUtils {
             System.arraycopy(keyBytes, 0, tmpKey1, 0, 7);
             System.arraycopy(keyBytes, 7, tmpKey2, 0, 7);
 
-            // Encrypt the magic string "KGS!@#$%" using each key
-            return EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey1))
-                    + EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey2));
+            // Compute HMAC-SHA256 of a fixed message using each key half
+            return EncodingUtils.bytesToHex(computeKeyedHash(tmpKey1))
+                    + EncodingUtils.bytesToHex(computeKeyedHash(tmpKey2));
         } catch (Exception e) {
-            throw new RuntimeException("LM Hashing failed", e);
+            throw new RuntimeException("Legacy-style hashing failed", e);
         }
     }
 
-    private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
-        // LM Hash uses a specific parity-bit transformation to turn 7 bytes into an 8-byte DES key
-        byte[] key8 = new byte[8];
-        key8[0] = (byte) (key7[0] >> 1);
-        key8[1] = (byte) (((key7[0] & 0x01) << 6) | (key7[1] >> 2));
-        key8[2] = (byte) (((key7[1] & 0x03) << 5) | (key7[2] >> 3));
-        key8[3] = (byte) (((key7[2] & 0x07) << 4) | (key7[3] >> 4));
-        key8[4] = (byte) (((key7[3] & 0x0F) << 3) | (key7[4] >> 5));
-        key8[5] = (byte) (((key7[4] & 0x1F) << 2) | (key7[5] >> 6));
-        key8[6] = (byte) (((key7[5] & 0x3F) << 1) | (key7[6] >> 7));
-        key8[7] = (byte) (key7[6] & 0x7F);
-
-        for (int i = 0; i < 8; i++) {
-            key8[i] = (byte) (key8[i] << 1);
-        }
-
-        Cipher des = Cipher.getInstance("DES/ECB/NoPadding", "BC");
-        des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key8, "DES"));
-        return des.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+    private static byte[] computeKeyedHash(byte[] key) throws Exception {
+        Mac mac = Mac.getInstance("HmacSHA256", "BC");
+        mac.init(new SecretKeySpec(key, "HmacSHA256"));
+        return mac.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
     }
 }
