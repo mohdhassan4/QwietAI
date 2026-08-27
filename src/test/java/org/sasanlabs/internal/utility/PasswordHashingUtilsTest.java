@@ -63,14 +63,23 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
-    @DisplayName("LM Hash: Should be case-insensitive and match legacy standards")
+    @DisplayName("LM Hash: Should be case-insensitive and use secure SHA-256 algorithm")
     void lmHash_LegacyStandards() {
-        // Known LM hash for "password" (which it converts to "PASSWORD")
-        String expected = "e52cac67419a9a224a3b108f3fa6cb6d";
+        // lmHash normalizes to uppercase then hashes with SHA-256
+        String hash1 = PasswordHashingUtils.lmHash("password");
+        String hash2 = PasswordHashingUtils.lmHash("PASSWORD");
+        String hash3 = PasswordHashingUtils.lmHash("pAsSwOrD");
 
-        assertEquals(expected, PasswordHashingUtils.lmHash("password"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("PASSWORD"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("pAsSwOrD"));
+        // All case variants must produce the same hash (case-insensitive)
+        assertEquals(hash1, hash2);
+        assertEquals(hash1, hash3);
+
+        // Output must be a 64-character lowercase hex string (SHA-256)
+        assertEquals(64, hash1.length());
+        assertTrue(hash1.matches("[0-9a-f]{64}"));
+
+        // Must equal the SHA-256 of the uppercased password
+        assertEquals(PasswordHashingUtils.unsaltedSha256Hex("PASSWORD"), hash1);
     }
 
     @Test
