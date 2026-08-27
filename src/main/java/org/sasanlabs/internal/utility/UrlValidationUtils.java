@@ -28,25 +28,24 @@ public final class UrlValidationUtils {
             throw new IllegalArgumentException("URL must not be null or empty");
         }
 
-        URL url;
+        URL parsed;
         try {
-            url = new URL(urlString);
+            parsed = new URL(urlString);
         } catch (MalformedURLException e) {
             throw new IllegalArgumentException("Invalid URL: " + e.getMessage(), e);
         }
 
-        String scheme = url.getProtocol();
+        String scheme = parsed.getProtocol();
         if (scheme == null
                 || (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https"))) {
             throw new IllegalArgumentException("Only http and https schemes are allowed");
         }
 
-        String host = url.getHost();
+        String host = parsed.getHost();
         if (host == null || host.isBlank()) {
             throw new IllegalArgumentException("URL must have a valid host");
         }
 
-        // Strip IPv6 brackets if present for InetAddress resolution
         String hostForResolution = host;
         if (hostForResolution.startsWith("[") && hostForResolution.endsWith("]")) {
             hostForResolution = hostForResolution.substring(1, hostForResolution.length() - 1);
@@ -63,7 +62,6 @@ public final class UrlValidationUtils {
             throw new IllegalArgumentException("Internal URLs not allowed");
         }
 
-        // For IPv4-mapped IPv6 addresses, also check the embedded IPv4 address
         if (resolvedAddress instanceof Inet6Address) {
             byte[] addrBytes = resolvedAddress.getAddress();
             if (isIpv4MappedIpv6(addrBytes)) {
@@ -81,7 +79,18 @@ public final class UrlValidationUtils {
             }
         }
 
-        return url;
+        int port = parsed.getPort();
+        String path = parsed.getPath();
+        String query = parsed.getQuery();
+        try {
+            String safeUrl = scheme + "://" + resolvedAddress.getHostAddress()
+                    + (port > 0 ? ":" + port : "")
+                    + (path != null ? path : "")
+                    + (query != null ? "?" + query : "");
+            return new URL(safeUrl);
+        } catch (MalformedURLException e) {
+            throw new IllegalArgumentException("Failed to construct validated URL", e);
+        }
     }
 
     private static boolean isInternalAddress(InetAddress address) {

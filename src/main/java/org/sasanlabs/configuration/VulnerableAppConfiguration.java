@@ -131,10 +131,15 @@ public class VulnerableAppConfiguration {
             @Value("${spring.datasource.application.password}") String appPassword) {
         ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
         JdbcTemplate adminJdbcTemplate = new JdbcTemplate(adminDataSource);
-        // Escape single quotes in the password to prevent SQL injection in DDL
-        String sanitizedPassword = appPassword.replace("'", "''");
         adminJdbcTemplate.execute(
-                String.format("CREATE USER application PASSWORD '%s'", sanitizedPassword));
+                (java.sql.Connection conn) -> {
+                    try (java.sql.PreparedStatement ps = conn.prepareStatement(
+                            "CREATE USER IF NOT EXISTS application PASSWORD ?")) {
+                        ps.setString(1, appPassword);
+                        ps.execute();
+                    }
+                    return null;
+                });
         populator.addScript(new ClassPathResource("scripts/SQLInjection/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/xss/PersistentXSS/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/XXEVulnerability/schema.sql"));
