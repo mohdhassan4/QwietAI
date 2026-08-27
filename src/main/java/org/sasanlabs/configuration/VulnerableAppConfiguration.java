@@ -27,6 +27,7 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.PreparedStatementCallback;
 import org.springframework.jdbc.datasource.init.DataSourceInitializer;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -133,7 +134,7 @@ public class VulnerableAppConfiguration {
         JdbcTemplate adminJdbcTemplate = new JdbcTemplate(adminDataSource);
         adminJdbcTemplate.execute(
                 "CREATE USER application PASSWORD ?",
-                (ps) -> {
+                (PreparedStatementCallback<Boolean>) (ps) -> {
                     ps.setString(1, appPassword);
                     return ps.execute();
                 });
