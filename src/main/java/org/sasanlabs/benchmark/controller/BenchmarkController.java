@@ -1,7 +1,6 @@
 package org.sasanlabs.benchmark.controller;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -9,7 +8,6 @@ import org.sasanlabs.benchmark.model.BenchmarkResult;
 import org.sasanlabs.benchmark.model.ScannerFindings;
 import org.sasanlabs.benchmark.service.BenchmarkResultWriter;
 import org.sasanlabs.benchmark.service.BenchmarkService;
-import org.sasanlabs.vulnerability.utils.LogSanitizer;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -50,25 +48,16 @@ public class BenchmarkController {
                                     "Field 'findings' is required (use [] for an empty list)"));
         }
 
-        String sanitizedTool = LogSanitizer.sanitizeForLog(input.getTool());
         LOGGER.debug(
-                "Benchmark request received for tool '{}' with {} findings",
-                sanitizedTool,
+                "Benchmark request received with {} findings",
                 input.getFindings().size());
         BenchmarkResult result = benchmarkService.compare(input);
 
         try {
-            Path written = benchmarkResultWriter.write(result);
-            LOGGER.info(
-                    "Wrote benchmark result for tool '{}' to {}",
-                    sanitizedTool,
-                    LogSanitizer.sanitizeForLog(written.toString()));
+            benchmarkResultWriter.write(result);
+            LOGGER.info("Wrote benchmark result");
         } catch (IOException ioe) {
-            LOGGER.error(
-                    "Failed to persist benchmark result for tool '{}'; returning 500 with result"
-                            + " in body",
-                    sanitizedTool,
-                    ioe);
+            LOGGER.error("Failed to persist benchmark result; returning 500 with result in body", ioe);
             result.setPersistenceError("Failed to persist benchmark result");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
         }
