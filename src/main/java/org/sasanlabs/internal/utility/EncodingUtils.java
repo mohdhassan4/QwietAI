@@ -11,6 +11,22 @@ public class EncodingUtils {
         return builder.toString();
     }
 
+    public static byte[] hexToBytes(String hex) {
+        if (hex == null || hex.length() % 2 != 0) {
+            throw new IllegalArgumentException("Invalid hex string");
+        }
+        byte[] bytes = new byte[hex.length() / 2];
+        for (int i = 0; i < bytes.length; i++) {
+            int high = Character.digit(hex.charAt(i * 2), 16);
+            int low = Character.digit(hex.charAt(i * 2 + 1), 16);
+            if (high == -1 || low == -1) {
+                throw new IllegalArgumentException("Invalid hex character at index " + (i * 2));
+            }
+            bytes[i] = (byte) ((high << 4) | low);
+        }
+        return bytes;
+    }
+
     public static String encodeBase64(String rawText) {
         return Base64.getEncoder().encodeToString(rawText.getBytes());
     }
