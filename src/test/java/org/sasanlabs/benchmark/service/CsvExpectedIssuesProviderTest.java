@@ -26,7 +26,7 @@ class CsvExpectedIssuesProviderTest {
                         + "CWE-79,Reflected XSS,src/main/java/Bar.java,42,3\n");
 
         List<ExpectedIssue> issues =
-                new CsvExpectedIssuesProvider(csv.toString()).getExpectedIssues();
+                new CsvExpectedIssuesProvider(csv.toString(), tempDir).getExpectedIssues();
 
         assertThat(issues)
                 .extracting(
@@ -48,7 +48,7 @@ class CsvExpectedIssuesProviderTest {
         write(csv, HEADER + "CWE-22,Path Traversal,src/main/java/Baz.java,65,12 \n");
 
         List<ExpectedIssue> issues =
-                new CsvExpectedIssuesProvider(csv.toString()).getExpectedIssues();
+                new CsvExpectedIssuesProvider(csv.toString(), tempDir).getExpectedIssues();
 
         assertThat(issues).hasSize(1);
         assertThat(issues.get(0).getNumberOfSources()).isEqualTo(12);
@@ -67,7 +67,7 @@ class CsvExpectedIssuesProviderTest {
                         + "\n");
 
         List<ExpectedIssue> issues =
-                new CsvExpectedIssuesProvider(csv.toString()).getExpectedIssues();
+                new CsvExpectedIssuesProvider(csv.toString(), tempDir).getExpectedIssues();
 
         assertThat(issues).hasSize(2);
     }
@@ -83,7 +83,7 @@ class CsvExpectedIssuesProviderTest {
                         + "CWE-77,Command Injection,src/main/java/Cmd.java,46,5\n");
 
         List<ExpectedIssue> issues =
-                new CsvExpectedIssuesProvider(csv.toString()).getExpectedIssues();
+                new CsvExpectedIssuesProvider(csv.toString(), tempDir).getExpectedIssues();
 
         assertThat(issues).hasSize(2);
         assertThat(issues).extracting(ExpectedIssue::getCwe).containsExactly("CWE-89", "CWE-77");
@@ -100,7 +100,7 @@ class CsvExpectedIssuesProviderTest {
                         + "CWE-77,Command Injection,src/main/java/Cmd.java,46,5\n");
 
         List<ExpectedIssue> issues =
-                new CsvExpectedIssuesProvider(csv.toString()).getExpectedIssues();
+                new CsvExpectedIssuesProvider(csv.toString(), tempDir).getExpectedIssues();
 
         assertThat(issues).hasSize(1);
         assertThat(issues.get(0).getCwe()).isEqualTo("CWE-77");
@@ -117,7 +117,7 @@ class CsvExpectedIssuesProviderTest {
                         + "CWE-79,\"XSS, Reflected\",src/main/java/Bar.java,42,3\n");
 
         List<ExpectedIssue> issues =
-                new CsvExpectedIssuesProvider(csv.toString()).getExpectedIssues();
+                new CsvExpectedIssuesProvider(csv.toString(), tempDir).getExpectedIssues();
 
         assertThat(issues)
                 .extracting(ExpectedIssue::getVulnerabilityType, ExpectedIssue::getLine)
@@ -134,7 +134,7 @@ class CsvExpectedIssuesProviderTest {
                 "CWE,Vulnerability Type,Line,Number of Sources\n" + "CWE-89,SQL Injection,56,1\n");
 
         List<ExpectedIssue> issues =
-                new CsvExpectedIssuesProvider(csv.toString()).getExpectedIssues();
+                new CsvExpectedIssuesProvider(csv.toString(), tempDir).getExpectedIssues();
 
         assertThat(issues).isEmpty();
     }
@@ -145,7 +145,7 @@ class CsvExpectedIssuesProviderTest {
         write(csv, HEADER);
 
         List<ExpectedIssue> issues =
-                new CsvExpectedIssuesProvider(csv.toString()).getExpectedIssues();
+                new CsvExpectedIssuesProvider(csv.toString(), tempDir).getExpectedIssues();
 
         assertThat(issues).isEmpty();
     }
@@ -154,7 +154,8 @@ class CsvExpectedIssuesProviderTest {
     void missingFile_throwsIOException(@TempDir Path tempDir) {
         String missing = tempDir.resolve("does-not-exist.csv").toString();
 
-        assertThatThrownBy(() -> new CsvExpectedIssuesProvider(missing).getExpectedIssues())
+        assertThatThrownBy(
+                        () -> new CsvExpectedIssuesProvider(missing, tempDir).getExpectedIssues())
                 .isInstanceOf(IOException.class);
     }
 
@@ -184,7 +185,7 @@ class CsvExpectedIssuesProviderTest {
     void getExpectedIssues_returnsTheCachedInstance(@TempDir Path tempDir) throws Exception {
         Path csv = tempDir.resolve("expected.csv");
         write(csv, HEADER + "CWE-89,SQL Injection,src/main/java/Foo.java,56,1\n");
-        CsvExpectedIssuesProvider provider = new CsvExpectedIssuesProvider(csv.toString());
+        CsvExpectedIssuesProvider provider = new CsvExpectedIssuesProvider(csv.toString(), tempDir);
 
         List<ExpectedIssue> first = provider.getExpectedIssues();
         List<ExpectedIssue> second = provider.getExpectedIssues();
@@ -196,7 +197,7 @@ class CsvExpectedIssuesProviderTest {
     void cacheAtStartup_warmsTheCacheSoNoRequestEverParses(@TempDir Path tempDir) throws Exception {
         Path csv = tempDir.resolve("expected.csv");
         write(csv, HEADER + "CWE-89,SQL Injection,src/main/java/Foo.java,56,1\n");
-        CsvExpectedIssuesProvider provider = new CsvExpectedIssuesProvider(csv.toString());
+        CsvExpectedIssuesProvider provider = new CsvExpectedIssuesProvider(csv.toString(), tempDir);
 
         provider.cacheAtStartup();
         Files.delete(csv);
@@ -219,6 +220,19 @@ class CsvExpectedIssuesProviderTest {
                 .hasMessageContaining("benchmark.sast.ground-truth.path")
                 .hasMessageContaining("classpath:does/not/exist.csv")
                 .hasCauseInstanceOf(IOException.class);
+    }
+
+    @Test
+    void pathTraversal_throwsIOException(@TempDir Path tempDir) {
+        Path allowed = tempDir.resolve("allowed");
+        String traversal = tempDir.resolve("../escape.csv").toString();
+
+        assertThatThrownBy(
+                        () ->
+                                new CsvExpectedIssuesProvider(traversal, allowed)
+                                        .getExpectedIssues())
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("Path traversal detected");
     }
 
     private static void write(Path path, String content) throws IOException {
