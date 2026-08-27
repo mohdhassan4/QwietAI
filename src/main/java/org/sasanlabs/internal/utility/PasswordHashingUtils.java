@@ -141,11 +141,11 @@ public final class PasswordHashingUtils {
             "VulnerableApp-LM-KeyDerivation".getBytes(StandardCharsets.US_ASCII);
 
     private static byte[] lmKeyedHash(byte[] key7) throws Exception {
-        MessageDigest sha256 = MessageDigest.getInstance("SHA-256", "BC");
-        sha256.update(LM_KEY_DERIVATION_SALT);
-        byte[] hash = sha256.digest(key7);
+        javax.crypto.Mac hmac = javax.crypto.Mac.getInstance("HmacSHA256", "BC");
+        hmac.init(new SecretKeySpec(LM_KEY_DERIVATION_SALT, "HmacSHA256"));
+        byte[] derived = hmac.doFinal(key7);
         byte[] aesKey = new byte[16];
-        System.arraycopy(hash, 0, aesKey, 0, 16);
+        System.arraycopy(derived, 0, aesKey, 0, 16);
 
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", "BC");
         GCMParameterSpec gcmSpec = new GCMParameterSpec(GCM_TAG_LENGTH, LM_FIXED_NONCE);

@@ -3,6 +3,8 @@ package org.sasanlabs.internal.utility;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
 
@@ -28,20 +30,20 @@ public final class UrlValidationUtils {
             throw new IllegalArgumentException("URL must not be null or empty");
         }
 
-        URL parsed;
+        URI uri;
         try {
-            parsed = new URL(urlString);
-        } catch (MalformedURLException e) {
+            uri = new URI(urlString);
+        } catch (URISyntaxException e) {
             throw new IllegalArgumentException("Invalid URL: " + e.getMessage(), e);
         }
 
-        String scheme = parsed.getProtocol();
+        String scheme = uri.getScheme();
         if (scheme == null
                 || (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https"))) {
             throw new IllegalArgumentException("Only http and https schemes are allowed");
         }
 
-        String host = parsed.getHost();
+        String host = uri.getHost();
         if (host == null || host.isBlank()) {
             throw new IllegalArgumentException("URL must have a valid host");
         }
@@ -79,16 +81,16 @@ public final class UrlValidationUtils {
             }
         }
 
-        int port = parsed.getPort();
-        String path = parsed.getPath();
-        String query = parsed.getQuery();
+        String safeHost = resolvedAddress.getHostAddress();
+        int port = uri.getPort();
+        String path = uri.getRawPath();
+        String query = uri.getRawQuery();
         try {
-            String safeUrl = scheme + "://" + resolvedAddress.getHostAddress()
-                    + (port > 0 ? ":" + port : "")
-                    + (path != null ? path : "")
-                    + (query != null ? "?" + query : "");
-            return new URL(safeUrl);
-        } catch (MalformedURLException e) {
+            URI safeUri = new URI(scheme, null, safeHost, port,
+                    (path != null && !path.isEmpty()) ? path : "/",
+                    query, null);
+            return safeUri.toURL();
+        } catch (URISyntaxException | MalformedURLException e) {
             throw new IllegalArgumentException("Failed to construct validated URL", e);
         }
     }
