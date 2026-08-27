@@ -34,7 +34,8 @@ class ControllerExceptionHandlerTest {
     @Test
     void shouldHandleControllerExceptions() {
         // Arrange
-        when(messageBundle.getString(any(), any())).thenReturn("Exception occurred");
+        when(messageBundle.getString("SYSTEM_ERROR", null))
+                .thenReturn("An internal error occurred");
         ServiceApplicationException serviceApplicationException =
                 new ServiceApplicationException(
                         ExceptionStatusCodeEnum.SYSTEM_ERROR, new NullPointerException("ex"));
@@ -46,8 +47,8 @@ class ControllerExceptionHandlerTest {
 
         // Assert
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, responseEntity.getStatusCode());
-        assertEquals("Exception occurred", responseEntity.getBody());
-        verify(messageBundle).getString(any(), any());
+        assertEquals("An internal error occurred", responseEntity.getBody());
+        verify(messageBundle).getString("SYSTEM_ERROR", null);
     }
 
     @Test

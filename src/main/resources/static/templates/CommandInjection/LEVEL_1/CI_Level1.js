@@ -11,5 +11,5 @@ function addingEventListenerToPingButton() {
 addingEventListenerToPingButton();
 
 function pingUtilityCallback(data) {
-  document.getElementById("pingUtilityResponse").innerHTML = data.content;
+  document.getElementById("pingUtilityResponse").textContent = data.content;
 }
