@@ -48,6 +48,27 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
+    @DisplayName("Salted getHashAsHex: Should produce different output than unsalted")
+    void getHashAsHex_Salted_DiffersFromUnsalted() {
+        String rawPassword = "password";
+        String salt = "somesalt";
+
+        String unsalted =
+                PasswordHashingUtils.getHashAsHex(
+                        rawPassword, PasswordHashingUtils.HashAlgorithm.SHA256);
+        String salted =
+                PasswordHashingUtils.getHashAsHex(
+                        rawPassword, PasswordHashingUtils.HashAlgorithm.SHA256, salt);
+
+        assertNotEquals(unsalted, salted);
+        // Salted hash with same salt should be deterministic
+        String saltedAgain =
+                PasswordHashingUtils.getHashAsHex(
+                        rawPassword, PasswordHashingUtils.HashAlgorithm.SHA256, salt);
+        assertEquals(salted, saltedAgain);
+    }
+
+    @Test
     @DisplayName("BCrypt: Should validate successfully even though hashes are unique each time")
     void bcrypt_UniqueGenerationAndValidation() {
         String password = "mySecretPassword";
