@@ -12,6 +12,8 @@ public final class PasswordHashingUtils {
 
     private static final String HASH_SEPARATOR = ":";
     private static final int bcryptWorkFactor = 12;
+    private static final int SALT_LENGTH = 16;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private PasswordHashingUtils() {}
 
@@ -52,13 +54,45 @@ public final class PasswordHashingUtils {
         return getHashAsHex(rawPassword, HashAlgorithm.SHA1);
     }
 
+    /**
+     * Computes a salted hash. A random salt is generated and prepended to the input before
+     * digesting. Returns the format {@code hex(salt):hex(hash)}.
+     */
     public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
+        byte[] saltBytes = new byte[SALT_LENGTH];
+        SECURE_RANDOM.nextBytes(saltBytes);
+        String salt = EncodingUtils.bytesToHex(saltBytes);
+        String hash = computeSaltedHash(salt, rawPassword, hashAlgorithm);
+        return salt + HASH_SEPARATOR + hash;
+    }
+
+    /**
+     * Verifies a password against a stored salted hash in the format {@code hex(salt):hex(hash)}.
+     */
+    public static boolean verifyHashAsHex(
+            String rawPassword, String storedSaltAndHash, HashAlgorithm hashAlgorithm) {
+        if (rawPassword == null || storedSaltAndHash == null) {
+            return false;
+        }
+        String[] parts = storedSaltAndHash.split(HASH_SEPARATOR, 2);
+        if (parts.length != 2) {
+            return false;
+        }
+        String computed = computeSaltedHash(parts[0], rawPassword, hashAlgorithm);
+        return MessageDigest.isEqual(
+                computed.toLowerCase().getBytes(StandardCharsets.UTF_8),
+                parts[1].toLowerCase().getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static String computeSaltedHash(
+            String salt, String rawPassword, HashAlgorithm hashAlgorithm) {
         try {
             MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
+            messageDigest.update(salt.getBytes(StandardCharsets.UTF_8));
             byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(hashAlgorithm + "Hash Algorithm Not Found", e);
+            throw new RuntimeException(hashAlgorithm + " Hash Algorithm Not Found", e);
         } catch (NoSuchProviderException e) {
             throw new RuntimeException("Security Provider Bouncy Castle not found", e);
         }
@@ -80,10 +114,10 @@ public final class PasswordHashingUtils {
     }
 
     public static String sha256Hex(String salt, String rawPassword) {
-        return getHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
+        return computeSaltedHash(salt, rawPassword, HashAlgorithm.SHA256);
     }
 
-    public static String unsaltedSha256Hex(String rawPassword) {
+    public static String sha256SaltedHex(String rawPassword) {
         return getHashAsHex(rawPassword, HashAlgorithm.SHA256);
     }
 
