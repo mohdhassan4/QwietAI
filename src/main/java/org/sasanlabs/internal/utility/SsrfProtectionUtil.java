@@ -51,7 +51,7 @@ public final class SsrfProtectionUtil {
 
         String scheme = url.getProtocol().toLowerCase();
         if (!ALLOWED_SCHEMES.contains(scheme)) {
-            LOGGER.warn("Blocked URL with disallowed scheme: {}", scheme);
+            LOGGER.warn("Blocked URL with disallowed scheme: {}", LogSanitizer.sanitize(scheme));
             return Optional.empty();
         }
 
@@ -66,12 +66,12 @@ public final class SsrfProtectionUtil {
                 if (isPrivateOrReservedAddress(address)) {
                     LOGGER.warn(
                             "Blocked SSRF attempt to private/reserved IP: {}",
-                            address.getHostAddress());
+                            LogSanitizer.sanitize(address.getHostAddress()));
                     return Optional.empty();
                 }
             }
         } catch (UnknownHostException e) {
-            LOGGER.error("Cannot resolve host: {}", host, e);
+            LOGGER.error("Cannot resolve host: {}", LogSanitizer.sanitize(host), e);
             return Optional.empty();
         }
 
