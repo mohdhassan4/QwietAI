@@ -7,12 +7,15 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 /** Utility class for various password hashing algorithms. */
 public final class PasswordHashingUtils {
 
+    private static final Logger LOGGER = LogManager.getLogger(PasswordHashingUtils.class);
     private static final String HASH_SEPARATOR = ":";
     private static final int bcryptWorkFactor = 12;
 
@@ -61,9 +64,11 @@ public final class PasswordHashingUtils {
             byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(hashAlgorithm + "Hash Algorithm Not Found", e);
+            LOGGER.error("Hash algorithm not found: {}", hashAlgorithm, e);
+            throw new IllegalStateException(hashAlgorithm + " Hash Algorithm Not Found", e);
         } catch (NoSuchProviderException e) {
-            throw new RuntimeException("Security Provider Bouncy Castle not found", e);
+            LOGGER.error("Security provider Bouncy Castle not found", e);
+            throw new IllegalStateException("Security Provider Bouncy Castle not found", e);
         }
     }
 
