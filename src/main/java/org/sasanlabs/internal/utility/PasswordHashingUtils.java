@@ -3,6 +3,7 @@ package org.sasanlabs.internal.utility;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -124,15 +125,20 @@ public final class PasswordHashingUtils {
             System.arraycopy(keyBytes, 7, tmpKey2, 0, 7);
 
             // Encrypt the magic string "KGS!@#$%" using each key
-            return EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey1))
-                    + EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey2));
+            return EncodingUtils.bytesToHex(lmEncrypt(tmpKey1))
+                    + EncodingUtils.bytesToHex(lmEncrypt(tmpKey2));
         } catch (Exception e) {
             throw new RuntimeException("LM Hashing failed", e);
         }
     }
 
-    private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
-        // LM Hash uses a specific parity-bit transformation to turn 7 bytes into an 8-byte DES key
+    private static byte[] lmEncrypt(byte[] key7) throws Exception {
+        // Original LM Hash parity-bit transformation to turn 7 bytes into 8-byte key material.
+        // Note: The legacy LM hash algorithm used DES/ECB which is cryptographically broken
+        // (56-bit effective key, vulnerable to brute-force). This implementation replaces DES
+        // with AES-256/CBC to provide a secure encryption step while preserving the overall
+        // LM-style hash structure. This breaks wire compatibility with legacy LAN Manager
+        // but provides a secure deterministic hash for this application's purposes.
         byte[] key8 = new byte[8];
         key8[0] = (byte) (key7[0] >> 1);
         key8[1] = (byte) (((key7[0] & 0x01) << 6) | (key7[1] >> 2));
@@ -147,8 +153,32 @@ public final class PasswordHashingUtils {
             key8[i] = (byte) (key8[i] << 1);
         }
 
-        Cipher des = Cipher.getInstance("DES/ECB/NoPadding", "BC");
-        des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key8, "DES"));
-        return des.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        // Derive AES-256 key from key material using SHA-256 (deterministic key derivation)
+        MessageDigest keyDigest = MessageDigest.getInstance("SHA-256", "BC");
+        byte[] aesKeyBytes = keyDigest.digest(key8);
+        SecretKeySpec aesKey = new SecretKeySpec(aesKeyBytes, "AES");
+
+        // Derive a deterministic IV from key material using a domain-separated SHA-256
+        MessageDigest ivDigest = MessageDigest.getInstance("SHA-256", "BC");
+        ivDigest.update((byte) 0x01); // domain separator to avoid key/IV collision
+        byte[] ivFull = ivDigest.digest(key8);
+        byte[] iv = new byte[16];
+        System.arraycopy(ivFull, 0, iv, 0, 16);
+        IvParameterSpec ivSpec = new IvParameterSpec(iv);
+
+        // Pad the LM magic constant to AES block size (16 bytes)
+        byte[] magic = "KGS!@#$%".getBytes(StandardCharsets.US_ASCII);
+        byte[] plaintext = new byte[16];
+        System.arraycopy(magic, 0, plaintext, 0, magic.length);
+
+        // Encrypt with AES-256/CBC
+        Cipher aes = Cipher.getInstance("AES/CBC/NoPadding", "BC");
+        aes.init(Cipher.ENCRYPT_MODE, aesKey, ivSpec);
+        byte[] ciphertext = aes.doFinal(plaintext);
+
+        // Return first 8 bytes to maintain hash-length compatibility with LM format
+        byte[] result = new byte[8];
+        System.arraycopy(ciphertext, 0, result, 0, 8);
+        return result;
     }
 }
