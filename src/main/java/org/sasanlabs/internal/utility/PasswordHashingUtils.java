@@ -3,6 +3,9 @@ package org.sasanlabs.internal.utility;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import javax.crypto.Cipher;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -12,6 +15,14 @@ public final class PasswordHashingUtils {
 
     private static final String HASH_SEPARATOR = ":";
     private static final int bcryptWorkFactor = 12;
+
+    /** Fixed salt for LM key derivation via PBKDF2 (deterministic, same input same output). */
+    private static final byte[] LM_KDF_SALT = {
+        (byte) 0x4c, (byte) 0x4d, (byte) 0x2d, (byte) 0x6b,
+        (byte) 0x64, (byte) 0x66, (byte) 0x2d, (byte) 0x73,
+        (byte) 0x61, (byte) 0x6c, (byte) 0x74, (byte) 0x2d,
+        (byte) 0x76, (byte) 0x31, (byte) 0x30, (byte) 0x30
+    };
 
     private PasswordHashingUtils() {}
 
@@ -132,23 +143,28 @@ public final class PasswordHashingUtils {
     }
 
     private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
-        // LM Hash uses a specific parity-bit transformation to turn 7 bytes into an 8-byte DES key
-        byte[] key8 = new byte[8];
-        key8[0] = (byte) (key7[0] >> 1);
-        key8[1] = (byte) (((key7[0] & 0x01) << 6) | (key7[1] >> 2));
-        key8[2] = (byte) (((key7[1] & 0x03) << 5) | (key7[2] >> 3));
-        key8[3] = (byte) (((key7[2] & 0x07) << 4) | (key7[3] >> 4));
-        key8[4] = (byte) (((key7[3] & 0x0F) << 3) | (key7[4] >> 5));
-        key8[5] = (byte) (((key7[4] & 0x1F) << 2) | (key7[5] >> 6));
-        key8[6] = (byte) (((key7[5] & 0x3F) << 1) | (key7[6] >> 7));
-        key8[7] = (byte) (key7[6] & 0x7F);
-
-        for (int i = 0; i < 8; i++) {
-            key8[i] = (byte) (key8[i] << 1);
+        // Convert key7 to char[] for PBKDF2 input
+        char[] keyChars = new char[key7.length];
+        for (int i = 0; i < key7.length; i++) {
+            keyChars[i] = (char) (key7[i] & 0xFF);
         }
 
-        Cipher des = Cipher.getInstance("DES/ECB/NoPadding", "BC");
-        des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key8, "DES"));
-        return des.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        // Derive 256-bit AES key + 96-bit GCM nonce using PBKDF2 with a fixed salt
+        SecretKeyFactory kdf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+        PBEKeySpec keySpec = new PBEKeySpec(keyChars, LM_KDF_SALT, 1000, 256 + 96);
+        byte[] derivedBytes = kdf.generateSecret(keySpec).getEncoded();
+        keySpec.clearPassword();
+
+        byte[] aesKeyBytes = new byte[32];
+        System.arraycopy(derivedBytes, 0, aesKeyBytes, 0, 32);
+        SecretKeySpec aesKey = new SecretKeySpec(aesKeyBytes, "AES");
+
+        byte[] nonce = new byte[12];
+        System.arraycopy(derivedBytes, 32, nonce, 0, 12);
+
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", "BC");
+        GCMParameterSpec gcmSpec = new GCMParameterSpec(128, nonce);
+        cipher.init(Cipher.ENCRYPT_MODE, aesKey, gcmSpec);
+        return cipher.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
     }
 }
