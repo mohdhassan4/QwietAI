@@ -3,7 +3,7 @@ const detailTitle = document.querySelector(".detail-title");
 const master = document.querySelector(".master");
 const innerMaster = document.querySelector(".inner-master");
 
-function _sanitizeHTML(html) {
+function _sanitizeToFragment(html) {
   var parser = new DOMParser();
   var doc = parser.parseFromString(html, "text/html");
   doc.querySelectorAll("script").forEach(function (s) { s.remove(); });
@@ -14,7 +14,11 @@ function _sanitizeHTML(html) {
       }
     }
   });
-  return doc.body.innerHTML;
+  var fragment = document.createDocumentFragment();
+  while (doc.body.firstChild) {
+    fragment.appendChild(document.adoptNode(doc.body.firstChild));
+  }
+  return fragment;
 }
 
 const variantTooltip = {
@@ -147,7 +151,8 @@ function _callbackForInnerMasterOnClickEvent(
         if (requestToken !== thisRequestToken) {
           return;
         }
-        detailTitle.innerHTML = _sanitizeHTML(responseText);
+        detailTitle.textContent = "";
+        detailTitle.appendChild(_sanitizeToFragment(responseText));
         _loadDynamicJSAndCSS(urlToFetchHtmlTemplate, () => {
           // Re-check: the asset load itself is async, so navigation could
           // have moved on again between the AJAX response and now.

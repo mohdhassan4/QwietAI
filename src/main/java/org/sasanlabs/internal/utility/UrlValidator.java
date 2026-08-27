@@ -5,16 +5,12 @@ import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 /**
  * Utility class for validating URLs against Server-Side Request Forgery (SSRF) attacks. Rejects
  * private/internal IP ranges, non-HTTP(S) schemes, and cloud metadata endpoints.
  */
 public final class UrlValidator {
-
-    private static final transient Logger LOGGER = LogManager.getLogger(UrlValidator.class);
 
     private UrlValidator() {}
 
@@ -32,13 +28,11 @@ public final class UrlValidator {
             // Only allow http and https schemes
             String protocol = url.getProtocol().toLowerCase();
             if (!protocol.equals("http") && !protocol.equals("https")) {
-                LOGGER.warn("Rejected URL with disallowed scheme: {}", protocol);
                 return false;
             }
 
             String host = url.getHost();
             if (host == null || host.isEmpty()) {
-                LOGGER.warn("Rejected URL with empty host");
                 return false;
             }
 
@@ -51,16 +45,13 @@ public final class UrlValidator {
             // Resolve hostname to IP address and validate
             InetAddress address = InetAddress.getByName(resolveHost);
             if (isInternalAddress(address)) {
-                LOGGER.warn("Rejected URL targeting internal/private address: {}", host);
                 return false;
             }
 
             return true;
         } catch (MalformedURLException | URISyntaxException e) {
-            LOGGER.error("URL validation failed - malformed URL: {}", urlString, e);
             return false;
         } catch (UnknownHostException e) {
-            LOGGER.error("URL validation failed - cannot resolve host: {}", urlString, e);
             return false;
         }
     }
