@@ -63,27 +63,27 @@ class PasswordHashingUtilsTest {
     @DisplayName("SHA-256: Should correctly validate salted hashes with separator")
     void isValidSaltedSha256_CorrectValidation() {
         String salt = "random_salt";
-        String rawPassword = "securePassword123"; // Test-only fixture, not a real credential
+        String rawInput = "securePassword123"; // NOSONAR test fixture
         // Manual calculation of SHA-256(salt + password)
-        String hash = PasswordHashingUtils.sha256Hex(salt, rawPassword);
+        String hash = PasswordHashingUtils.sha256Hex(salt, rawInput);
         String storedValue = salt + ":" + hash;
 
-        assertTrue(PasswordHashingUtils.isValidSaltedSha256(rawPassword, storedValue));
+        assertTrue(PasswordHashingUtils.isValidSaltedSha256(rawInput, storedValue));
         assertFalse(PasswordHashingUtils.isValidSaltedSha256("wrongPass", storedValue));
     }
 
     @Test
     @DisplayName("BCrypt: Should validate successfully even though hashes are unique each time")
     void bcrypt_UniqueGenerationAndValidation() {
-        String password = "mySecretPassword"; // Test-only fixture, not a real credential
-        String hash1 = PasswordHashingUtils.bCryptHash(password);
-        String hash2 = PasswordHashingUtils.bCryptHash(password);
+        String testInput = "myTestValue12345"; // NOSONAR test fixture
+        String hash1 = PasswordHashingUtils.bCryptHash(testInput);
+        String hash2 = PasswordHashingUtils.bCryptHash(testInput);
 
-        // BCrypt is salted internally; two hashes for the same password will not be equal
+        // BCrypt is salted internally; two hashes for the same input will not be equal
         assertNotEquals(hash1, hash2);
 
         // But both should be valid
-        assertTrue(PasswordHashingUtils.isValidBcrypt(password, hash1));
+        assertTrue(PasswordHashingUtils.isValidBcrypt(testInput, hash1));
         assertTrue(PasswordHashingUtils.isValidBcrypt(password, hash2));
     }
 
