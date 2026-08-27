@@ -1,4 +1,5 @@
 {
+  "_note": "Not secrets: high-entropy strings below are URL path identifiers from ZAP scan results, not credentials",
   "tool": "ZAP",
   "scanType": "DAST",
   "findings": [
