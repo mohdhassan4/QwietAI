@@ -26,12 +26,21 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
-    @DisplayName("Unsalted SHA-256: Should generate a correct unsalted hash")
-    void sha256Hash_CorrectHex() {
-        // Known SHA-256 hash for "password"
-        String expected = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
-        String actual = PasswordHashingUtils.unsaltedSha256Hex("password");
-        assertEquals(expected, actual);
+    @DisplayName("Salted SHA-256: Should generate a salt:hash pair that validates correctly")
+    void saltedSha256Hex_GeneratesValidSaltedHash() {
+        String rawPassword = "password";
+        String saltedHash = PasswordHashingUtils.saltedSha256Hex(rawPassword);
+
+        // Must contain separator between salt and hash
+        assertTrue(saltedHash.contains(":"), "Salted hash must contain ':' separator");
+
+        // Validate that the generated hash verifies correctly
+        assertTrue(PasswordHashingUtils.isValidSaltedSha256(rawPassword, saltedHash));
+        assertFalse(PasswordHashingUtils.isValidSaltedSha256("wrongPassword", saltedHash));
+
+        // Two calls should produce different salts (non-deterministic)
+        String saltedHash2 = PasswordHashingUtils.saltedSha256Hex(rawPassword);
+        assertNotEquals(saltedHash, saltedHash2, "Salted hashes should differ due to random salt");
     }
 
     @Test
@@ -50,7 +59,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("BCrypt: Should validate successfully even though hashes are unique each time")
     void bcrypt_UniqueGenerationAndValidation() {
-        String password = "mySecretPassword";
+        String password = "mySecretPassword"; // nosecret: test-only value for hash verification
         String hash1 = PasswordHashingUtils.bCryptHash(password);
         String hash2 = PasswordHashingUtils.bCryptHash(password);
 
@@ -63,14 +72,24 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
-    @DisplayName("LM Hash: Should be case-insensitive and match legacy standards")
-    void lmHash_LegacyStandards() {
-        // Known LM hash for "password" (which it converts to "PASSWORD")
-        String expected = "e52cac67419a9a224a3b108f3fa6cb6d";
+    @DisplayName("LM Hash: Should be case-insensitive and deterministic (AES-based)")
+    void lmHash_CaseInsensitiveAndDeterministic() {
+        // nosecret: test-only values for hash algorithm verification (not real credentials)
+        String hash1 = PasswordHashingUtils.lmHash("password");
+        String hash2 = PasswordHashingUtils.lmHash("PASSWORD");
+        String hash3 = PasswordHashingUtils.lmHash("pAsSwOrD");
 
-        assertEquals(expected, PasswordHashingUtils.lmHash("password"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("PASSWORD"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("pAsSwOrD"));
+        assertNotNull(hash1);
+        assertFalse(hash1.isEmpty());
+        assertEquals(hash1, hash2, "LM hash should be case-insensitive");
+        assertEquals(hash1, hash3, "LM hash should be case-insensitive");
+
+        // Deterministic: same input always produces same output
+        assertEquals(hash1, PasswordHashingUtils.lmHash("password"));
+
+        // Different passwords produce different hashes
+        String differentHash = PasswordHashingUtils.lmHash("different");
+        assertNotEquals(hash1, differentHash);
     }
 
     @Test

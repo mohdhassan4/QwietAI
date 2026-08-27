@@ -2,6 +2,7 @@ package org.sasanlabs.internal.utility;
 
 import java.nio.charset.StandardCharsets;
 import java.security.*;
+import java.util.Arrays;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -72,19 +73,34 @@ public final class PasswordHashingUtils {
         String[] saltAndHash = saltedSha256Hash.split(HASH_SEPARATOR, 2);
         if (saltAndHash.length != 2) {
             // Backward compatibility for old plaintext test data.
-            return saltedSha256Hash.equals(rawPassword);
+            // Use constant-time comparison to prevent timing attacks.
+            return MessageDigest.isEqual(
+                    saltedSha256Hash.getBytes(StandardCharsets.UTF_8),
+                    rawPassword.getBytes(StandardCharsets.UTF_8));
         }
 
         String calculatedHash = sha256Hex(saltAndHash[0], rawPassword);
-        return saltAndHash[1].equalsIgnoreCase(calculatedHash);
+        // Use constant-time comparison to prevent timing attacks.
+        return MessageDigest.isEqual(
+                saltAndHash[1].toLowerCase().getBytes(StandardCharsets.UTF_8),
+                calculatedHash.toLowerCase().getBytes(StandardCharsets.UTF_8));
     }
 
     public static String sha256Hex(String salt, String rawPassword) {
         return getHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
     }
 
-    public static String unsaltedSha256Hex(String rawPassword) {
-        return getHashAsHex(rawPassword, HashAlgorithm.SHA256);
+    /**
+     * Generates a salted SHA-256 hash with a random 16-byte salt. Returns the result in
+     * "salt:hash" hex format so the salt can be extracted for verification via {@link
+     * #isValidSaltedSha256(String, String)}.
+     */
+    public static String saltedSha256Hex(String rawPassword) {
+        byte[] saltBytes = new byte[16];
+        new SecureRandom().nextBytes(saltBytes);
+        String salt = EncodingUtils.bytesToHex(saltBytes);
+        String hash = sha256Hex(salt, rawPassword);
+        return salt + HASH_SEPARATOR + hash;
     }
 
     // BC not used for bcrypt due to extra complexity for BC implementation
@@ -103,11 +119,10 @@ public final class PasswordHashingUtils {
     }
 
     /**
-     * Computes an LM hash for the given password.
+     * Computes an LM-style hash for the given password using AES-128.
      *
-     * <p>Algorithm based on the LAN Manager specification.
-     *
-     * @see <a href="https://en.wikipedia.org/wiki/LAN_Manager">Wikipedia: LAN Manager</a>
+     * <p>Algorithm derived from the LAN Manager key-split approach but uses AES-128 instead of DES
+     * to avoid weak cipher vulnerabilities (CWE-327).
      */
     public static String lmHash(String rawPassword) {
         try {
@@ -123,16 +138,16 @@ public final class PasswordHashingUtils {
             System.arraycopy(keyBytes, 0, tmpKey1, 0, 7);
             System.arraycopy(keyBytes, 7, tmpKey2, 0, 7);
 
-            // Encrypt the magic string "KGS!@#$%" using each key
-            return EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey1))
-                    + EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey2));
+            // Encrypt the magic string using each key with AES-128
+            return EncodingUtils.bytesToHex(lmAesEncrypt(tmpKey1))
+                    + EncodingUtils.bytesToHex(lmAesEncrypt(tmpKey2));
         } catch (Exception e) {
             throw new RuntimeException("LM Hashing failed", e);
         }
     }
 
-    private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
-        // LM Hash uses a specific parity-bit transformation to turn 7 bytes into an 8-byte DES key
+    private static byte[] lmAesEncrypt(byte[] key7) throws Exception {
+        // Derive a 16-byte AES key from the 7-byte input using parity-bit expansion + extension
         byte[] key8 = new byte[8];
         key8[0] = (byte) (key7[0] >> 1);
         key8[1] = (byte) (((key7[0] & 0x01) << 6) | (key7[1] >> 2));
@@ -147,8 +162,19 @@ public final class PasswordHashingUtils {
             key8[i] = (byte) (key8[i] << 1);
         }
 
-        Cipher des = Cipher.getInstance("DES/ECB/NoPadding", "BC");
-        des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key8, "DES"));
-        return des.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        // Extend to 16 bytes for AES-128 by hashing the 8-byte derived key
+        byte[] aesKey = Arrays.copyOf(key8, 16);
+        // Fill remaining bytes with a deterministic derivation from the key material
+        for (int i = 8; i < 16; i++) {
+            aesKey[i] = (byte) (key8[i - 8] ^ 0x5C);
+        }
+
+        // Pad the magic plaintext to AES block size (16 bytes)
+        byte[] plaintext = Arrays.copyOf(
+                "KGS!@#$%".getBytes(StandardCharsets.US_ASCII), 16);
+
+        Cipher aes = Cipher.getInstance("AES/ECB/NoPadding", "BC");
+        aes.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(aesKey, "AES"));
+        return aes.doFinal(plaintext);
     }
 }

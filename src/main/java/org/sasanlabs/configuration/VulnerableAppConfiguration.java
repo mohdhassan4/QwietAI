@@ -2,6 +2,7 @@ package org.sasanlabs.configuration;
 
 import com.zaxxer.hikari.HikariDataSource;
 import java.io.IOException;
+import java.sql.PreparedStatement;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -128,11 +129,33 @@ public class VulnerableAppConfiguration {
     @Bean
     public DataSourceInitializer adminDataSourceInitializer(
             @Qualifier("adminDataSource") DataSource adminDataSource,
-            @Value("${spring.datasource.application.password}") String appPassword) {
+            @Value("${spring.datasource.application.password}") String appPassword,
+            @Value("${db.readonly.password:readonly_password}") String readonlyPassword,
+            @Value("${db.crypto.user.password:cryptographic_failures_password}")
+                    String cryptoUserPassword) {
         ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
         JdbcTemplate adminJdbcTemplate = new JdbcTemplate(adminDataSource);
-        adminJdbcTemplate.execute(
-                String.format("CREATE USER application PASSWORD '%s'", appPassword));
+        adminJdbcTemplate.execute((java.sql.Connection conn) -> {
+            try (PreparedStatement ps =
+                    conn.prepareStatement("CREATE USER IF NOT EXISTS APPLICATION PASSWORD ?")) {
+                ps.setString(1, appPassword);
+                ps.execute();
+            }
+            try (PreparedStatement ps =
+                    conn.prepareStatement(
+                            "CREATE USER IF NOT EXISTS READONLY_USER PASSWORD ?")) {
+                ps.setString(1, readonlyPassword);
+                ps.execute();
+            }
+            try (PreparedStatement ps =
+                    conn.prepareStatement(
+                            "CREATE USER IF NOT EXISTS CRYPTOGRAPHIC_FAILURES_USER"
+                                    + " PASSWORD ?")) {
+                ps.setString(1, cryptoUserPassword);
+                ps.execute();
+            }
+            return null;
+        });
         populator.addScript(new ClassPathResource("scripts/SQLInjection/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/xss/PersistentXSS/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/XXEVulnerability/schema.sql"));
