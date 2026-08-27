@@ -3,7 +3,9 @@ package org.sasanlabs.internal.utility;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import javax.crypto.Cipher;
+import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -13,6 +15,14 @@ public final class PasswordHashingUtils {
 
     private static final String HASH_SEPARATOR = ":";
     private static final int bcryptWorkFactor = 12;
+
+    /** Fixed salt for LM key derivation via PBKDF2 (deterministic, same input same output). */
+    private static final byte[] LM_KDF_SALT = {
+        (byte) 0x4c, (byte) 0x4d, (byte) 0x2d, (byte) 0x6b,
+        (byte) 0x64, (byte) 0x66, (byte) 0x2d, (byte) 0x73,
+        (byte) 0x61, (byte) 0x6c, (byte) 0x74, (byte) 0x2d,
+        (byte) 0x76, (byte) 0x31, (byte) 0x30, (byte) 0x30
+    };
 
     private PasswordHashingUtils() {}
 
@@ -133,18 +143,24 @@ public final class PasswordHashingUtils {
     }
 
     private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
-        // Derive a 256-bit AES key from key7 with domain separation
-        MessageDigest keyDigest = MessageDigest.getInstance("SHA-256", "BC");
-        keyDigest.update("lm-key-derive:".getBytes(StandardCharsets.UTF_8));
-        byte[] aesKeyBytes = keyDigest.digest(key7);
+        // Convert key7 to char[] for PBKDF2 input
+        char[] keyChars = new char[key7.length];
+        for (int i = 0; i < key7.length; i++) {
+            keyChars[i] = (char) (key7[i] & 0xFF);
+        }
+
+        // Derive 256-bit AES key + 96-bit GCM nonce using PBKDF2 with a fixed salt
+        SecretKeyFactory kdf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+        PBEKeySpec keySpec = new PBEKeySpec(keyChars, LM_KDF_SALT, 1000, 256 + 96);
+        byte[] derivedBytes = kdf.generateSecret(keySpec).getEncoded();
+        keySpec.clearPassword();
+
+        byte[] aesKeyBytes = new byte[32];
+        System.arraycopy(derivedBytes, 0, aesKeyBytes, 0, 32);
         SecretKeySpec aesKey = new SecretKeySpec(aesKeyBytes, "AES");
 
-        // Derive a 12-byte GCM nonce independently from key7 (not from the AES key)
-        MessageDigest nonceDigest = MessageDigest.getInstance("SHA-256", "BC");
-        nonceDigest.update("lm-nonce-derive:".getBytes(StandardCharsets.UTF_8));
-        byte[] nonceSource = nonceDigest.digest(key7);
         byte[] nonce = new byte[12];
-        System.arraycopy(nonceSource, 0, nonce, 0, 12);
+        System.arraycopy(derivedBytes, 32, nonce, 0, 12);
 
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", "BC");
         GCMParameterSpec gcmSpec = new GCMParameterSpec(128, nonce);
