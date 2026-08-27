@@ -1,3 +1,98 @@
+/**
+ * Sanitizes an HTML string by removing dangerous elements and attributes
+ * to prevent Cross-Site Scripting (XSS) attacks.
+ * @param {string} html - The HTML string to sanitize.
+ * @returns {string} The sanitized HTML string safe for innerHTML assignment.
+ */
+function sanitizeHTML(html) {
+  if (!html) return "";
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(html, "text/html");
+
+  var ALLOWED_TAGS = [
+    "a", "abbr", "b", "blockquote", "br", "caption", "cite", "code",
+    "col", "colgroup", "dd", "del", "details", "dfn", "div", "dl",
+    "dt", "em", "figcaption", "figure", "h1", "h2", "h3", "h4", "h5",
+    "h6", "hr", "i", "img", "ins", "kbd", "li", "mark", "ol", "p",
+    "pre", "q", "rp", "rt", "ruby", "s", "samp", "small", "span",
+    "strong", "sub", "summary", "sup", "table", "tbody", "td",
+    "tfoot", "th", "thead", "time", "tr", "u", "ul", "var", "wbr"
+  ];
+
+  var ALLOWED_ATTRS = [
+    "align", "alt", "class", "colspan", "dir", "height", "href", "id",
+    "lang", "name", "rowspan", "scope", "src", "style", "title",
+    "type", "width"
+  ];
+
+  function isAllowedTag(tag) {
+    for (var i = 0; i < ALLOWED_TAGS.length; i++) {
+      if (ALLOWED_TAGS[i] === tag) return true;
+    }
+    return false;
+  }
+
+  function isAllowedAttr(attr) {
+    for (var i = 0; i < ALLOWED_ATTRS.length; i++) {
+      if (ALLOWED_ATTRS[i] === attr) return true;
+    }
+    return false;
+  }
+
+  function isDangerousTag(tag) {
+    var dangerous = [
+      "script", "style", "iframe", "object", "embed", "form",
+      "input", "textarea", "button", "select", "link", "meta",
+      "base", "svg", "math", "template", "noscript"
+    ];
+    for (var i = 0; i < dangerous.length; i++) {
+      if (dangerous[i] === tag) return true;
+    }
+    return false;
+  }
+
+  function sanitizeNode(node) {
+    var child = node.firstChild;
+    while (child) {
+      var next = child.nextSibling;
+      if (child.nodeType === Node.ELEMENT_NODE) {
+        var tagName = child.tagName.toLowerCase();
+        if (!isAllowedTag(tagName)) {
+          if (isDangerousTag(tagName)) {
+            child.remove();
+          } else {
+            while (child.firstChild) {
+              node.insertBefore(child.firstChild, child);
+            }
+            child.remove();
+          }
+        } else {
+          var attrs = [];
+          for (var i = 0; i < child.attributes.length; i++) {
+            attrs.push(child.attributes[i]);
+          }
+          for (var j = 0; j < attrs.length; j++) {
+            var attrName = attrs[j].name.toLowerCase();
+            if (!isAllowedAttr(attrName) || attrName.indexOf("on") === 0) {
+              child.removeAttribute(attrs[j].name);
+            } else if (
+              (attrName === "href" || attrName === "src") &&
+              /^\s*javascript:/i.test(attrs[j].value)
+            ) {
+              child.removeAttribute(attrs[j].name);
+            }
+          }
+          sanitizeNode(child);
+        }
+      }
+      child = next;
+    }
+  }
+
+  sanitizeNode(doc.body);
+  return doc.body.innerHTML;
+}
+
 const detail = document.querySelector(".detail");
 const detailTitle = document.querySelector(".detail-title");
 const master = document.querySelector(".master");
@@ -111,7 +206,7 @@ function _callbackForInnerMasterOnClickEvent(
         "HtmlTemplate"
       ];
     document.getElementById("vulnerabilityDescription").innerHTML =
-      vulnerableAppEndPointData[id]["Description"];
+      sanitizeHTML(vulnerableAppEndPointData[id]["Description"]);
     let urlToFetchHtmlTemplate = htmlTemplate
       ? "/VulnerableApp/templates/" + vulnerabilitySelected + "/" + htmlTemplate
       : "error";
@@ -133,7 +228,7 @@ function _callbackForInnerMasterOnClickEvent(
         if (requestToken !== thisRequestToken) {
           return;
         }
-        detailTitle.innerHTML = responseText;
+        detailTitle.innerHTML = sanitizeHTML(responseText);
         _loadDynamicJSAndCSS(urlToFetchHtmlTemplate, () => {
           // Re-check: the asset load itself is async, so navigation could
           // have moved on again between the AJAX response and now.
@@ -187,7 +282,7 @@ function createColumn(detailedInformationArray, key) {
   span.classList.add(
     isSecure ? "secure-variant-tooltip-text" : "unsecure-variant-tooltip-text"
   );
-  span.innerHTML = isSecure ? variantTooltip.secure : variantTooltip.unsecure;
+  span.textContent = isSecure ? variantTooltip.secure : variantTooltip.unsecure;
   svgWithTooltip.appendChild(span);
   svgWithTooltip.appendChild(_getSvgElementForVariant(isSecure));
   column.appendChild(svgWithTooltip);
@@ -241,13 +336,13 @@ function handleElementAutoSelection(vulnerableAppEndPointData, id = 0) {
   }
 
   if (id === 0) {
-    detailTitle.innerHTML = vulnerableAppEndPointData[id]["Description"];
+    detailTitle.innerHTML = sanitizeHTML(vulnerableAppEndPointData[id]["Description"]);
   } else {
     innerMaster.innerHTML = "";
   }
 
   vulnerabilitySelected = vulnerableAppEndPointData[id]["Name"];
-  detailTitle.innerHTML = vulnerableAppEndPointData[id]["Description"];
+  detailTitle.innerHTML = sanitizeHTML(vulnerableAppEndPointData[id]["Description"]);
   appendNewColumn(vulnerableAppEndPointData, id);
 }
 
@@ -432,7 +527,7 @@ function _addingEventListenerToShowHideHelpButton(vulnerableAppEndPointData) {
         "</li>";
     }
     helpText = helpText + "</ol>";
-    document.getElementById("helpText").innerHTML = helpText;
+    document.getElementById("helpText").innerHTML = sanitizeHTML(helpText);
     document.getElementById("hideHelp").disabled = false;
   });
 
