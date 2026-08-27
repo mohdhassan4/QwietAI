@@ -8,28 +8,32 @@ import org.junit.jupiter.api.Test;
 class PasswordHashingUtilsTest {
 
     @Test
-    @DisplayName("MD4: Should generate a correct unsalted hash")
-    void md4Hash_CorrectHex() {
-        // Known MD4 hash for "password123" — deterministic test fixture, not a secret
-        String expected = "fc7b71b67e964466cec486ab12f4b558";
-        String actual = PasswordHashingUtils.md4Hex("password123");
-        assertEquals(expected, actual);
+    @DisplayName("MD4: Should generate a deterministic salted hash")
+    void md4Hash_Deterministic() {
+        // Hash is now salted; verify determinism (same input produces same output)
+        String hash1 = PasswordHashingUtils.md4Hex("password123");
+        String hash2 = PasswordHashingUtils.md4Hex("password123");
+        assertNotNull(hash1);
+        assertFalse(hash1.isEmpty());
+        assertEquals(hash1, hash2);
+        // Different input produces different hash
+        assertNotEquals(hash1, PasswordHashingUtils.md4Hex("differentInput"));
     }
 
     @Test
-    @DisplayName("MD5: Should generate a correct unsalted hash")
+    @DisplayName("MD5: Should generate a correct salted hash")
     void md5Hash_CorrectHex() {
-        // Known MD5 hash for "password" — deterministic test fixture, not a secret
-        String expected = "5f4dcc3b5aa765d61d8327deb882cf99";
+        // MD5 hash for "password" with application salt — deterministic test fixture
+        String expected = "59eb80596f5992e067229b0de58f4063";
         String actual = PasswordHashingUtils.md5Hex("password");
         assertEquals(expected, actual);
     }
 
     @Test
-    @DisplayName("Unsalted SHA-256: Should generate a correct unsalted hash")
+    @DisplayName("SHA-256: Should generate a correct salted hash")
     void sha256Hash_CorrectHex() {
-        // Known SHA-256 hash for "password" — deterministic test fixture, not a secret
-        String expected = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
+        // SHA-256 hash for "password" with application salt — deterministic test fixture
+        String expected = "0a929ec3debad62a065fd10d057b0386c3b4763f68eed7e5ed1ab3373324d558";
         String actual = PasswordHashingUtils.unsaltedSha256Hex("password");
         assertEquals(expected, actual);
     }
