@@ -63,14 +63,15 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
-    @DisplayName("LM Hash: Should be case-insensitive and match legacy standards")
-    void lmHash_LegacyStandards() {
-        // Known LM hash for "password" (which it converts to "PASSWORD")
-        String expected = "e52cac67419a9a224a3b108f3fa6cb6d";
+    @DisplayName("NT Hash: Should produce correct NTLM hash and be case-sensitive")
+    void ntHash_CorrectAndCaseSensitive() {
+        // Known NT hash (MD4 of UTF-16LE) for "password"
+        String expected = "a4f49c406510bdcab6824ee7c30fd852";
 
-        assertEquals(expected, PasswordHashingUtils.lmHash("password"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("PASSWORD"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("pAsSwOrD"));
+        assertEquals(expected, PasswordHashingUtils.ntHash("password"));
+        // NT hash is case-sensitive unlike LM hash
+        assertNotEquals(expected, PasswordHashingUtils.ntHash("PASSWORD"));
+        assertNotEquals(expected, PasswordHashingUtils.ntHash("pAsSwOrD"));
     }
 
     @Test

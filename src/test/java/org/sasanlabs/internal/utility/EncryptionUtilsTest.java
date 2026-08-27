@@ -49,25 +49,25 @@ class EncryptionUtilsTest {
     }
 
     @Test
-    @DisplayName("AES Encryption: Should produce consistent ciphertext (ECB Mode Property)")
-    void encrypt_EcbDeterminism() throws EncryptionException {
+    @DisplayName("AES Encryption: GCM mode should produce different ciphertext for same input")
+    void encrypt_GcmNonDeterminism() throws EncryptionException {
         SecretKey key = EncryptionUtils.getKeyFromPassword("fixed-password");
         String plaintext = "This is a secret message that is exactly 32 bytes";
 
         String ciphertext1 = EncryptionUtils.encrypt(plaintext, key);
         String ciphertext2 = EncryptionUtils.encrypt(plaintext, key);
 
-        // In ECB mode, the same plaintext with the same key always produces the same ciphertext
-        assertEquals(ciphertext1, ciphertext2);
+        // In GCM mode, a random IV makes ciphertext different each time
+        assertNotEquals(ciphertext1, ciphertext2);
 
-        // Verify it is valid Base64
+        // Verify both are valid Base64
         assertDoesNotThrow(() -> Base64.getDecoder().decode(ciphertext1));
+        assertDoesNotThrow(() -> Base64.getDecoder().decode(ciphertext2));
     }
 
     @Test
-    @DisplayName(
-            "AES Encryption: Identical blocks should produce identical ciphertext blocks (ECB Vulnerability)")
-    void encrypt_EcbPatternLeakage() throws EncryptionException {
+    @DisplayName("AES Encryption: GCM mode should not leak patterns from identical blocks")
+    void encrypt_GcmPatternProtection() throws EncryptionException {
         SecretKey key = EncryptionUtils.getKeyFromPassword("vulnerability-test");
 
         // Create two identical 16-byte blocks (AES block size)
@@ -77,13 +77,27 @@ class EncryptionUtilsTest {
         String ciphertext = EncryptionUtils.encrypt(plaintext, key);
         byte[] decoded = Base64.getDecoder().decode(ciphertext);
 
-        // Split the ciphertext into two 16-byte segments
+        // GCM output includes 12-byte IV prefix; skip it, then check blocks are different
         byte[] block1 = new byte[16];
         byte[] block2 = new byte[16];
-        System.arraycopy(decoded, 0, block1, 0, 16);
-        System.arraycopy(decoded, 16, block2, 0, 16);
+        System.arraycopy(decoded, 12, block1, 0, 16);
+        System.arraycopy(decoded, 28, block2, 0, 16);
 
-        // The core vulnerability of ECB: identical input blocks = identical output blocks
-        assertArrayEquals(block1, block2, "ECB mode failed to leak identical blocks");
+        // GCM mode: identical input blocks must NOT produce identical output blocks
+        assertFalse(
+                java.util.Arrays.equals(block1, block2),
+                "GCM mode should not leak identical blocks");
+    }
+
+    @Test
+    @DisplayName("AES Encryption: Encrypt then decrypt should return original plaintext")
+    void encrypt_decrypt_Roundtrip() throws EncryptionException {
+        SecretKey key = EncryptionUtils.getKeyFromPassword("roundtrip-password");
+        String plaintext = "Hello, World! This is a roundtrip test.";
+
+        String ciphertext = EncryptionUtils.encrypt(plaintext, key);
+        String decrypted = EncryptionUtils.decrypt(ciphertext, key);
+
+        assertEquals(plaintext, decrypted);
     }
 }
