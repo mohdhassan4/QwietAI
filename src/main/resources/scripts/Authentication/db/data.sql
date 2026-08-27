@@ -1,3 +1,6 @@
+-- Note: Passwords below are intentional demo fixtures for an in-memory H2 database,
+-- not real credentials. They exist to demonstrate authentication vulnerability patterns.
+
 -- Level 1: SQL Injection
 -- Real password: 'not_needed_for_sqli'
 INSERT INTO auth_users VALUES (1, 'admin_sqli', 'not_needed_for_sqli', NULL, 'PLAIN', 1, 'admin_sqli@example.com', 'ADMIN');
