@@ -4,7 +4,7 @@ INSERT INTO auth_users VALUES (1, 'admin_sqli', 'not_needed_for_sqli', NULL, 'PL
 
 -- Level 2: Sensitive Data Logging
 -- Real password: 'v9K#2mLp!8zQ'
-INSERT INTO auth_users VALUES (2, 'admin_logs', 'v9K#2mLp!8zQ', NULL, 'PLAIN', 2, 'admin_logs@example.com', 'ADMIN');
+INSERT INTO auth_users VALUES (2, 'admin_logs', '$2a$10$UwkgSC5QyOcxvd4tSs6vseXbRV9b5XebOu8Wqt3f7WEOCkU3hqB2i', NULL, 'BCRYPT', 2, 'admin_logs@example.com', 'ADMIN');
 
 -- Level 3: Plaintext Storage
 -- Real password: 'b7X$4nRj-6mW'
