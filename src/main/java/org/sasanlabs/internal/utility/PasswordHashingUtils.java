@@ -133,14 +133,18 @@ public final class PasswordHashingUtils {
     }
 
     private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
-        // Derive a 256-bit AES key from the input key material using SHA-256
+        // Derive a 256-bit AES key from key7 with domain separation
         MessageDigest keyDigest = MessageDigest.getInstance("SHA-256", "BC");
+        keyDigest.update("lm-key-derive:".getBytes(StandardCharsets.UTF_8));
         byte[] aesKeyBytes = keyDigest.digest(key7);
         SecretKeySpec aesKey = new SecretKeySpec(aesKeyBytes, "AES");
 
-        // Derive a deterministic 12-byte GCM nonce from the key
+        // Derive a 12-byte GCM nonce independently from key7 (not from the AES key)
+        MessageDigest nonceDigest = MessageDigest.getInstance("SHA-256", "BC");
+        nonceDigest.update("lm-nonce-derive:".getBytes(StandardCharsets.UTF_8));
+        byte[] nonceSource = nonceDigest.digest(key7);
         byte[] nonce = new byte[12];
-        System.arraycopy(keyDigest.digest(aesKeyBytes), 0, nonce, 0, 12);
+        System.arraycopy(nonceSource, 0, nonce, 0, 12);
 
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", "BC");
         GCMParameterSpec gcmSpec = new GCMParameterSpec(128, nonce);
