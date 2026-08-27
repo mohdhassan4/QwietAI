@@ -1,3 +1,79 @@
+/**
+ * Sanitizes an HTML string by removing dangerous elements and attributes,
+ * then safely replaces the content of a target element using DOM APIs only.
+ */
+function setSanitizedHTML(targetElement, html) {
+  if (typeof html !== "string" || !targetElement) {
+    if (targetElement) { targetElement.textContent = ""; }
+    return;
+  }
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(html, "text/html");
+  var dangerousTags = doc.querySelectorAll(
+    "script, style, iframe, object, embed, link[rel='import'], base, math, svg, form"
+  );
+  dangerousTags.forEach(function (el) {
+    el.remove();
+  });
+  var allElements = doc.body.querySelectorAll("*");
+  allElements.forEach(function (el) {
+    var attrs = Array.from(el.attributes);
+    attrs.forEach(function (attr) {
+      var name = attr.name.toLowerCase();
+      var value = (attr.value || "").trim().toLowerCase();
+      if (
+        name.startsWith("on") ||
+        (name === "href" && value.startsWith("javascript:")) ||
+        (name === "src" && value.startsWith("javascript:")) ||
+        (name === "xlink:href" && value.startsWith("javascript:")) ||
+        (name === "formaction" && value.startsWith("javascript:")) ||
+        name === "srcdoc"
+      ) {
+        el.removeAttribute(attr.name);
+      }
+    });
+  });
+  while (targetElement.firstChild) {
+    targetElement.removeChild(targetElement.firstChild);
+  }
+  while (doc.body.firstChild) {
+    targetElement.appendChild(document.adoptNode(doc.body.firstChild));
+  }
+}
+
+function sanitizeHTML(html) {
+  if (typeof html !== "string") {
+    return "";
+  }
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(html, "text/html");
+  var dangerousTags = doc.querySelectorAll(
+    "script, style, iframe, object, embed, link[rel='import'], base, math, svg, form"
+  );
+  dangerousTags.forEach(function (el) {
+    el.remove();
+  });
+  var allElements = doc.body.querySelectorAll("*");
+  allElements.forEach(function (el) {
+    var attrs = Array.from(el.attributes);
+    attrs.forEach(function (attr) {
+      var name = attr.name.toLowerCase();
+      var value = (attr.value || "").trim().toLowerCase();
+      if (
+        name.startsWith("on") ||
+        (name === "href" && value.startsWith("javascript:")) ||
+        (name === "src" && value.startsWith("javascript:")) ||
+        (name === "xlink:href" && value.startsWith("javascript:")) ||
+        (name === "formaction" && value.startsWith("javascript:")) ||
+        name === "srcdoc"
+      ) {
+        el.removeAttribute(attr.name);
+      }
+    });
+  });
+  return doc.body.textContent || "";
+}
+
 const detail = document.querySelector(".detail");
 const detailTitle = document.querySelector(".detail-title");
 const master = document.querySelector(".master");
@@ -110,7 +186,7 @@ function _callbackForInnerMasterOnClickEvent(
       vulnerableAppEndPointData[id]["Detailed Information"][key][
         "HtmlTemplate"
       ];
-    document.getElementById("vulnerabilityDescription").innerHTML =
+    document.getElementById("vulnerabilityDescription").textContent =
       vulnerableAppEndPointData[id]["Description"];
     let urlToFetchHtmlTemplate = htmlTemplate
       ? "/VulnerableApp/templates/" + vulnerabilitySelected + "/" + htmlTemplate
@@ -133,7 +209,7 @@ function _callbackForInnerMasterOnClickEvent(
         if (requestToken !== thisRequestToken) {
           return;
         }
-        detailTitle.innerHTML = responseText;
+        setSanitizedHTML(detailTitle, responseText);
         _loadDynamicJSAndCSS(urlToFetchHtmlTemplate, () => {
           // Re-check: the asset load itself is async, so navigation could
           // have moved on again between the AJAX response and now.
@@ -187,7 +263,7 @@ function createColumn(detailedInformationArray, key) {
   span.classList.add(
     isSecure ? "secure-variant-tooltip-text" : "unsecure-variant-tooltip-text"
   );
-  span.innerHTML = isSecure ? variantTooltip.secure : variantTooltip.unsecure;
+  span.textContent = isSecure ? variantTooltip.secure : variantTooltip.unsecure;
   svgWithTooltip.appendChild(span);
   svgWithTooltip.appendChild(_getSvgElementForVariant(isSecure));
   column.appendChild(svgWithTooltip);
@@ -241,13 +317,13 @@ function handleElementAutoSelection(vulnerableAppEndPointData, id = 0) {
   }
 
   if (id === 0) {
-    detailTitle.innerHTML = vulnerableAppEndPointData[id]["Description"];
+    detailTitle.textContent = vulnerableAppEndPointData[id]["Description"];
   } else {
-    innerMaster.innerHTML = "";
+    while (innerMaster.firstChild) { innerMaster.removeChild(innerMaster.firstChild); }
   }
 
   vulnerabilitySelected = vulnerableAppEndPointData[id]["Name"];
-  detailTitle.innerHTML = vulnerableAppEndPointData[id]["Description"];
+  detailTitle.textContent = vulnerableAppEndPointData[id]["Description"];
   appendNewColumn(vulnerableAppEndPointData, id);
 }
 
@@ -406,14 +482,17 @@ function generateMasterDetail(vulnerableAppEndPointData) {
 
 function _clearHelp() {
   document.getElementById("showHelp").disabled = false;
-  document.getElementById("helpText").innerHTML = "";
+  var helpEl = document.getElementById("helpText");
+  while (helpEl.firstChild) { helpEl.removeChild(helpEl.firstChild); }
   document.getElementById("hideHelp").disabled = true;
 }
 
 function _addingEventListenerToShowHideHelpButton(vulnerableAppEndPointData) {
   document.getElementById("showHelp").addEventListener("click", function () {
     document.getElementById("showHelp").disabled = true;
-    let helpText = "<ol>";
+    var helpEl = document.getElementById("helpText");
+    while (helpEl.firstChild) { helpEl.removeChild(helpEl.firstChild); }
+    var ol = document.createElement("ol");
     for (let index in vulnerableAppEndPointData[currentId][
       "Detailed Information"
     ][currentKey]["AttackVectors"]) {
@@ -423,16 +502,19 @@ function _addingEventListenerToShowHideHelpButton(vulnerableAppEndPointData) {
         ]["AttackVectors"][index];
       let curlPayload = attackVector["CurlPayload"];
       let description = attackVector["Description"];
-      helpText =
-        helpText +
-        "<li><b>Description about the attack:</b> " +
-        description +
-        "<br/><b>Payload:</b> " +
-        curlPayload +
-        "</li>";
+      var li = document.createElement("li");
+      var b1 = document.createElement("b");
+      b1.textContent = "Description about the attack:";
+      li.appendChild(b1);
+      li.appendChild(document.createTextNode(" " + description));
+      li.appendChild(document.createElement("br"));
+      var b2 = document.createElement("b");
+      b2.textContent = "Payload:";
+      li.appendChild(b2);
+      li.appendChild(document.createTextNode(" " + curlPayload));
+      ol.appendChild(li);
     }
-    helpText = helpText + "</ol>";
-    document.getElementById("helpText").innerHTML = helpText;
+    helpEl.appendChild(ol);
     document.getElementById("hideHelp").disabled = false;
   });
 

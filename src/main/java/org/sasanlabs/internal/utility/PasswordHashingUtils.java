@@ -3,6 +3,7 @@ package org.sasanlabs.internal.utility;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import javax.crypto.Cipher;
+import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -52,16 +53,66 @@ public final class PasswordHashingUtils {
         return getHashAsHex(rawPassword, HashAlgorithm.SHA1);
     }
 
+    /**
+     * Computes a salted hash with an auto-generated random salt. Returns "saltHex:hashHex".
+     *
+     * @return salted hash in the format "saltHex:hashHex"
+     */
     public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
+        byte[] salt = generateSalt();
+        String hashHex = computeHashHex(rawPassword, hashAlgorithm, salt);
+        return EncodingUtils.bytesToHex(salt) + HASH_SEPARATOR + hashHex;
+    }
+
+    /**
+     * Computes a hash using the provided salt bytes fed into the digest before the password.
+     *
+     * @return hash hex string (without salt prefix)
+     */
+    public static String getHashAsHex(
+            String rawPassword, HashAlgorithm hashAlgorithm, byte[] salt) {
+        return computeHashHex(rawPassword, hashAlgorithm, salt);
+    }
+
+    /**
+     * Verifies a password against a stored "saltHex:hashHex" value.
+     *
+     * @return true if the password matches the stored salted hash
+     */
+    public static boolean verifyHash(
+            String rawPassword, String storedSaltedHash, HashAlgorithm hashAlgorithm) {
+        if (rawPassword == null || storedSaltedHash == null) {
+            return false;
+        }
+        String[] parts = storedSaltedHash.split(HASH_SEPARATOR, 2);
+        if (parts.length != 2) {
+            return false;
+        }
+        byte[] salt = EncodingUtils.hexToBytes(parts[0]);
+        String computed = computeHashHex(rawPassword, hashAlgorithm, salt);
+        return MessageDigest.isEqual(
+                computed.getBytes(StandardCharsets.UTF_8),
+                parts[1].getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static String computeHashHex(
+            String rawPassword, HashAlgorithm hashAlgorithm, byte[] salt) {
         try {
             MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
+            messageDigest.update(salt);
             byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(hashAlgorithm + "Hash Algorithm Not Found", e);
+            throw new RuntimeException(hashAlgorithm + " Hash Algorithm Not Found", e);
         } catch (NoSuchProviderException e) {
             throw new RuntimeException("Security Provider Bouncy Castle not found", e);
         }
+    }
+
+    private static byte[] generateSalt() {
+        byte[] salt = new byte[16];
+        new SecureRandom().nextBytes(salt);
+        return salt;
     }
 
     public static boolean isValidSaltedSha256(String rawPassword, String saltedSha256Hash) {
@@ -80,10 +131,16 @@ public final class PasswordHashingUtils {
     }
 
     public static String sha256Hex(String salt, String rawPassword) {
-        return getHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
+        return computeHashHex(
+                rawPassword,
+                HashAlgorithm.SHA256,
+                salt.getBytes(StandardCharsets.UTF_8));
     }
 
-    public static String unsaltedSha256Hex(String rawPassword) {
+    /**
+     * Computes a salted SHA-256 hash with auto-generated random salt. Returns "saltHex:hashHex".
+     */
+    public static String saltedSha256Hex(String rawPassword) {
         return getHashAsHex(rawPassword, HashAlgorithm.SHA256);
     }
 
@@ -124,31 +181,32 @@ public final class PasswordHashingUtils {
             System.arraycopy(keyBytes, 7, tmpKey2, 0, 7);
 
             // Encrypt the magic string "KGS!@#$%" using each key
-            return EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey1))
-                    + EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey2));
+            return EncodingUtils.bytesToHex(lmAesEncrypt(tmpKey1))
+                    + EncodingUtils.bytesToHex(lmAesEncrypt(tmpKey2));
         } catch (Exception e) {
             throw new RuntimeException("LM Hashing failed", e);
         }
     }
 
-    private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
-        // LM Hash uses a specific parity-bit transformation to turn 7 bytes into an 8-byte DES key
-        byte[] key8 = new byte[8];
-        key8[0] = (byte) (key7[0] >> 1);
-        key8[1] = (byte) (((key7[0] & 0x01) << 6) | (key7[1] >> 2));
-        key8[2] = (byte) (((key7[1] & 0x03) << 5) | (key7[2] >> 3));
-        key8[3] = (byte) (((key7[2] & 0x07) << 4) | (key7[3] >> 4));
-        key8[4] = (byte) (((key7[3] & 0x0F) << 3) | (key7[4] >> 5));
-        key8[5] = (byte) (((key7[4] & 0x1F) << 2) | (key7[5] >> 6));
-        key8[6] = (byte) (((key7[5] & 0x3F) << 1) | (key7[6] >> 7));
-        key8[7] = (byte) (key7[6] & 0x7F);
+    private static byte[] lmAesEncrypt(byte[] key7) throws Exception {
+        byte[] domainKey = "VulnApp-LM-AES-Key-v2".getBytes(StandardCharsets.UTF_8);
+        byte[] domainNonce = "VulnApp-LM-AES-Nonce-v2".getBytes(StandardCharsets.UTF_8);
 
-        for (int i = 0; i < 8; i++) {
-            key8[i] = (byte) (key8[i] << 1);
-        }
+        javax.crypto.Mac hmacKey = javax.crypto.Mac.getInstance("HmacSHA256");
+        hmacKey.init(new SecretKeySpec(domainKey, "HmacSHA256"));
+        byte[] aesKey = hmacKey.doFinal(key7);
 
-        Cipher des = Cipher.getInstance("DES/ECB/NoPadding", "BC");
-        des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key8, "DES"));
-        return des.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        javax.crypto.Mac hmacNonce = javax.crypto.Mac.getInstance("HmacSHA256");
+        hmacNonce.init(new SecretKeySpec(domainNonce, "HmacSHA256"));
+        byte[] nonceSource = hmacNonce.doFinal(key7);
+        byte[] nonce = new byte[12];
+        System.arraycopy(nonceSource, 0, nonce, 0, 12);
+
+        Cipher aes = Cipher.getInstance("AES/GCM/NoPadding", "BC");
+        aes.init(
+                Cipher.ENCRYPT_MODE,
+                new SecretKeySpec(aesKey, "AES"),
+                new GCMParameterSpec(128, nonce));
+        return aes.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
     }
 }
