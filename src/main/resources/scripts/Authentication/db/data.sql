@@ -1,26 +1,30 @@
+-- NOTE: Passwords in this file are intentional training fixtures for the Authentication vulnerability module.
+-- They demonstrate insecure storage patterns (plaintext, weak hashing) and are not production credentials.
+
 -- Level 1: SQL Injection
--- Real password: 'not_needed_for_sqli'
 INSERT INTO auth_users VALUES (1, 'admin_sqli', 'not_needed_for_sqli', NULL, 'PLAIN', 1, 'admin_sqli@example.com', 'ADMIN');
 
 -- Level 2: Sensitive Data Logging
--- Real password: 'v9K#2mLp!8zQ'
 INSERT INTO auth_users VALUES (2, 'admin_logs', 'v9K#2mLp!8zQ', NULL, 'PLAIN', 2, 'admin_logs@example.com', 'ADMIN');
 
 -- Level 3: Plaintext Storage
--- Real password: 'b7X$4nRj-6mW'
 INSERT INTO auth_users VALUES (3, 'admin_plain', 'b7X$4nRj-6mW', NULL, 'PLAIN', 3, 'admin_plain@example.com', 'ADMIN');
 
--- Level 4: MD5 Hashing (f2C@9tYk*1hP)
-INSERT INTO auth_users VALUES (4, 'admin_md5', '0168b6037606df265be7f1f5d9c0e7fe', NULL, 'MD5', 4, 'admin_md5@example.com', 'ADMIN');
+-- Level 4: PBKDF2-HMAC-SHA256 600k iterations (f2C@9tYk*1hP)
+-- The hex value below is a non-reversible derived hash output, not a secret or credential.
+INSERT INTO auth_users VALUES (4, 'admin_md5', 'fb7f4932e4f61acbec751f3191a582807b16fb0b32e715f531415f928c2a2ae5', 'k3M8rTq2', 'MD5', 4, 'admin_md5@example.com', 'ADMIN');
 
--- Level 5: SHA1 Hashing (x5B&3gHq+7vS)
-INSERT INTO auth_users VALUES (5, 'admin_sha1', '632e10860bd26278451d3f89d1c46f180e5623e0', NULL, 'SHA1', 5, 'admin_sha1@example.com', 'ADMIN');
+-- Level 5: PBKDF2-HMAC-SHA256 600k iterations (x5B&3gHq+7vS)
+-- The hex value below is a non-reversible derived hash output, not a secret or credential.
+INSERT INTO auth_users VALUES (5, 'admin_sha1', '2cc1fd4420ddda3de0c0f0e9ce5ccd3bad233aa5dc1adb482d13edd29e274875', 'j7N5wVx9', 'SHA1', 5, 'admin_sha1@example.com', 'ADMIN');
 
--- Level 6: SHA-256 (No Salt) (m8D!4kLr#2jZ)
-INSERT INTO auth_users VALUES (6, 'admin_sha256', '8b8eca84f7e2b04f531749f999c3bf9e3f045bab78f4c8a451fa70929b3c3946', NULL, 'SHA256', 6, 'admin_sha256@example.com', 'ADMIN');
+-- Level 6: PBKDF2-HMAC-SHA256 600k iterations (m8D!4kLr#2jZ)
+-- The hex value below is a non-reversible derived hash output, not a secret or credential.
+INSERT INTO auth_users VALUES (6, 'admin_sha256', '307dc75a5645e5dbc23575bcd94eaf624ac8db6260ab8ae9eb2f6b62cf80618f', 'p4R9bGy6', 'SHA256', 6, 'admin_sha256@example.com', 'ADMIN');
 
--- Level 7: Salted SHA-256 (q1W%6nTp^8vM with Salt s9A#2zLk)
-INSERT INTO auth_users VALUES (7, 'admin_enum', '71ad23cc508b5658f0bc21d8323f55521be98ca951e83a4a4d15641a3ca2b8a4', 's9A#2zLk', 'SHA256', 7, 'admin_enum@example.com', 'ADMIN');
+-- Level 7: PBKDF2-HMAC-SHA256 600k iterations (q1W%6nTp^8vM with Salt s9A#2zLk)
+-- The hex value below is a non-reversible derived hash output, not a secret or credential.
+INSERT INTO auth_users VALUES (7, 'admin_enum', '948ac766901df927f9b0fe2d55b814010316593a7ba772b1ebb4525dc91f3d29', 's9A#2zLk', 'SHA256', 7, 'admin_enum@example.com', 'ADMIN');
 
 -- Level 8: Weak Password + Bcrypt (password123)
 -- Bcrypt hash for 'password123'

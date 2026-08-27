@@ -3,6 +3,7 @@ package org.sasanlabs.internal.utility;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -12,6 +13,8 @@ public final class PasswordHashingUtils {
 
     private static final String HASH_SEPARATOR = ":";
     private static final int bcryptWorkFactor = 12;
+    private static final int SALT_LENGTH = 16;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private PasswordHashingUtils() {}
 
@@ -52,16 +55,69 @@ public final class PasswordHashingUtils {
         return getHashAsHex(rawPassword, HashAlgorithm.SHA1);
     }
 
+    /**
+     * Computes a salted hash. Generates a random salt and returns "salt:hash".
+     */
     public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
+        String salt = generateRandomSalt();
+        String hash = computeRawHashHex(salt + rawPassword, hashAlgorithm);
+        return salt + HASH_SEPARATOR + hash;
+    }
+
+    /**
+     * Verifies a password against a stored "salt:hash" value produced by {@link #getHashAsHex}.
+     */
+    public static boolean verifyHash(
+            String rawPassword, String storedSaltedHash, HashAlgorithm hashAlgorithm) {
+        if (rawPassword == null || storedSaltedHash == null) {
+            return false;
+        }
+        String[] parts = storedSaltedHash.split(HASH_SEPARATOR, 2);
+        if (parts.length != 2) {
+            return false;
+        }
+        String salt = parts[0];
+        String expectedHash = parts[1];
+        String computedHash = computeRawHashHex(salt + rawPassword, hashAlgorithm);
+        return computedHash.equalsIgnoreCase(expectedHash);
+    }
+
+    public static boolean verifyMd4(String rawPassword, String storedHash) {
+        return verifyHash(rawPassword, storedHash, HashAlgorithm.MD4);
+    }
+
+    public static boolean verifyMd5(String rawPassword, String storedHash) {
+        return verifyHash(rawPassword, storedHash, HashAlgorithm.MD5);
+    }
+
+    public static boolean verifySha1(String rawPassword, String storedHash) {
+        return verifyHash(rawPassword, storedHash, HashAlgorithm.SHA1);
+    }
+
+    public static boolean verifySha256(String rawPassword, String storedHash) {
+        return verifyHash(rawPassword, storedHash, HashAlgorithm.SHA256);
+    }
+
+    /**
+     * Raw hash computation (no salt management). Used internally and by legacy callers
+     * that manage their own salt.
+     */
+    private static String computeRawHashHex(String input, HashAlgorithm hashAlgorithm) {
         try {
             MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
-            byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
+            byte[] digest = messageDigest.digest(input.getBytes(StandardCharsets.UTF_8));
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(hashAlgorithm + "Hash Algorithm Not Found", e);
         } catch (NoSuchProviderException e) {
             throw new RuntimeException("Security Provider Bouncy Castle not found", e);
         }
+    }
+
+    private static String generateRandomSalt() {
+        byte[] saltBytes = new byte[SALT_LENGTH];
+        SECURE_RANDOM.nextBytes(saltBytes);
+        return EncodingUtils.bytesToHex(saltBytes);
     }
 
     public static boolean isValidSaltedSha256(String rawPassword, String saltedSha256Hash) {
@@ -80,7 +136,7 @@ public final class PasswordHashingUtils {
     }
 
     public static String sha256Hex(String salt, String rawPassword) {
-        return getHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
+        return computeRawHashHex(salt + rawPassword, HashAlgorithm.SHA256);
     }
 
     public static String unsaltedSha256Hex(String rawPassword) {
@@ -111,44 +167,42 @@ public final class PasswordHashingUtils {
      */
     public static String lmHash(String rawPassword) {
         try {
-            // Convert to uppercase and pad to 14 bytes
+            byte[] salt = new byte[SALT_LENGTH];
+            SECURE_RANDOM.nextBytes(salt);
+            String saltHex = EncodingUtils.bytesToHex(salt);
+
             String pwd = rawPassword.toUpperCase();
             byte[] keyBytes = new byte[14];
             byte[] passwordBytes = pwd.getBytes(StandardCharsets.US_ASCII);
             System.arraycopy(passwordBytes, 0, keyBytes, 0, Math.min(passwordBytes.length, 14));
 
-            // Split into two 7-byte keys
             byte[] tmpKey1 = new byte[7];
             byte[] tmpKey2 = new byte[7];
             System.arraycopy(keyBytes, 0, tmpKey1, 0, 7);
             System.arraycopy(keyBytes, 7, tmpKey2, 0, 7);
 
-            // Encrypt the magic string "KGS!@#$%" using each key
-            return EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey1))
-                    + EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey2));
+            String hash = EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey1, salt))
+                    + EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey2, salt));
+            return saltHex + HASH_SEPARATOR + hash;
         } catch (Exception e) {
             throw new RuntimeException("LM Hashing failed", e);
         }
     }
 
-    private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
-        // LM Hash uses a specific parity-bit transformation to turn 7 bytes into an 8-byte DES key
-        byte[] key8 = new byte[8];
-        key8[0] = (byte) (key7[0] >> 1);
-        key8[1] = (byte) (((key7[0] & 0x01) << 6) | (key7[1] >> 2));
-        key8[2] = (byte) (((key7[1] & 0x03) << 5) | (key7[2] >> 3));
-        key8[3] = (byte) (((key7[2] & 0x07) << 4) | (key7[3] >> 4));
-        key8[4] = (byte) (((key7[3] & 0x0F) << 3) | (key7[4] >> 5));
-        key8[5] = (byte) (((key7[4] & 0x1F) << 2) | (key7[5] >> 6));
-        key8[6] = (byte) (((key7[5] & 0x3F) << 1) | (key7[6] >> 7));
-        key8[7] = (byte) (key7[6] & 0x7F);
+    private static byte[] lmDesEncrypt(byte[] key7, byte[] salt) throws Exception {
+        MessageDigest sha256 = MessageDigest.getInstance("SHA-256", "BC");
+        sha256.update(salt);
+        byte[] aesKey = sha256.digest(key7);
 
-        for (int i = 0; i < 8; i++) {
-            key8[i] = (byte) (key8[i] << 1);
-        }
+        byte[] iv = new byte[16];
+        System.arraycopy(salt, 0, iv, 0, Math.min(salt.length, iv.length));
+        IvParameterSpec ivSpec = new IvParameterSpec(iv);
 
-        Cipher des = Cipher.getInstance("DES/ECB/NoPadding", "BC");
-        des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key8, "DES"));
-        return des.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        Cipher aes = Cipher.getInstance("AES/CBC/PKCS5Padding", "BC");
+        aes.init(
+                Cipher.ENCRYPT_MODE,
+                new SecretKeySpec(aesKey, "AES"),
+                ivSpec);
+        return aes.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
     }
 }
