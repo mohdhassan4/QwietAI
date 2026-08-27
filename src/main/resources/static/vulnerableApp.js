@@ -366,7 +366,9 @@ function doGetAjaxCall(callBack, url, isJson, headers = {}, onError) {
   );
 
   for (const header in headers) {
-    xmlHttpRequest.setRequestHeader(header, headers[header]);
+    if (Object.prototype.hasOwnProperty.call(headers, header)) {
+      xmlHttpRequest.setRequestHeader(header, headers[header]);
+    }
   }
 
   xmlHttpRequest.send();
@@ -379,7 +381,9 @@ function doPostAjaxCall(callBack, url, isJson, data, headers = {}) {
   };
   xmlHttpRequest.open("POST", url, true);
   for (const header in headers) {
-    xmlHttpRequest.setRequestHeader(header, headers[header]);
+    if (Object.prototype.hasOwnProperty.call(headers, header)) {
+      xmlHttpRequest.setRequestHeader(header, headers[header]);
+    }
   }
   xmlHttpRequest.send(data);
 }
@@ -387,6 +391,9 @@ function doPostAjaxCall(callBack, url, isJson, data, headers = {}) {
 function generateMasterDetail(vulnerableAppEndPointData) {
   let isFirst = true;
   for (let index in vulnerableAppEndPointData) {
+    if (!Object.prototype.hasOwnProperty.call(vulnerableAppEndPointData, index)) {
+      continue;
+    }
     let column = document.createElement("div");
     if (isFirst) {
       column.className = "master-item  active-item";
@@ -414,13 +421,14 @@ function _addingEventListenerToShowHideHelpButton(vulnerableAppEndPointData) {
   document.getElementById("showHelp").addEventListener("click", function () {
     document.getElementById("showHelp").disabled = true;
     let helpText = "<ol>";
-    for (let index in vulnerableAppEndPointData[currentId][
+    let _attackVectors = vulnerableAppEndPointData[currentId][
       "Detailed Information"
-    ][currentKey]["AttackVectors"]) {
-      let attackVector =
-        vulnerableAppEndPointData[currentId]["Detailed Information"][
-          currentKey
-        ]["AttackVectors"][index];
+    ][currentKey]["AttackVectors"];
+    for (let index in _attackVectors) {
+      if (!Object.prototype.hasOwnProperty.call(_attackVectors, index)) {
+        continue;
+      }
+      let attackVector = _attackVectors[index];
       let curlPayload = attackVector["CurlPayload"];
       let description = attackVector["Description"];
       helpText =

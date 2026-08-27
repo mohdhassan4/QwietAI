@@ -16,7 +16,7 @@ export function getBrowserCacheEnabled() {
 }
 
 export function getRequestUrl(options = {}) {
-  const { bannerInputId = "bannerInput" } = options;
+  const { bannerInputId = "bannerInput", demoUser = undefined } = options;
   const queryParams = new URLSearchParams();
 
   const banner = bannerInputId ? getInputValue(bannerInputId) : "";
@@ -25,6 +25,10 @@ export function getRequestUrl(options = {}) {
   }
 
   queryParams.set("browserCache", String(getBrowserCacheEnabled()));
+
+  if (demoUser !== undefined) {
+    queryParams.set("demoUser", demoUser);
+  }
 
   const queryString = queryParams.toString();
   const url = getUrlForVulnerabilityLevel();
@@ -47,12 +51,9 @@ export function getHeadersWithForwardedHost(inputId = "forwardedHostInput") {
 }
 
 export function setDemoUserCookie(value) {
-  if (value) {
-    document.cookie = `demo_user=${value}; path=/; SameSite=Lax`;
-  } else {
-    document.cookie =
-      "demo_user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-  }
+  // Cookie is now managed server-side with Secure and HttpOnly attributes.
+  // The demoUser value is passed as a query parameter to the server endpoint.
+  void value;
 }
 
 export function fetchDataCallback(data, request) {
