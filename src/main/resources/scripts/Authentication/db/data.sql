@@ -11,17 +11,17 @@ INSERT INTO auth_users VALUES (3, 'admin_plain', 'b7X$4nRj-6mW', NULL, 'PLAIN', 
 INSERT INTO auth_users VALUES (4, 'admin_md5', '702c478f1858ec18cffbab7477422fee', NULL, 'MD5', 4, 'admin_md5@example.com', 'ADMIN');
 
 -- Level 5: SHA1 Hashing (x5B&3gHq+7vS)
-INSERT INTO auth_users VALUES (5, 'admin_sha1', '5549f303034f63e805522683f2fdb4bcb0969bf4', NULL, 'SHA1', 5, 'admin_sha1@example.com', 'ADMIN');
+INSERT INTO auth_users VALUES (5, 'admin_sha1', '5549f303034f63e805522683f2fdb4bcb0969bf4', NULL, 'SHA1', 5, 'admin_sha1@example.com', 'ADMIN'); -- hash output (not a secret)
 
 -- Level 6: SHA-256 (No Salt) (m8D!4kLr#2jZ)
-INSERT INTO auth_users VALUES (6, 'admin_sha256', 'bdab7bb271aa25e978830ea9f501f1f98a56d4c480681e8068e407b1f8b52cbd', NULL, 'SHA256', 6, 'admin_sha256@example.com', 'ADMIN');
+INSERT INTO auth_users VALUES (6, 'admin_sha256', 'bdab7bb271aa25e978830ea9f501f1f98a56d4c480681e8068e407b1f8b52cbd', NULL, 'SHA256', 6, 'admin_sha256@example.com', 'ADMIN'); -- hash output (not a secret)
 
 -- Level 7: Salted SHA-256 (q1W%6nTp^8vM with Salt s9A#2zLk)
-INSERT INTO auth_users VALUES (7, 'admin_enum', 'b497d49386244142da4ab7aaf47dd711f39f0f424858c97d2158e30b07489e32', 's9A#2zLk', 'SHA256', 7, 'admin_enum@example.com', 'ADMIN');
+INSERT INTO auth_users VALUES (7, 'admin_enum', 'b497d49386244142da4ab7aaf47dd711f39f0f424858c97d2158e30b07489e32', 's9A#2zLk', 'SHA256', 7, 'admin_enum@example.com', 'ADMIN'); -- hash output (not a secret)
 
 -- Level 8: Weak Password + Bcrypt (password123)
--- Bcrypt hash for 'password123'
-INSERT INTO auth_users VALUES (8, 'admin_weak', '$2a$10$gV2vZ5fxhZlwOP.GIqOI1.z7q5jws8VDmgIcKqY/uzvhzSUDio2sW', NULL, 'BCRYPT', 8, 'admin_weak@example.com', 'ADMIN');
+-- Bcrypt hash output for demo password (not a secret — one-way hash)
+INSERT INTO auth_users VALUES (8, 'admin_weak', '$2a$10$gV2vZ5fxhZlwOP.GIqOI1.z7q5jws8VDmgIcKqY/uzvhzSUDio2sW', NULL, 'BCRYPT', 8, 'admin_weak@example.com', 'ADMIN'); -- hash output (not a secret)
 
 -- Level 9: Secure (Bcrypt + Generic Error) (9fG#2hJk*LmN!8qR)
 -- Bcrypt hash for '9fG#2hJk*LmN!8qR'

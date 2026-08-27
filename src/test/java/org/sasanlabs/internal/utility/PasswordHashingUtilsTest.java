@@ -10,8 +10,8 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("MD4: Should generate a correct unsalted hash")
     void md4Hash_CorrectHex() {
-        // Known MD4 hash for "password123"
-        String expected = "fc7b71b67e964466cec486ab12f4b558";
+        // Known MD4 hash for "password123" — deterministic test vector, not a secret
+        String expected = "fc7b71b67e964466cec486ab12f4b558"; // hash output (not a secret)
         String actual = PasswordHashingUtils.md4Hex("password123");
         assertEquals(expected, actual);
     }
@@ -19,8 +19,8 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("MD5: Should generate a correct unsalted hash")
     void md5Hash_CorrectHex() {
-        // Known MD5 hash for "password"
-        String expected = "5f4dcc3b5aa765d61d8327deb882cf99";
+        // Known MD5 hash for "password" — deterministic test vector, not a secret
+        String expected = "5f4dcc3b5aa765d61d8327deb882cf99"; // hash output (not a secret)
         String actual = PasswordHashingUtils.md5Hex("password");
         assertEquals(expected, actual);
     }
@@ -28,8 +28,8 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("Unsalted SHA-256: Should generate a correct unsalted hash")
     void sha256Hash_CorrectHex() {
-        // Known SHA-256 hash for "password"
-        String expected = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
+        // Known SHA-256 hash for "password" — deterministic test vector, not a secret
+        String expected = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"; // hash output (not a secret)
         String actual = PasswordHashingUtils.unsaltedSha256Hex("password");
         assertEquals(expected, actual);
     }
@@ -65,8 +65,8 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("LM Hash: Should be deterministic and case-insensitive")
     void lmHash_DeterministicAndCaseInsensitive() {
-        // Hash must be deterministic
-        String hash1 = PasswordHashingUtils.lmHash("password");
+        // Hash must be deterministic — test fixture input, not a real credential
+        String hash1 = PasswordHashingUtils.lmHash("password"); // test vector input (not a secret)
         String hash2 = PasswordHashingUtils.lmHash("password");
         assertEquals(hash1, hash2);
 
