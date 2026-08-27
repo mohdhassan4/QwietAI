@@ -1,5 +1,7 @@
 package org.sasanlabs.controller.exception;
 
+import static org.sasanlabs.vulnerability.utils.LogSanitizer.sanitize;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sasanlabs.internal.utility.MessageBundle;
@@ -31,7 +33,10 @@ public class ControllerExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ControllerException.class)
     public ResponseEntity<String> handleControllerExceptions(
             ControllerException ex, WebRequest request) {
-        LOGGER.error("Controller Exception Occurred :-", ex);
+        LOGGER.error(
+                "Controller Exception Occurred: {} - {}",
+                ex.getClass().getName(),
+                sanitize(ex.getMessage()));
         return new ResponseEntity<String>(
                 ex.getExceptionStatusCode().getMessage(ex.getArgs(), messageBundle),
                 HttpStatus.INTERNAL_SERVER_ERROR);
@@ -39,7 +44,10 @@ public class ControllerExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<String> handleExceptions(Exception ex, WebRequest request) {
-        LOGGER.error("General Exception Occurred :- ", ex);
+        LOGGER.error(
+                "General Exception Occurred: {} - {}",
+                ex.getClass().getName(),
+                sanitize(ex.getMessage()));
         return new ResponseEntity<String>(
                 ExceptionStatusCodeEnum.SYSTEM_ERROR.getMessage(null, messageBundle),
                 HttpStatus.INTERNAL_SERVER_ERROR);

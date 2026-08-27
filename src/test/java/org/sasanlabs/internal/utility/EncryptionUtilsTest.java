@@ -49,6 +49,17 @@ class EncryptionUtilsTest {
     }
 
     @Test
+    @DisplayName(
+            "Key Generation: getKey() should derive an AES key from the ENCRYPTION_KEY env variable")
+    void getKey_ValidKey() throws EncryptionException {
+        SecretKey key = EncryptionUtils.getKey();
+
+        assertNotNull(key);
+        assertEquals("AES", key.getAlgorithm());
+        assertEquals(16, key.getEncoded().length);
+    }
+
+    @Test
     @DisplayName("AES Encryption: Should produce consistent ciphertext (ECB Mode Property)")
     void encrypt_EcbDeterminism() throws EncryptionException {
         SecretKey key = EncryptionUtils.getKeyFromPassword("fixed-password");
