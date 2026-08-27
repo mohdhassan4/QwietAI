@@ -71,10 +71,20 @@ public class EncryptionUtils {
         new SecureRandom().nextBytes(salt);
     }
 
+    private static final int PBKDF2_ITERATIONS =
+            System.getenv("PBKDF2_ITERATIONS") != null
+                    ? Integer.parseInt(System.getenv("PBKDF2_ITERATIONS"))
+                    : 600000;
+
+    private static final int AES_KEY_LENGTH =
+            System.getenv("AES_KEY_LENGTH") != null
+                    ? Integer.parseInt(System.getenv("AES_KEY_LENGTH"))
+                    : 128;
+
     public static SecretKey getKeyFromPassword(String password) throws EncryptionException {
         try {
             SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-            KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 600000, 128);
+            KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, PBKDF2_ITERATIONS, AES_KEY_LENGTH);
 
             return new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
