@@ -20,6 +20,7 @@ public class PasswordResetReferrerPolicyFilter extends OncePerRequestFilter {
 
     private static final String RESET_PAGE_PATH = "/password-reset/reset.html";
     private static final int REFERRER_LEAK_LEVEL = 7;
+    private static final int MAX_LEVEL = 999;
 
     @Override
     protected void doFilterInternal(
@@ -38,14 +39,20 @@ public class PasswordResetReferrerPolicyFilter extends OncePerRequestFilter {
         }
 
         String level = request.getParameter("level");
-        if (level == null) {
+        if (level == null || level.isEmpty() || level.length() > 3) {
             return false;
         }
 
-        try {
-            return Integer.parseInt(level) == REFERRER_LEAK_LEVEL;
-        } catch (NumberFormatException exception) {
+        // Allowlist: only ASCII digits are valid level values
+        if (!level.chars().allMatch(Character::isDigit)) {
             return false;
         }
+
+        int parsedLevel = Integer.parseInt(level);
+        if (parsedLevel < 1 || parsedLevel > MAX_LEVEL) {
+            return false;
+        }
+
+        return parsedLevel == REFERRER_LEAK_LEVEL;
     }
 }
