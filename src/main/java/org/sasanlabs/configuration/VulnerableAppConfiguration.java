@@ -27,7 +27,9 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.init.CompositeDatabasePopulator;
 import org.springframework.jdbc.datasource.init.DataSourceInitializer;
+import org.springframework.jdbc.datasource.init.DatabasePopulator;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.multipart.MultipartResolver;
@@ -128,7 +130,8 @@ public class VulnerableAppConfiguration {
     @Bean
     public DataSourceInitializer adminDataSourceInitializer(
             @Qualifier("adminDataSource") DataSource adminDataSource,
-            @Value("${spring.datasource.application.password}") String appPassword) {
+            @Value("${spring.datasource.application.password}") String appPassword,
+            @Value("${auth.demo.admin-weak-password}") String adminWeakPassword) {
         ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
         JdbcTemplate adminJdbcTemplate = new JdbcTemplate(adminDataSource);
         adminJdbcTemplate.execute(
@@ -147,9 +150,27 @@ public class VulnerableAppConfiguration {
         populator.addScript(new ClassPathResource("scripts/SessionManagement/db/data.sql"));
         populator.setSeparator(";");
 
+        // Compute bcrypt hash at startup rather than storing precomputed hash in SQL
+        DatabasePopulator bcryptPopulator =
+                connection -> {
+                    BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
+                    String bcryptHash = encoder.encode(adminWeakPassword);
+                    try (java.sql.PreparedStatement ps =
+                            connection.prepareStatement(
+                                    "INSERT INTO auth_users VALUES"
+                                            + " (8, 'admin_weak', ?, NULL, 'BCRYPT', 8,"
+                                            + " 'admin_weak@example.com', 'ADMIN')")) {
+                        ps.setString(1, bcryptHash);
+                        ps.executeUpdate();
+                    }
+                };
+
+        CompositeDatabasePopulator composite = new CompositeDatabasePopulator();
+        composite.addPopulators(populator, bcryptPopulator);
+
         DataSourceInitializer initializer = new DataSourceInitializer();
         initializer.setDataSource(adminDataSource);
-        initializer.setDatabasePopulator(populator);
+        initializer.setDatabasePopulator(composite);
         return initializer;
     }
 
