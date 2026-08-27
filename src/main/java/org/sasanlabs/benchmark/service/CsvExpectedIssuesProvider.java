@@ -60,13 +60,20 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
                     .build();
 
     private final String csvPath;
+    private final Path allowedBaseDir;
 
     private volatile List<ExpectedIssue> cached;
 
     public CsvExpectedIssuesProvider(
             @Value("${benchmark.sast.ground-truth.path:classpath:scanner/sast/expectedIssues.csv}")
                     String csvPath) {
+        this(csvPath, Paths.get("").toAbsolutePath().normalize());
+    }
+
+    /** Package-private constructor that allows specifying the allowed base directory. */
+    CsvExpectedIssuesProvider(String csvPath, Path allowedBaseDir) {
         this.csvPath = csvPath;
+        this.allowedBaseDir = allowedBaseDir;
     }
 
     @PostConstruct
@@ -103,7 +110,12 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
         if (csvPath.startsWith(CLASSPATH_PREFIX)) {
             return parseFromResource(csvPath.substring(CLASSPATH_PREFIX.length()));
         }
-        return parseFromPath(Paths.get(csvPath));
+        Path resolved = Paths.get(csvPath).toAbsolutePath().normalize();
+        if (!resolved.startsWith(allowedBaseDir)) {
+            throw new IOException(
+                    "CSV path escapes the allowed base directory: " + csvPath);
+        }
+        return parseFromPath(resolved);
     }
 
     private List<ExpectedIssue> parseFromResource(String location) throws IOException {
