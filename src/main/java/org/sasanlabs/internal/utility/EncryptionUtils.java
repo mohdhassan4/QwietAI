@@ -67,6 +67,14 @@ public class EncryptionUtils {
 
     private static final byte[] salt = new byte[16];
 
+    private static final int PBE_ITERATIONS = Integer.parseInt(
+            System.getProperty("encryption.pbe.iterations",
+                    System.getenv().getOrDefault("ENCRYPTION_PBE_ITERATIONS", "65536")));
+
+    private static final int AES_KEY_LENGTH = Integer.parseInt(
+            System.getProperty("encryption.aes.key.length",
+                    System.getenv().getOrDefault("ENCRYPTION_AES_KEY_LENGTH", "128")));
+
     static {
         new SecureRandom().nextBytes(salt);
     }
@@ -74,7 +82,8 @@ public class EncryptionUtils {
     public static SecretKey getKeyFromPassword(String password) throws EncryptionException {
         try {
             SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-            KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 1, 128);
+            KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, PBE_ITERATIONS,
+                    AES_KEY_LENGTH);
 
             return new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
