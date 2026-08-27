@@ -21,6 +21,8 @@ public class EncryptionUtils {
 
     private EncryptionUtils() {}
 
+    private static final String CRYPTO_PASSWORD_ENV_VAR = "VULNERABLEAPP_CRYPTO_PASSWORD";
+
     /**
      * INSECURE: Caesar Cipher shifts alphabetic characters positions to the right overflowing to
      * the beginning of the alphabet. 'z' will shift to 'a' and so on.
@@ -72,6 +74,9 @@ public class EncryptionUtils {
     }
 
     public static SecretKey getKeyFromPassword(String password) throws EncryptionException {
+        if (password == null || password.isEmpty()) {
+            throw new EncryptionException("Password for key derivation must not be null or empty");
+        }
         try {
             SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
             KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 1, 128);
@@ -80,6 +85,36 @@ public class EncryptionUtils {
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
             throw new EncryptionException("Error generating AES key from password", e);
         }
+    }
+
+    /**
+     * Derives an AES key from the encryption password configured via the {@code
+     * VULNERABLEAPP_CRYPTO_PASSWORD} environment variable. This method ensures that no hardcoded
+     * credential is used in server-side key derivation.
+     *
+     * @return a SecretKey derived from the configured environment password
+     * @throws EncryptionException if the environment variable is not set or empty
+     */
+    public static SecretKey getKeyFromConfiguredPassword() throws EncryptionException {
+        String password = getConfiguredPassword();
+        return getKeyFromPassword(password);
+    }
+
+    /**
+     * Returns the encryption password from the {@code VULNERABLEAPP_CRYPTO_PASSWORD} environment
+     * variable.
+     *
+     * @return the configured password
+     * @throws EncryptionException if the environment variable is not set or empty
+     */
+    public static String getConfiguredPassword() throws EncryptionException {
+        String password = System.getenv(CRYPTO_PASSWORD_ENV_VAR);
+        if (password == null || password.isEmpty()) {
+            throw new EncryptionException(
+                    "Encryption password must be configured via environment variable "
+                            + CRYPTO_PASSWORD_ENV_VAR);
+        }
+        return password;
     }
 
     public static String encrypt(String plaintext, SecretKey key) throws EncryptionException {
