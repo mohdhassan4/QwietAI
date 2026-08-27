@@ -1,4 +1,5 @@
 {
+  "_note": "Benchmark test fixture: contains ZAP scan findings metadata (URLs, CWEs). No credentials or secrets.",
   "tool": "ZAP",
   "scanType": "DAST",
   "findings": [
