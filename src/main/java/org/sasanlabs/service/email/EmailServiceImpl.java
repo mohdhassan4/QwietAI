@@ -8,6 +8,7 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import org.apache.commons.lang3.StringUtils;
 import org.sasanlabs.configuration.EmailConfiguration;
+import org.sasanlabs.internal.utility.LogSanitizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.mail.MailSendException;
@@ -42,7 +43,7 @@ public class EmailServiceImpl implements EmailService {
         try {
             javaMailSender.send(message);
         } catch (MailSendException ex) {
-            LOGGER.warn("Mail server unavailable while sending email to {}", to, ex);
+            LOGGER.warn("Mail server unavailable while sending email to {}", LogSanitizer.sanitize(to), ex);
         }
     }
 
@@ -57,7 +58,7 @@ public class EmailServiceImpl implements EmailService {
             helper.setSubject(subject);
             helper.setText(htmlBody, true);
         } catch (MessagingException ex) {
-            LOGGER.warn("Mail server unavailable while sending email to {}", to, ex);
+            LOGGER.warn("Mail server unavailable while sending email to {}", LogSanitizer.sanitize(to), ex);
         }
         javaMailSender.send(message);
     }

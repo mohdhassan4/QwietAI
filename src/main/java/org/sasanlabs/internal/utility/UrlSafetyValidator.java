@@ -42,14 +42,14 @@ public final class UrlSafetyValidator {
             url = new URL(urlString);
             url.toURI();
         } catch (MalformedURLException | URISyntaxException e) {
-            LOGGER.debug("URL validation failed - malformed URL: {}", urlString, e);
+            LOGGER.debug("URL validation failed - malformed URL: {}", LogSanitizer.sanitize(urlString), e);
             return false;
         }
 
         // Only allow http and https schemes
         String scheme = url.getProtocol();
         if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
-            LOGGER.debug("URL validation failed - disallowed scheme: {}", scheme);
+            LOGGER.debug("URL validation failed - disallowed scheme: {}", LogSanitizer.sanitize(scheme));
             return false;
         }
 
@@ -77,7 +77,7 @@ public final class UrlSafetyValidator {
             }
         } catch (UnknownHostException e) {
             // Fail closed - if we cannot resolve the host, reject the request
-            LOGGER.debug("URL validation failed - cannot resolve host: {}", host, e);
+            LOGGER.debug("URL validation failed - cannot resolve host: {}", LogSanitizer.sanitize(host), e);
             return false;
         }
 
