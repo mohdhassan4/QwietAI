@@ -3,6 +3,7 @@ package org.sasanlabs.internal.utility;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import javax.crypto.Cipher;
+import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -81,16 +82,18 @@ public final class PasswordHashingUtils {
     public static String computeHashWithSalt(
             String rawPassword, HashAlgorithm hashAlgorithm, byte[] salt) {
         try {
-            MessageDigest messageDigest =
-                    MessageDigest.getInstance(hashAlgorithm.label(), "BC");
-            messageDigest.update(salt);
-            byte[] digest =
-                    messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
+            String hmacAlgorithm = "Hmac" + hashAlgorithm.label().replace("-", "");
+            Mac mac = Mac.getInstance(hmacAlgorithm, "BC");
+            SecretKeySpec keySpec = new SecretKeySpec(salt, hmacAlgorithm);
+            mac.init(keySpec);
+            byte[] digest = mac.doFinal(rawPassword.getBytes(StandardCharsets.UTF_8));
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(hashAlgorithm + " Hash Algorithm Not Found", e);
+            throw new RuntimeException(hashAlgorithm + " HMAC Algorithm Not Found", e);
         } catch (NoSuchProviderException e) {
             throw new RuntimeException("Security Provider Bouncy Castle not found", e);
+        } catch (InvalidKeyException e) {
+            throw new RuntimeException("Invalid salt key for " + hashAlgorithm, e);
         }
     }
 
