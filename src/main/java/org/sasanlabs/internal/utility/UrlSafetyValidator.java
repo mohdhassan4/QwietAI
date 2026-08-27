@@ -51,7 +51,10 @@ public final class UrlSafetyValidator {
             url = new URL(urlString);
             url.toURI();
         } catch (MalformedURLException | URISyntaxException e) {
-            LOGGER.error("URL is not valid: {}", sanitize(urlString), e);
+            LOGGER.error(
+                    "URL is not valid: {} (cause: {})",
+                    sanitize(urlString),
+                    sanitize(e.getMessage()));
             return null;
         }
 
@@ -97,7 +100,10 @@ public final class UrlSafetyValidator {
             String file = (path != null ? path : "") + (query != null ? "?" + query : "");
             return new URL(scheme, host, port, file);
         } catch (MalformedURLException e) {
-            LOGGER.error("Failed to reconstruct URL: {}", sanitize(urlString), e);
+            LOGGER.error(
+                    "Failed to reconstruct URL: {} (cause: {})",
+                    sanitize(urlString),
+                    sanitize(e.getMessage()));
             return null;
         }
     }
