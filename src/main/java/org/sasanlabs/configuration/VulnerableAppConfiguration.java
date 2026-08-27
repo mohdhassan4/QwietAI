@@ -128,11 +128,17 @@ public class VulnerableAppConfiguration {
     @Bean
     public DataSourceInitializer adminDataSourceInitializer(
             @Qualifier("adminDataSource") DataSource adminDataSource,
-            @Value("${spring.datasource.application.password}") String appPassword) {
+            @Value("${spring.datasource.application.password}") String appPassword,
+            @Value("${auth.readonly.user.password:}") String authReadonlyPassword,
+            @Value("${crypto.readonly.user.password:}") String cryptoReadonlyPassword) {
         ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
         JdbcTemplate adminJdbcTemplate = new JdbcTemplate(adminDataSource);
-        adminJdbcTemplate.execute(
-                String.format("CREATE USER application PASSWORD '%s'", appPassword));
+        adminJdbcTemplate.update("CREATE USER application PASSWORD ?", appPassword);
+        adminJdbcTemplate.update(
+                "CREATE USER IF NOT EXISTS readonly_user PASSWORD ?", authReadonlyPassword);
+        adminJdbcTemplate.update(
+                "CREATE USER IF NOT EXISTS cryptographic_failures_user PASSWORD ?",
+                cryptoReadonlyPassword);
         populator.addScript(new ClassPathResource("scripts/SQLInjection/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/xss/PersistentXSS/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/XXEVulnerability/schema.sql"));
