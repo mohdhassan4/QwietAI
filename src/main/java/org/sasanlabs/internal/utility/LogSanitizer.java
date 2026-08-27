@@ -11,9 +11,12 @@ public final class LogSanitizer {
         // utility class
     }
 
+    private static final int MAX_LOG_VALUE_LENGTH = 500;
+
     /**
-     * Replaces carriage-return, line-feed, and tab characters with underscores so that
-     * attacker-controlled data cannot forge additional log lines.
+     * Strips all control characters (ASCII 0x00-0x1F, 0x7F) from the input so that
+     * attacker-controlled data cannot forge additional log lines or inject invisible characters.
+     * Also truncates to a safe maximum length to prevent log flooding.
      *
      * @param value the potentially tainted value
      * @return sanitized value safe for logging, or "null" literal if value is null
@@ -22,6 +25,16 @@ public final class LogSanitizer {
         if (value == null) {
             return "null";
         }
-        return value.replaceAll("[\\r\\n\\t]", "_");
+        int len = Math.min(value.length(), MAX_LOG_VALUE_LENGTH);
+        StringBuilder sb = new StringBuilder(len);
+        for (int i = 0; i < len; i++) {
+            char c = value.charAt(i);
+            if (c >= 0x20 && c != 0x7F) {
+                sb.append(c);
+            } else {
+                sb.append('_');
+            }
+        }
+        return sb.toString();
     }
 }
