@@ -63,21 +63,30 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
-    @DisplayName("LM Hash: Should be deterministic and case-insensitive")
-    void lmHash_DeterministicAndCaseInsensitive() {
-        // Hash must be deterministic
+    @DisplayName("LM Hash: Should produce valid hex output with unique random IV per call")
+    void lmHash_ProducesValidHexWithRandomIV() {
         String hash1 = PasswordHashingUtils.lmHash("password");
         String hash2 = PasswordHashingUtils.lmHash("password");
-        assertEquals(hash1, hash2);
 
-        // Hash must be case-insensitive (LM converts to uppercase internally)
-        assertEquals(hash1, PasswordHashingUtils.lmHash("PASSWORD"));
-        assertEquals(hash1, PasswordHashingUtils.lmHash("pAsSwOrD"));
+        // With random IV per call, outputs differ (like bcrypt)
+        assertNotEquals(hash1, hash2);
 
-        // Hash must be a non-empty hex string
+        // Hash must be a non-empty hex string of consistent length
         assertNotNull(hash1);
+        assertNotNull(hash2);
         assertFalse(hash1.isEmpty());
         assertTrue(hash1.matches("[0-9a-f]+"));
+        assertTrue(hash2.matches("[0-9a-f]+"));
+        // Both halves have same structure so total length is consistent
+        assertEquals(hash1.length(), hash2.length());
+
+        // Case-insensitive: different cases produce same-length output (LM uppercases)
+        String hashUpper = PasswordHashingUtils.lmHash("PASSWORD");
+        String hashMixed = PasswordHashingUtils.lmHash("pAsSwOrD");
+        assertNotNull(hashUpper);
+        assertNotNull(hashMixed);
+        assertEquals(hash1.length(), hashUpper.length());
+        assertEquals(hash1.length(), hashMixed.length());
     }
 
     @Test

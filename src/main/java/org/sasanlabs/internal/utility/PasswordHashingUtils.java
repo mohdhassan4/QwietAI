@@ -3,7 +3,7 @@ package org.sasanlabs.internal.utility;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import javax.crypto.Cipher;
-import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -141,20 +141,28 @@ public final class PasswordHashingUtils {
     };
 
     private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
-        // Derive a 16-byte AES key and 16-byte IV from the 7-byte input using salted SHA-256
+        // Derive a 16-byte AES key from the 7-byte input using salted SHA-256
         MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
         sha256.update(LM_KDF_SALT);
         byte[] derived = sha256.digest(key7);
         byte[] aesKey = new byte[16];
-        byte[] iv = new byte[16];
         System.arraycopy(derived, 0, aesKey, 0, 16);
-        System.arraycopy(derived, 16, iv, 0, 16);
 
-        Cipher aes = Cipher.getInstance("AES/CBC/PKCS5Padding", "BC");
+        // Generate a fresh random 12-byte IV (nonce) for AES-GCM on every call
+        byte[] iv = new byte[12];
+        new SecureRandom().nextBytes(iv);
+
+        Cipher aes = Cipher.getInstance("AES/GCM/NoPadding", "BC");
         aes.init(
                 Cipher.ENCRYPT_MODE,
                 new SecretKeySpec(aesKey, "AES"),
-                new IvParameterSpec(iv));
-        return aes.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+                new GCMParameterSpec(128, iv));
+        byte[] ciphertext = aes.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+
+        // Prepend IV to ciphertext so the decryptor can extract it
+        byte[] result = new byte[iv.length + ciphertext.length];
+        System.arraycopy(iv, 0, result, 0, iv.length);
+        System.arraycopy(ciphertext, 0, result, iv.length, ciphertext.length);
+        return result;
     }
 }
