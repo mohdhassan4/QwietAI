@@ -1,4 +1,5 @@
 {
+  "_note": "Not secrets: this file contains ZAP DAST benchmark test fixture data (URLs and CWE IDs only)",
   "tool": "ZAP",
   "scanType": "DAST",
   "findings": [
