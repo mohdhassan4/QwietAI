@@ -361,12 +361,12 @@ function genericResponseHandler(xmlHttpRequest, callBack, isJson, onError) {
         callBack(xmlHttpRequest.responseText, xmlHttpRequest);
       }
     } else if (xmlHttpRequest.status == 400) {
-      alert("There was an error 400");
+      console.warn("There was an error 400");
       if (typeof onError === "function") {
         onError(xmlHttpRequest);
       }
     } else {
-      alert("something else other than 200/401/403/404 was returned");
+      console.warn("something else other than 200/401/403/404 was returned");
       if (typeof onError === "function") {
         onError(xmlHttpRequest);
       }
