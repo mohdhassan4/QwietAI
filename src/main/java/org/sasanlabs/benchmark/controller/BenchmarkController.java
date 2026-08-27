@@ -1,12 +1,10 @@
 package org.sasanlabs.benchmark.controller;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sasanlabs.benchmark.model.BenchmarkResult;
-import org.sasanlabs.internal.utility.LogSanitizer;
 import org.sasanlabs.benchmark.model.ScannerFindings;
 import org.sasanlabs.benchmark.service.BenchmarkResultWriter;
 import org.sasanlabs.benchmark.service.BenchmarkService;
@@ -53,20 +51,10 @@ public class BenchmarkController {
         BenchmarkResult result = benchmarkService.compare(input);
 
         try {
-            Path written = benchmarkResultWriter.write(result);
-            String safeTool = LogSanitizer.sanitize(input.getTool());
-            String safePath = LogSanitizer.sanitize(written);
-            LOGGER.info(
-                    "Wrote benchmark result for tool '{}' to {}",
-                    safeTool,
-                    safePath);
+            benchmarkResultWriter.write(result);
+            LOGGER.info("Benchmark result persisted successfully");
         } catch (IOException ioe) {
-            String safeTool = LogSanitizer.sanitize(input.getTool());
-            String safeMessage = LogSanitizer.sanitize(ioe.getMessage());
-            LOGGER.error(
-                    "Failed to persist benchmark result for tool '{}': {}",
-                    safeTool,
-                    safeMessage);
+            LOGGER.error("Failed to persist benchmark result", ioe);
             result.setPersistenceError("Failed to persist benchmark result");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
         }
