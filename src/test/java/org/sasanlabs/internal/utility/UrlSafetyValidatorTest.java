@@ -1,10 +1,13 @@
 package org.sasanlabs.internal.utility;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.InetAddress;
+import java.net.URL;
 import java.net.UnknownHostException;
+import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -91,5 +94,22 @@ class UrlSafetyValidatorTest {
     void allowsPublicAddresses() throws UnknownHostException {
         InetAddress publicAddr = InetAddress.getByName("8.8.8.8");
         assertFalse(UrlSafetyValidator.isInternalAddress(publicAddr));
+    }
+
+    @Test
+    @DisplayName("getValidatedUrl should return empty for unsafe URLs")
+    void getValidatedUrlReturnsEmptyForUnsafe() {
+        assertEquals(Optional.empty(), UrlSafetyValidator.getValidatedUrl("file:///etc/passwd"));
+        assertEquals(Optional.empty(), UrlSafetyValidator.getValidatedUrl("not a url"));
+        assertEquals(Optional.empty(), UrlSafetyValidator.getValidatedUrl("http://127.0.0.1/x"));
+    }
+
+    @Test
+    @DisplayName("getValidatedUrl should return URL for safe URLs")
+    void getValidatedUrlReturnsUrlForSafe() throws Exception {
+        Optional<URL> result =
+                UrlSafetyValidator.getValidatedUrl("https://github.com/SasanLabs/VulnerableApp");
+        assertTrue(result.isPresent());
+        assertEquals("github.com", result.get().getHost());
     }
 }

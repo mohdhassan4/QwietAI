@@ -5,6 +5,8 @@ import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.util.Optional;
+import java.util.regex.Pattern;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -17,7 +19,102 @@ public final class UrlSafetyValidator {
 
     private static final transient Logger LOGGER = LogManager.getLogger(UrlSafetyValidator.class);
 
+    /**
+     * Pattern for a valid hostname: labels separated by dots, each label starts/ends with
+     * alphanumeric, may contain hyphens internally.
+     */
+    private static final Pattern VALID_HOSTNAME_PATTERN =
+            Pattern.compile(
+                    "^([a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?\\.)*"
+                            + "[a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?$");
+
+    /** Pattern to detect IPv4 address literals. */
+    private static final Pattern IPV4_PATTERN =
+            Pattern.compile("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$");
+
     private UrlSafetyValidator() {}
+
+    /**
+     * Validates the given URL string against SSRF attacks and returns the validated URL object. The
+     * returned URL is safe to use for connections. Returning the URL object (rather than just a
+     * boolean) breaks the taint chain from the original user-controlled string.
+     *
+     * @param urlString the URL to validate
+     * @return an Optional containing the validated URL if safe, or empty if unsafe
+     */
+    public static Optional<URL> getValidatedUrl(String urlString) {
+        try {
+            URL url = new URL(urlString);
+            url.toURI();
+
+            // Only allow http and https schemes
+            String protocol = url.getProtocol().toLowerCase();
+            if (!"http".equals(protocol) && !"https".equals(protocol)) {
+                LOGGER.warn(
+                        "Blocked URL with disallowed scheme: {}",
+                        LogSanitizer.sanitize(protocol));
+                return Optional.empty();
+            }
+
+            // Resolve the hostname to an IP address and check it is not internal
+            String host = url.getHost();
+            if (host == null || host.isEmpty()) {
+                LOGGER.warn("Blocked URL with empty host");
+                return Optional.empty();
+            }
+
+            // Strip IPv6 brackets if present for validation
+            String rawHost = host;
+            if (rawHost.startsWith("[") && rawHost.endsWith("]")) {
+                rawHost = rawHost.substring(1, rawHost.length() - 1);
+            }
+
+            // Validate hostname format before any network operation
+            if (!isValidHostFormat(rawHost)) {
+                LOGGER.warn(
+                        "Blocked URL with invalid host format: {}",
+                        LogSanitizer.sanitize(rawHost));
+                return Optional.empty();
+            }
+
+            // Check if the host is an IP literal that resolves to an internal address
+            if (isIpLiteral(rawHost)) {
+                InetAddress literalAddr = InetAddress.getByName(rawHost);
+                if (isInternalAddress(literalAddr)) {
+                    LOGGER.warn(
+                            "Blocked URL with internal IP literal: {}",
+                            LogSanitizer.sanitize(rawHost));
+                    return Optional.empty();
+                }
+            }
+
+            // Resolve the hostname via DNS and verify all addresses are public
+            InetAddress[] addresses = InetAddress.getAllByName(rawHost);
+            for (InetAddress address : addresses) {
+                if (isInternalAddress(address)) {
+                    LOGGER.warn(
+                            "Blocked URL resolving to internal address: {} -> {}",
+                            LogSanitizer.sanitize(rawHost),
+                            address.getHostAddress());
+                    return Optional.empty();
+                }
+            }
+
+            return Optional.of(url);
+        } catch (MalformedURLException | URISyntaxException e) {
+            LOGGER.error(
+                    "URL validation failed - malformed URL: {}",
+                    LogSanitizer.sanitize(urlString),
+                    e);
+            return Optional.empty();
+        } catch (UnknownHostException e) {
+            LOGGER.error(
+                    "URL validation failed - cannot resolve host: {}",
+                    LogSanitizer.sanitize(urlString),
+                    e);
+            return Optional.empty();
+        }
+    }
 
     /**
      * Validates the given URL string against SSRF attacks.
@@ -26,48 +123,37 @@ public final class UrlSafetyValidator {
      * @return true if the URL is safe to fetch (public http/https), false otherwise
      */
     public static boolean isSafeUrl(String urlString) {
-        try {
-            URL url = new URL(urlString);
-            url.toURI();
+        return getValidatedUrl(urlString).isPresent();
+    }
 
-            // Only allow http and https schemes
-            String protocol = url.getProtocol().toLowerCase();
-            if (!"http".equals(protocol) && !"https".equals(protocol)) {
-                LOGGER.warn("Blocked URL with disallowed scheme: {}", protocol);
-                return false;
-            }
-
-            // Resolve the hostname to an IP address and check it is not internal
-            String host = url.getHost();
-            if (host == null || host.isEmpty()) {
-                LOGGER.warn("Blocked URL with empty host");
-                return false;
-            }
-
-            // Strip IPv6 brackets if present
-            if (host.startsWith("[") && host.endsWith("]")) {
-                host = host.substring(1, host.length() - 1);
-            }
-
-            InetAddress[] addresses = InetAddress.getAllByName(host);
-            for (InetAddress address : addresses) {
-                if (isInternalAddress(address)) {
-                    LOGGER.warn(
-                            "Blocked URL resolving to internal address: {} -> {}",
-                            host,
-                            address.getHostAddress());
-                    return false;
-                }
-            }
-
-            return true;
-        } catch (MalformedURLException | URISyntaxException e) {
-            LOGGER.error("URL validation failed - malformed URL: {}", urlString, e);
-            return false;
-        } catch (UnknownHostException e) {
-            LOGGER.error("URL validation failed - cannot resolve host: {}", urlString, e);
+    /**
+     * Validates that the host string has a valid format (either a valid hostname or a valid IP
+     * literal). Rejects suspicious patterns before any network operation.
+     */
+    private static boolean isValidHostFormat(String host) {
+        if (host == null || host.isEmpty()) {
             return false;
         }
+        // Allow valid IPv4 literals
+        if (IPV4_PATTERN.matcher(host).matches()) {
+            return true;
+        }
+        // Allow IPv6 (already stripped of brackets)
+        if (host.contains(":")) {
+            return true;
+        }
+        // Must match a valid hostname pattern
+        return VALID_HOSTNAME_PATTERN.matcher(host).matches();
+    }
+
+    /** Checks if the host string is an IP address literal (IPv4 or IPv6). */
+    private static boolean isIpLiteral(String host) {
+        // IPv4 literal
+        if (IPV4_PATTERN.matcher(host).matches()) {
+            return true;
+        }
+        // IPv6 literal (contains colons)
+        return host.contains(":");
     }
 
     /**
@@ -85,9 +171,7 @@ public final class UrlSafetyValidator {
                 || isIpv4Mapped169254(address);
     }
 
-    /**
-     * Checks for 100.64.0.0/10 (Carrier-Grade NAT / shared address space).
-     */
+    /** Checks for 100.64.0.0/10 (Carrier-Grade NAT / shared address space). */
     private static boolean isCarrierGradeNat(InetAddress address) {
         byte[] addr = address.getAddress();
         if (addr.length == 4) {
