@@ -162,7 +162,7 @@ class EmailServiceImplTest {
                         IllegalArgumentException.class,
                         () -> emailService.sendEmail("invalid-address", "Subject", "Body"));
 
-        assertEquals("Invalid email address: invalid-address", exception.getMessage());
+        assertEquals("Invalid email address format", exception.getMessage());
     }
 
     @Test
