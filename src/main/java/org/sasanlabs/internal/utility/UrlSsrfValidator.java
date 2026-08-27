@@ -39,14 +39,14 @@ public final class UrlSsrfValidator {
         } catch (MalformedURLException | URISyntaxException e) {
             LOGGER.error(
                     "Provided URL: {} is not valid and following exception occurred",
-                    urlString,
+                    LogSanitizer.sanitize(urlString),
                     e);
             return false;
         }
 
         String scheme = url.getProtocol();
         if (scheme == null || (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https"))) {
-            LOGGER.warn("Blocked URL with disallowed scheme: {}", scheme);
+            LOGGER.warn("Blocked URL with disallowed scheme: {}", LogSanitizer.sanitize(scheme));
             return false;
         }
 
@@ -62,13 +62,13 @@ public final class UrlSsrfValidator {
                 if (isPrivateOrReserved(address)) {
                     LOGGER.warn(
                             "Blocked URL {} resolving to private/internal address: {}",
-                            urlString,
+                            LogSanitizer.sanitize(urlString),
                             address.getHostAddress());
                     return false;
                 }
             }
         } catch (UnknownHostException e) {
-            LOGGER.error("Cannot resolve host for URL: {}", urlString, e);
+            LOGGER.error("Cannot resolve host for URL: {}", LogSanitizer.sanitize(urlString), e);
             return false;
         }
 
