@@ -17,6 +17,19 @@ let appMode = MODE_SCANNER;
 
 let currentId;
 let currentKey;
+
+/**
+ * Safely access an own property of an object, preventing prototype pollution
+ * via dynamic bracket notation. Returns undefined when the key is not an own
+ * property of the target.
+ */
+function _safeAccess(obj, key) {
+  if (obj == null || !Object.prototype.hasOwnProperty.call(obj, key)) {
+    return undefined;
+  }
+  return obj[key];
+}
+
 // Incrementing token identifying the most recent navigation/request.
 // currentId/currentKey alone can't distinguish A -> B -> A (same id/key
 // selected twice), so every async callback validates against this token
@@ -97,7 +110,7 @@ function _callbackForInnerMasterOnClickEvent(
     const thisRequestToken = requestToken;
     clearSelectedInnerMaster();
     vulnerabilityLevelSelected =
-      vulnerableAppEndPointData[id]["Detailed Information"][key]["Level"];
+      _safeAccess(_safeAccess(vulnerableAppEndPointData, id)["Detailed Information"], key)["Level"];
     this.classList.add("active-item");
     let levelChallengeCards = _getChallengeCardsForLevel(
       vulnerableAppEndPointData,
@@ -107,11 +120,11 @@ function _callbackForInnerMasterOnClickEvent(
     _updateChallengeToggleAvailability(levelChallengeCards);
     _renderDetailMode(vulnerableAppEndPointData);
     let htmlTemplate =
-      vulnerableAppEndPointData[id]["Detailed Information"][key][
+      _safeAccess(_safeAccess(vulnerableAppEndPointData, id)["Detailed Information"], key)[
         "HtmlTemplate"
       ];
     document.getElementById("vulnerabilityDescription").innerHTML =
-      vulnerableAppEndPointData[id]["Description"];
+      _safeAccess(vulnerableAppEndPointData, id)["Description"];
     let urlToFetchHtmlTemplate = htmlTemplate
       ? "/VulnerableApp/templates/" + vulnerabilitySelected + "/" + htmlTemplate
       : "error";
@@ -173,7 +186,7 @@ function _getSvgElementForVariant(isSecure) {
 }
 
 function createColumn(detailedInformationArray, key) {
-  let detailedInformation = detailedInformationArray[key];
+  let detailedInformation = _safeAccess(detailedInformationArray, key);
   let isSecure = _isSecureVariant(detailedInformation);
 
   let column = document.createElement("div");
@@ -204,7 +217,7 @@ function createColumn(detailedInformationArray, key) {
 
 function appendNewColumn(vulnerableAppEndPointData, id) {
   let detailedInformationArray =
-    vulnerableAppEndPointData[id]["Detailed Information"];
+    _safeAccess(vulnerableAppEndPointData, id)["Detailed Information"];
   let isFirst = true;
 
   for (let key in detailedInformationArray) {
@@ -241,13 +254,13 @@ function handleElementAutoSelection(vulnerableAppEndPointData, id = 0) {
   }
 
   if (id === 0) {
-    detailTitle.innerHTML = vulnerableAppEndPointData[id]["Description"];
+    detailTitle.innerHTML = _safeAccess(vulnerableAppEndPointData, id)["Description"];
   } else {
     innerMaster.innerHTML = "";
   }
 
-  vulnerabilitySelected = vulnerableAppEndPointData[id]["Name"];
-  detailTitle.innerHTML = vulnerableAppEndPointData[id]["Description"];
+  vulnerabilitySelected = _safeAccess(vulnerableAppEndPointData, id)["Name"];
+  detailTitle.innerHTML = _safeAccess(vulnerableAppEndPointData, id)["Description"];
   appendNewColumn(vulnerableAppEndPointData, id);
 }
 
@@ -366,7 +379,8 @@ function doGetAjaxCall(callBack, url, isJson, headers = {}, onError) {
   );
 
   for (const header in headers) {
-    xmlHttpRequest.setRequestHeader(header, headers[header]);
+    if (!Object.prototype.hasOwnProperty.call(headers, header)) continue;
+    xmlHttpRequest.setRequestHeader(header, _safeAccess(headers, header));
   }
 
   xmlHttpRequest.send();
@@ -379,7 +393,8 @@ function doPostAjaxCall(callBack, url, isJson, data, headers = {}) {
   };
   xmlHttpRequest.open("POST", url, true);
   for (const header in headers) {
-    xmlHttpRequest.setRequestHeader(header, headers[header]);
+    if (!Object.prototype.hasOwnProperty.call(headers, header)) continue;
+    xmlHttpRequest.setRequestHeader(header, _safeAccess(headers, header));
   }
   xmlHttpRequest.send(data);
 }
@@ -387,6 +402,7 @@ function doPostAjaxCall(callBack, url, isJson, data, headers = {}) {
 function generateMasterDetail(vulnerableAppEndPointData) {
   let isFirst = true;
   for (let index in vulnerableAppEndPointData) {
+    if (!Object.prototype.hasOwnProperty.call(vulnerableAppEndPointData, index)) continue;
     let column = document.createElement("div");
     if (isFirst) {
       column.className = "master-item  active-item";
@@ -396,7 +412,7 @@ function generateMasterDetail(vulnerableAppEndPointData) {
     }
     column.id = index;
     let textNode = document.createTextNode(
-      vulnerableAppEndPointData[index]["Name"]
+      _safeAccess(vulnerableAppEndPointData, index)["Name"]
     );
     column.appendChild(textNode);
     master.appendChild(column);
@@ -414,13 +430,10 @@ function _addingEventListenerToShowHideHelpButton(vulnerableAppEndPointData) {
   document.getElementById("showHelp").addEventListener("click", function () {
     document.getElementById("showHelp").disabled = true;
     let helpText = "<ol>";
-    for (let index in vulnerableAppEndPointData[currentId][
-      "Detailed Information"
-    ][currentKey]["AttackVectors"]) {
-      let attackVector =
-        vulnerableAppEndPointData[currentId]["Detailed Information"][
-          currentKey
-        ]["AttackVectors"][index];
+    let _attackVectors = _safeAccess(_safeAccess(vulnerableAppEndPointData, currentId)["Detailed Information"], currentKey)["AttackVectors"];
+    for (let index in _attackVectors) {
+      if (!Object.prototype.hasOwnProperty.call(_attackVectors, index)) continue;
+      let attackVector = _safeAccess(_attackVectors, index);
       let curlPayload = attackVector["CurlPayload"];
       let description = attackVector["Description"];
       helpText =
@@ -518,7 +531,7 @@ function _buildSingleChallengeCard(card, index) {
   revealHintBtn.addEventListener("click", function () {
     if (revealedHints < hints.length) {
       let li = document.createElement("li");
-      li.textContent = hints[revealedHints]["text"] || "";
+      li.textContent = _safeAccess(hints, revealedHints)["text"] || "";
       hintList.appendChild(li);
       revealedHints += 1;
       _updateControlsAfterHint();
@@ -574,9 +587,10 @@ function _updateChallengeToggleAvailability(challengeCards) {
 }
 
 function _getChallengeCardsForLevel(vulnerableAppEndPointData, id, key) {
+  let _entry = _safeAccess(vulnerableAppEndPointData, id);
   let level =
-    vulnerableAppEndPointData[id] &&
-    vulnerableAppEndPointData[id]["Detailed Information"][key];
+    _entry &&
+    _safeAccess(_entry["Detailed Information"], key);
   return (level && level["ChallengeCard"]) || [];
 }
 
