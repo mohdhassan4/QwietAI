@@ -58,7 +58,7 @@ public class BenchmarkController {
             LOGGER.error(
                     "Failed to persist benchmark result; returning 500 with result in body",
                     ioe);
-            result.setPersistenceError("Failed to persist benchmark result: " + ioe.getMessage());
+            result.setPersistenceError("Failed to persist benchmark result");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
         }
 

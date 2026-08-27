@@ -45,6 +45,8 @@ import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 @Configuration
 public class VulnerableAppConfiguration {
 
+    private static final String CREATE_USER_SQL =
+            "CREATE USER IF NOT EXISTS application PASSWORD ?";
     private static final String I18N_MESSAGE_FILE_LOCATION = "classpath:i18n/messages";
     private static final String ATTACK_VECTOR_PAYLOAD_PROPERTY_FILES_LOCATION_PATTERN =
             "classpath:/attackvectors/*.properties";
@@ -137,8 +139,7 @@ public class VulnerableAppConfiguration {
                 (ConnectionCallback<Void>)
                         conn -> {
                             try (PreparedStatement ps =
-                                    conn.prepareStatement(
-                                            "CREATE USER IF NOT EXISTS application PASSWORD ?")) {
+                                    conn.prepareStatement(CREATE_USER_SQL)) {
                                 ps.setString(1, appPassword);
                                 ps.execute();
                             }
