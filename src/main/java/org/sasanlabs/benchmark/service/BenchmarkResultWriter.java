@@ -21,21 +21,26 @@ import org.springframework.stereotype.Component;
 public class BenchmarkResultWriter {
 
     private final ObjectMapper objectMapper;
-    private final String defaultBenchmarksDir;
+    private final Path allowedBaseDir;
 
     public BenchmarkResultWriter(
             ObjectMapper objectMapper,
             @Value("${benchmark.output.dir:benchmarks}") String defaultBenchmarksDir) {
         this.objectMapper = objectMapper;
-        this.defaultBenchmarksDir = defaultBenchmarksDir;
+        this.allowedBaseDir = Paths.get(defaultBenchmarksDir).toAbsolutePath().normalize();
     }
 
     public Path write(BenchmarkResult result) throws IOException {
-        return write(result, defaultBenchmarksDir);
+        return write(result, allowedBaseDir.toString());
     }
 
     public Path write(BenchmarkResult result, String benchmarksDir) throws IOException {
-        Path dir = Paths.get(benchmarksDir);
+        Path dir = Paths.get(benchmarksDir).toAbsolutePath().normalize();
+        if (!dir.startsWith(allowedBaseDir)) {
+            throw new IOException(
+                    "Path traversal detected: resolved directory escapes the allowed base"
+                            + " directory");
+        }
         Files.createDirectories(dir);
         String fileName = sanitizeToolName(result.getTool()) + "-results.json";
         Path target = dir.resolve(fileName);

@@ -60,13 +60,31 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
                     .build();
 
     private final String csvPath;
+    private final Path allowedBaseDir;
 
     private volatile List<ExpectedIssue> cached;
 
     public CsvExpectedIssuesProvider(
             @Value("${benchmark.sast.ground-truth.path:classpath:scanner/sast/expectedIssues.csv}")
-                    String csvPath) {
+                    String csvPath,
+            @Value("${benchmark.sast.ground-truth.allowed-base-dir:.}")
+                    String allowedBaseDir) {
         this.csvPath = csvPath;
+        this.allowedBaseDir = Paths.get(allowedBaseDir).toAbsolutePath().normalize();
+    }
+
+    /** Package-private constructor for tests that sets the allowed base directory explicitly. */
+    CsvExpectedIssuesProvider(String csvPath, Path allowedBaseDir) {
+        this.csvPath = csvPath;
+        this.allowedBaseDir = allowedBaseDir.toAbsolutePath().normalize();
+    }
+
+    /**
+     * Package-private single-arg constructor for tests using classpath resources (where no
+     * filesystem path validation is needed).
+     */
+    CsvExpectedIssuesProvider(String csvPath) {
+        this(csvPath, Paths.get("."));
     }
 
     @PostConstruct
@@ -103,7 +121,12 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
         if (csvPath.startsWith(CLASSPATH_PREFIX)) {
             return parseFromResource(csvPath.substring(CLASSPATH_PREFIX.length()));
         }
-        return parseFromPath(Paths.get(csvPath));
+        Path resolved = Paths.get(csvPath).toAbsolutePath().normalize();
+        if (!resolved.startsWith(allowedBaseDir)) {
+            throw new IOException(
+                    "Path traversal detected: CSV path escapes the allowed base directory");
+        }
+        return parseFromPath(resolved);
     }
 
     private List<ExpectedIssue> parseFromResource(String location) throws IOException {
