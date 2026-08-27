@@ -60,13 +60,27 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
                     .build();
 
     private final String csvPath;
+    private final Path allowedBaseDir;
 
     private volatile List<ExpectedIssue> cached;
 
     public CsvExpectedIssuesProvider(
             @Value("${benchmark.sast.ground-truth.path:classpath:scanner/sast/expectedIssues.csv}")
                     String csvPath) {
+        this(csvPath, computeAllowedBaseDir(csvPath));
+    }
+
+    CsvExpectedIssuesProvider(String csvPath, String allowedBaseDir) {
         this.csvPath = csvPath;
+        this.allowedBaseDir = Paths.get(allowedBaseDir).toAbsolutePath().normalize();
+    }
+
+    private static String computeAllowedBaseDir(String csvPath) {
+        if (csvPath.startsWith(CLASSPATH_PREFIX)) {
+            return System.getProperty("user.dir");
+        }
+        Path parent = Paths.get(csvPath).toAbsolutePath().normalize().getParent();
+        return parent != null ? parent.toString() : System.getProperty("user.dir");
     }
 
     @PostConstruct
@@ -115,7 +129,12 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
     }
 
     private List<ExpectedIssue> parseFromPath(Path path) throws IOException {
-        try (Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8);
+        Path resolved = path.toAbsolutePath().normalize();
+        if (!resolved.startsWith(allowedBaseDir)) {
+            throw new IOException(
+                    "Path traversal detected: CSV path resolves outside the allowed directory");
+        }
+        try (Reader reader = Files.newBufferedReader(resolved, StandardCharsets.UTF_8);
                 CSVParser parser = FORMAT.parse(reader)) {
             return parseAll(parser);
         }
