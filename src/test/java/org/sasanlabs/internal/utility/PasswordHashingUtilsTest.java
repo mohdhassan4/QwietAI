@@ -10,7 +10,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("MD4: Should generate a correct unsalted hash")
     void md4Hash_CorrectHex() {
-        // Known MD4 hash for "password123"
+        // Known MD4 hash for "password123" — deterministic test vector, not a secret
         String expected = "fc7b71b67e964466cec486ab12f4b558";
         String actual = PasswordHashingUtils.md4Hex("password123");
         assertEquals(expected, actual);
@@ -19,7 +19,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("MD5: Should generate a correct unsalted hash")
     void md5Hash_CorrectHex() {
-        // Known MD5 hash for "password"
+        // Known MD5 hash for "password" — deterministic test vector, not a secret
         String expected = "5f4dcc3b5aa765d61d8327deb882cf99";
         String actual = PasswordHashingUtils.md5Hex("password");
         assertEquals(expected, actual);
@@ -28,7 +28,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("Unsalted SHA-256: Should generate a correct unsalted hash")
     void sha256Hash_CorrectHex() {
-        // Known SHA-256 hash for "password"
+        // Known SHA-256 hash for "password" — deterministic test vector, not a secret
         String expected = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
         String actual = PasswordHashingUtils.unsaltedSha256Hex("password");
         assertEquals(expected, actual);
@@ -38,7 +38,7 @@ class PasswordHashingUtilsTest {
     @DisplayName("SHA-256: Should correctly validate salted hashes with separator")
     void isValidSaltedSha256_CorrectValidation() {
         String salt = "random_salt";
-        String rawPassword = "securePassword123";
+        String rawPassword = "securePassword123"; // nosecret: test-only fixture credential
         // Manual calculation of SHA-256(salt + password)
         String hash = PasswordHashingUtils.sha256Hex(salt, rawPassword);
         String storedValue = salt + ":" + hash;
@@ -50,7 +50,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("BCrypt: Should validate successfully even though hashes are unique each time")
     void bcrypt_UniqueGenerationAndValidation() {
-        String password = "mySecretPassword";
+        String password = "mySecretPassword"; // nosecret: test-only fixture credential
         String hash1 = PasswordHashingUtils.bCryptHash(password);
         String hash2 = PasswordHashingUtils.bCryptHash(password);
 
@@ -71,6 +71,39 @@ class PasswordHashingUtilsTest {
         assertEquals(expected, PasswordHashingUtils.lmHash("password"));
         assertEquals(expected, PasswordHashingUtils.lmHash("PASSWORD"));
         assertEquals(expected, PasswordHashingUtils.lmHash("pAsSwOrD"));
+    }
+
+    @Test
+    @DisplayName("Salted Hash: Should produce different output from unsalted hash")
+    void saltedHash_DiffersFromUnsalted() {
+        byte[] salt = "test_salt".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        String unsalted =
+                PasswordHashingUtils.getHashAsHex(
+                        "password", PasswordHashingUtils.HashAlgorithm.SHA256);
+        String salted =
+                PasswordHashingUtils.getHashAsHex(
+                        "password", PasswordHashingUtils.HashAlgorithm.SHA256, salt);
+        assertNotEquals(unsalted, salted);
+    }
+
+    @Test
+    @DisplayName("Salted Hash: Same salt and input should produce consistent output")
+    void saltedHash_Deterministic() {
+        byte[] salt = "fixed_salt".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        String hash1 =
+                PasswordHashingUtils.getHashAsHex(
+                        "password", PasswordHashingUtils.HashAlgorithm.SHA256, salt);
+        String hash2 =
+                PasswordHashingUtils.getHashAsHex(
+                        "password", PasswordHashingUtils.HashAlgorithm.SHA256, salt);
+        assertEquals(hash1, hash2);
+    }
+
+    @Test
+    @DisplayName("Generate Salt: Should produce non-empty byte array of requested length")
+    void generateSalt_CorrectLength() {
+        byte[] salt = PasswordHashingUtils.generateSalt(16);
+        assertEquals(16, salt.length);
     }
 
     @Test

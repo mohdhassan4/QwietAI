@@ -53,15 +53,30 @@ public final class PasswordHashingUtils {
     }
 
     public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
+        return getHashAsHex(rawPassword, hashAlgorithm, (byte[]) null);
+    }
+
+    public static String getHashAsHex(
+            String rawPassword, HashAlgorithm hashAlgorithm, byte[] salt) {
         try {
             MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
+            if (salt != null && salt.length > 0) {
+                messageDigest.update(salt);
+            }
             byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(hashAlgorithm + "Hash Algorithm Not Found", e);
+            throw new RuntimeException(hashAlgorithm + " Hash Algorithm Not Found", e);
         } catch (NoSuchProviderException e) {
             throw new RuntimeException("Security Provider Bouncy Castle not found", e);
         }
+    }
+
+    /** Generates a cryptographically secure random salt of the specified length. */
+    public static byte[] generateSalt(int length) {
+        byte[] salt = new byte[length];
+        new SecureRandom().nextBytes(salt);
+        return salt;
     }
 
     public static boolean isValidSaltedSha256(String rawPassword, String saltedSha256Hash) {
