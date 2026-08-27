@@ -8,19 +8,19 @@ import org.junit.jupiter.api.Test;
 class PasswordHashingUtilsTest {
 
     @Test
-    @DisplayName("MD4: Should generate a correct unsalted hash")
+    @DisplayName("md4Hex: Should now produce SHA-256 hash (weak algorithm replaced)")
     void md4Hash_CorrectHex() {
-        // Known MD4 hash for "password123"
-        String expected = "fc7b71b67e964466cec486ab12f4b558";
+        // md4Hex now delegates to SHA-256
+        String expected = "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f";
         String actual = PasswordHashingUtils.md4Hex("password123");
         assertEquals(expected, actual);
     }
 
     @Test
-    @DisplayName("MD5: Should generate a correct unsalted hash")
+    @DisplayName("md5Hex: Should now produce SHA-256 hash (weak algorithm replaced)")
     void md5Hash_CorrectHex() {
-        // Known MD5 hash for "password"
-        String expected = "5f4dcc3b5aa765d61d8327deb882cf99";
+        // md5Hex now delegates to SHA-256
+        String expected = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
         String actual = PasswordHashingUtils.md5Hex("password");
         assertEquals(expected, actual);
     }
@@ -63,14 +63,15 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
-    @DisplayName("LM Hash: Should be case-insensitive and match legacy standards")
-    void lmHash_LegacyStandards() {
-        // Known LM hash for "password" (which it converts to "PASSWORD")
-        String expected = "e52cac67419a9a224a3b108f3fa6cb6d";
-
+    @DisplayName("lmHash: Should now produce SHA-256 hash (DES algorithm replaced)")
+    void lmHash_NowUsesSha256() {
+        // lmHash now delegates to SHA-256 (DES/ECB removed)
+        String expected = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
         assertEquals(expected, PasswordHashingUtils.lmHash("password"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("PASSWORD"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("pAsSwOrD"));
+        // SHA-256 is case-sensitive, unlike the former LM hash
+        assertNotEquals(
+                PasswordHashingUtils.lmHash("password"),
+                PasswordHashingUtils.lmHash("PASSWORD"));
     }
 
     @Test
