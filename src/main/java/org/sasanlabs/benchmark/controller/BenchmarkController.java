@@ -51,6 +51,10 @@ public class BenchmarkController {
         }
 
         String sanitizedTool = LogSanitizer.sanitizeForLog(input.getTool());
+        LOGGER.debug(
+                "Benchmark request received for tool '{}' with {} findings",
+                sanitizedTool,
+                input.getFindings().size());
         BenchmarkResult result = benchmarkService.compare(input);
 
         try {
