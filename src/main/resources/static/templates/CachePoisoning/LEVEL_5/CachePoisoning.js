@@ -5,20 +5,16 @@ import {
   getHeadersWithForwardedHost,
   getInputValue,
   getRequestUrl,
-  setDemoUserCookie,
 } from "../Common/CachePoisoningCommon.js";
 
 document
   .getElementById("poisonCacheBtn")
   .addEventListener("click", function () {
     const demoUser = getInputValue("demoUserInput");
-    if (demoUser) {
-      setDemoUserCookie(demoUser);
-    }
 
     doGetAjaxCall(
       fetchDataCallback,
-      getRequestUrl(),
+      getRequestUrl({ demoUser: demoUser || undefined }),
       true,
       getHeadersWithForwardedHost()
     );
@@ -26,13 +22,16 @@ document
   });
 
 document.getElementById("resetCacheBtn").addEventListener("click", function () {
-  setDemoUserCookie(null);
   clearCacheAndFetchFreshResponse();
 });
 
 document
   .getElementById("victimRequestBtn")
   .addEventListener("click", function () {
-    setDemoUserCookie(null);
-    doGetAjaxCall(fetchDataCallback, getRequestUrl(), true, {});
+    doGetAjaxCall(
+      fetchDataCallback,
+      getRequestUrl({ demoUser: "" }),
+      true,
+      {}
+    );
   });
