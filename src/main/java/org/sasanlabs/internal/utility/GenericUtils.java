@@ -12,6 +12,17 @@ public final class GenericUtils {
     private GenericUtils() {}
 
     /**
+     * Sanitizes a value for safe inclusion in log messages by removing CR and LF characters that
+     * could enable log forging/injection (CWE-117).
+     */
+    public static String sanitizeForLog(String value) {
+        if (value == null) {
+            return null;
+        }
+        return value.replaceAll("[\\r\\n]", "");
+    }
+
+    /**
      * @deprecated
      * @param payload
      * @return

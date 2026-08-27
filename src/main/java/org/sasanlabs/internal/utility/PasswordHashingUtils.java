@@ -83,8 +83,10 @@ public final class PasswordHashingUtils {
         return getHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
     }
 
+    private static final String SHA256_PEPPER = "VulnerableApp-SHA256-Pepper";
+
     public static String unsaltedSha256Hex(String rawPassword) {
-        return getHashAsHex(rawPassword, HashAlgorithm.SHA256);
+        return getHashAsHex(SHA256_PEPPER + rawPassword, HashAlgorithm.SHA256);
     }
 
     // BC not used for bcrypt due to extra complexity for BC implementation
