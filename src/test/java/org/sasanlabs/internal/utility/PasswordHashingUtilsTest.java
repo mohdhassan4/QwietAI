@@ -2,47 +2,71 @@ package org.sasanlabs.internal.utility;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.util.HexFormat;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class PasswordHashingUtilsTest {
 
     @Test
-    @DisplayName("MD4: Should generate a correct unsalted hash")
-    void md4Hash_CorrectHex() {
-        // Verify MD4 output properties (no hardcoded vector; MD4 only available via BC)
+    @DisplayName("MD4: Should generate a salted hash in salt:hash format")
+    void md4Hash_SaltedFormat() {
+        // Verify salted MD4 output: format is salt_hex(32):hash_hex(32)
         String actual = PasswordHashingUtils.md4Hex("password123");
-        assertEquals(32, actual.length()); // MD4 = 128-bit = 32 hex chars
-        assertTrue(actual.matches("[0-9a-f]+"));
-        assertEquals(actual, PasswordHashingUtils.md4Hex("password123")); // deterministic
-        assertNotEquals(actual, PasswordHashingUtils.md4Hex("different_input"));
+        String[] parts = actual.split(":");
+        assertEquals(2, parts.length, "Should be salt:hash format");
+        assertEquals(32, parts[0].length(), "Salt should be 32 hex chars (16 bytes)");
+        assertEquals(32, parts[1].length(), "MD4 hash should be 32 hex chars");
+        assertTrue(parts[0].matches("[0-9a-f]+"), "Salt should be lowercase hex");
+        assertTrue(parts[1].matches("[0-9a-f]+"), "Hash should be lowercase hex");
+
+        // Each call generates a new salt, so hashes should differ (like bcrypt)
+        assertNotEquals(actual, PasswordHashingUtils.md4Hex("password123"));
+
+        // Verification should work
+        assertTrue(
+                PasswordHashingUtils.verifySaltedHash(
+                        "password123", actual, PasswordHashingUtils.HashAlgorithm.MD4));
+        assertFalse(
+                PasswordHashingUtils.verifySaltedHash(
+                        "wrong_password", actual, PasswordHashingUtils.HashAlgorithm.MD4));
     }
 
     @Test
-    @DisplayName("MD5: Should generate a correct unsalted hash")
-    void md5Hash_CorrectHex() throws Exception {
-        // Compute expected dynamically via standard MessageDigest (not a secret: test vector)
-        MessageDigest md5 = MessageDigest.getInstance("MD5");
-        String expected =
-                HexFormat.of()
-                        .formatHex(md5.digest("password".getBytes(StandardCharsets.UTF_8)));
+    @DisplayName("MD5: Should generate a salted hash and verify correctly")
+    void md5Hash_SaltedVerification() {
+        // Verify salted MD5 output: format is salt_hex(32):hash_hex(32)
         String actual = PasswordHashingUtils.md5Hex("password");
-        assertEquals(expected, actual);
+        String[] parts = actual.split(":");
+        assertEquals(2, parts.length, "Should be salt:hash format");
+        assertEquals(32, parts[0].length(), "Salt should be 32 hex chars (16 bytes)");
+        assertEquals(32, parts[1].length(), "MD5 hash should be 32 hex chars");
+
+        // Verification should work
+        assertTrue(
+                PasswordHashingUtils.verifySaltedHash(
+                        "password", actual, PasswordHashingUtils.HashAlgorithm.MD5));
+        assertFalse(
+                PasswordHashingUtils.verifySaltedHash(
+                        "wrong", actual, PasswordHashingUtils.HashAlgorithm.MD5));
     }
 
     @Test
-    @DisplayName("Unsalted SHA-256: Should generate a correct unsalted hash")
-    void sha256Hash_CorrectHex() throws Exception {
-        // Compute expected dynamically via standard MessageDigest (not a secret: test vector)
-        MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
-        String expected =
-                HexFormat.of()
-                        .formatHex(sha256.digest("password".getBytes(StandardCharsets.UTF_8)));
-        String actual = PasswordHashingUtils.unsaltedSha256Hex("password");
-        assertEquals(expected, actual);
+    @DisplayName("Salted SHA-256: Should generate a salted hash and verify correctly")
+    void sha256Hash_SaltedVerification() {
+        // Verify salted SHA-256 output: format is salt_hex(32):hash_hex(64)
+        String actual = PasswordHashingUtils.saltedSha256Hex("password");
+        String[] parts = actual.split(":");
+        assertEquals(2, parts.length, "Should be salt:hash format");
+        assertEquals(32, parts[0].length(), "Salt should be 32 hex chars (16 bytes)");
+        assertEquals(64, parts[1].length(), "SHA-256 hash should be 64 hex chars");
+
+        // Verification should work
+        assertTrue(
+                PasswordHashingUtils.verifySaltedHash(
+                        "password", actual, PasswordHashingUtils.HashAlgorithm.SHA256));
+        assertFalse(
+                PasswordHashingUtils.verifySaltedHash(
+                        "wrong", actual, PasswordHashingUtils.HashAlgorithm.SHA256));
     }
 
     @Test
