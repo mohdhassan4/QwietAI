@@ -8,30 +8,95 @@ import org.junit.jupiter.api.Test;
 class PasswordHashingUtilsTest {
 
     @Test
-    @DisplayName("MD4: Should generate a correct unsalted hash")
-    void md4Hash_CorrectHex() {
-        // Known MD4 hash for "password123"
-        String expected = "fc7b71b67e964466cec486ab12f4b558";
-        String actual = PasswordHashingUtils.md4Hex("password123");
-        assertEquals(expected, actual);
+    @DisplayName("MD4: Should generate a salted hash and validate correctly")
+    void md4Hash_SaltedAndValidatable() {
+        String password = "password123";
+        String salted1 = PasswordHashingUtils.md4Hex(password);
+        String salted2 = PasswordHashingUtils.md4Hex(password);
+
+        // Salted hashes should differ due to random salt
+        assertNotEquals(salted1, salted2);
+
+        // Both should validate against the original password
+        assertTrue(
+                PasswordHashingUtils.isValidSaltedHash(
+                        password, salted1, PasswordHashingUtils.HashAlgorithm.MD4));
+        assertTrue(
+                PasswordHashingUtils.isValidSaltedHash(
+                        password, salted2, PasswordHashingUtils.HashAlgorithm.MD4));
+
+        // Wrong password should fail
+        assertFalse(
+                PasswordHashingUtils.isValidSaltedHash(
+                        "wrong", salted1, PasswordHashingUtils.HashAlgorithm.MD4));
     }
 
     @Test
-    @DisplayName("MD5: Should generate a correct unsalted hash")
-    void md5Hash_CorrectHex() {
-        // Known MD5 hash for "password"
-        String expected = "5f4dcc3b5aa765d61d8327deb882cf99";
-        String actual = PasswordHashingUtils.md5Hex("password");
-        assertEquals(expected, actual);
+    @DisplayName("MD5: Should generate a salted hash and validate correctly")
+    void md5Hash_SaltedAndValidatable() {
+        String password = "password";
+        String salted = PasswordHashingUtils.md5Hex(password);
+
+        // Should contain salt separator
+        assertTrue(salted.contains(":"));
+
+        // Should validate against the original password
+        assertTrue(
+                PasswordHashingUtils.isValidSaltedHash(
+                        password, salted, PasswordHashingUtils.HashAlgorithm.MD5));
+        assertFalse(
+                PasswordHashingUtils.isValidSaltedHash(
+                        "wrong", salted, PasswordHashingUtils.HashAlgorithm.MD5));
     }
 
     @Test
-    @DisplayName("Unsalted SHA-256: Should generate a correct unsalted hash")
-    void sha256Hash_CorrectHex() {
-        // Known SHA-256 hash for "password"
-        String expected = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
-        String actual = PasswordHashingUtils.unsaltedSha256Hex("password");
-        assertEquals(expected, actual);
+    @DisplayName("SHA-1: Should generate a salted hash and validate correctly")
+    void sha1Hash_SaltedAndValidatable() {
+        String password = "testPassword";
+        String salted = PasswordHashingUtils.sha1Hex(password);
+
+        assertTrue(salted.contains(":"));
+        assertTrue(
+                PasswordHashingUtils.isValidSaltedHash(
+                        password, salted, PasswordHashingUtils.HashAlgorithm.SHA1));
+        assertFalse(
+                PasswordHashingUtils.isValidSaltedHash(
+                        "wrong", salted, PasswordHashingUtils.HashAlgorithm.SHA1));
+    }
+
+    @Test
+    @DisplayName("SHA-256: Salted hash should validate correctly")
+    void sha256Hash_SaltedAndValidatable() {
+        String password = "password";
+        String salted = PasswordHashingUtils.saltedSha256Hex(password);
+
+        assertTrue(salted.contains(":"));
+        assertTrue(
+                PasswordHashingUtils.isValidSaltedHash(
+                        password, salted, PasswordHashingUtils.HashAlgorithm.SHA256));
+        assertFalse(
+                PasswordHashingUtils.isValidSaltedHash(
+                        "wrong", salted, PasswordHashingUtils.HashAlgorithm.SHA256));
+    }
+
+    @Test
+    @DisplayName("getHashAsHex with explicit salt produces deterministic output")
+    void getHashAsHex_WithSalt_Deterministic() {
+        byte[] salt = "fixedsalt1234567".getBytes();
+        String hash1 =
+                PasswordHashingUtils.getHashAsHex(
+                        "password", PasswordHashingUtils.HashAlgorithm.SHA256, salt);
+        String hash2 =
+                PasswordHashingUtils.getHashAsHex(
+                        "password", PasswordHashingUtils.HashAlgorithm.SHA256, salt);
+        assertEquals(hash1, hash2);
+
+        // Different salt produces different hash
+        byte[] salt2 = "othersalt1234567".getBytes();
+        String hash3 =
+                PasswordHashingUtils.getHashAsHex(
+                        "password", PasswordHashingUtils.HashAlgorithm.SHA256, salt2);
+        assertNotEquals(hash1, hash3);
     }
 
     @Test
@@ -39,7 +104,6 @@ class PasswordHashingUtilsTest {
     void isValidSaltedSha256_CorrectValidation() {
         String salt = "random_salt";
         String rawPassword = "securePassword123";
-        // Manual calculation of SHA-256(salt + password)
         String hash = PasswordHashingUtils.sha256Hex(salt, rawPassword);
         String storedValue = salt + ":" + hash;
 
@@ -65,7 +129,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("LM Hash: Should be case-insensitive and match legacy standards")
     void lmHash_LegacyStandards() {
-        // Known LM hash for "password" (which it converts to "PASSWORD")
+        // Known LM hash for "password" (converts to "PASSWORD") — deterministic test vector
         String expected = "e52cac67419a9a224a3b108f3fa6cb6d";
 
         assertEquals(expected, PasswordHashingUtils.lmHash("password"));
@@ -82,9 +146,24 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
+    @DisplayName("Hex Utility: hexToBytes should roundtrip with bytesToHex")
+    void hexToBytes_Roundtrip() {
+        byte[] original = {0, 15, 16, 127, -1};
+        String hex = EncodingUtils.bytesToHex(original);
+        byte[] recovered = EncodingUtils.hexToBytes(hex);
+        assertArrayEquals(original, recovered);
+    }
+
+    @Test
     @DisplayName("Null Checks: Should handle null inputs gracefully in validation")
     void validation_NullInputs() {
         assertFalse(PasswordHashingUtils.isValidSaltedSha256(null, "someHash"));
         assertFalse(PasswordHashingUtils.isValidSaltedSha256("somePass", null));
+        assertFalse(
+                PasswordHashingUtils.isValidSaltedHash(
+                        null, "someHash", PasswordHashingUtils.HashAlgorithm.SHA256));
+        assertFalse(
+                PasswordHashingUtils.isValidSaltedHash(
+                        "somePass", null, PasswordHashingUtils.HashAlgorithm.SHA256));
     }
 }
