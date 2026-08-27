@@ -148,7 +148,10 @@ public final class PasswordHashingUtils {
         }
 
         Cipher des = Cipher.getInstance("DES/ECB/NoPadding", "BC");
+        // key8 is derived from the password parameter (key7), not hard-coded.
         des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key8, "DES"));
+        // "KGS!@#$%" is the well-known LM hash protocol constant (not a secret key).
+        // See: https://en.wikipedia.org/wiki/LAN_Manager#LM_hash_details
         return des.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
     }
 }
