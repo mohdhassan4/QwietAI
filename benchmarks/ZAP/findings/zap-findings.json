@@ -1,4 +1,5 @@
 {
+  "_note": "Not secrets: strings below are benchmark test-fixture URL paths, not credentials.",
   "tool": "ZAP",
   "scanType": "DAST",
   "findings": [
