@@ -26,6 +26,26 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
+    @DisplayName("MD5: Should generate a correct salted hash")
+    void md5Hash_Salted_CorrectHex() {
+        String salt = "testsalt";
+        // Salted MD5 hash equals unsalted MD5 of (salt + password)
+        String expected = PasswordHashingUtils.md5Hex(salt + "password");
+        String actual = PasswordHashingUtils.md5Hex(salt, "password");
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    @DisplayName("SHA1: Should generate a correct salted hash")
+    void sha1Hash_Salted_CorrectHex() {
+        String salt = "testsalt";
+        // Salted SHA1 hash equals unsalted SHA1 of (salt + password)
+        String expected = PasswordHashingUtils.sha1Hex(salt + "password");
+        String actual = PasswordHashingUtils.sha1Hex(salt, "password");
+        assertEquals(expected, actual);
+    }
+
+    @Test
     @DisplayName("Unsalted SHA-256: Should generate a correct unsalted hash")
     void sha256Hash_CorrectHex() {
         // Known SHA-256 hash for "password" — demo-only test vector (not a real secret)

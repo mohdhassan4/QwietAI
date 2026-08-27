@@ -48,8 +48,16 @@ public final class PasswordHashingUtils {
         return getHashAsHex(rawPassword, HashAlgorithm.MD5);
     }
 
+    public static String md5Hex(String salt, String rawPassword) {
+        return getHashAsHex(salt + rawPassword, HashAlgorithm.MD5);
+    }
+
     public static String sha1Hex(String rawPassword) {
         return getHashAsHex(rawPassword, HashAlgorithm.SHA1);
+    }
+
+    public static String sha1Hex(String salt, String rawPassword) {
+        return getHashAsHex(salt + rawPassword, HashAlgorithm.SHA1);
     }
 
     public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
