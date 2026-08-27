@@ -49,6 +49,20 @@ class EncryptionUtilsTest {
     }
 
     @Test
+    @DisplayName("Key Generation: Should reject null password")
+    void getKeyFromPassword_NullPassword() {
+        assertThrows(
+                EncryptionException.class, () -> EncryptionUtils.getKeyFromPassword(null));
+    }
+
+    @Test
+    @DisplayName("Key Generation: Should reject empty password")
+    void getKeyFromPassword_EmptyPassword() {
+        assertThrows(
+                EncryptionException.class, () -> EncryptionUtils.getKeyFromPassword(""));
+    }
+
+    @Test
     @DisplayName("AES Encryption: Should produce consistent ciphertext (ECB Mode Property)")
     void encrypt_EcbDeterminism() throws EncryptionException {
         SecretKey key = EncryptionUtils.getKeyFromPassword("fixed-password");
