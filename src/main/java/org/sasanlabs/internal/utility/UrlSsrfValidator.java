@@ -19,6 +19,20 @@ public final class UrlSsrfValidator {
     private UrlSsrfValidator() {}
 
     /**
+     * Sanitizes a string for safe inclusion in log messages by replacing control characters
+     * (newlines, carriage returns, tabs) that could be used for log forging.
+     *
+     * @param input the string to sanitize
+     * @return sanitized string safe for logging
+     */
+    public static String sanitizeForLog(String input) {
+        if (input == null) {
+            return "null";
+        }
+        return input.replaceAll("[\\r\\n\\t\\u0000-\\u001F\\u007F]", "_");
+    }
+
+    /**
      * Validates whether the given URL is safe from SSRF attacks.
      *
      * @param urlString the URL string to validate
@@ -31,7 +45,7 @@ public final class UrlSsrfValidator {
 
             String scheme = url.getProtocol().toLowerCase();
             if (!"http".equals(scheme) && !"https".equals(scheme)) {
-                LOGGER.warn("Blocked URL with disallowed scheme: {}", scheme);
+                LOGGER.warn("Blocked URL with disallowed scheme: {}", sanitizeForLog(scheme));
                 return false;
             }
 
@@ -51,7 +65,7 @@ public final class UrlSsrfValidator {
             try {
                 addresses = InetAddress.getAllByName(cleanHost);
             } catch (UnknownHostException e) {
-                LOGGER.warn("Could not resolve host: {}", host);
+                LOGGER.warn("Could not resolve host: {}", sanitizeForLog(host));
                 return false;
             }
 
@@ -59,7 +73,7 @@ public final class UrlSsrfValidator {
                 if (isPrivateOrReserved(addr)) {
                     LOGGER.warn(
                             "Blocked URL targeting private/internal address: {} -> {}",
-                            host,
+                            sanitizeForLog(host),
                             addr.getHostAddress());
                     return false;
                 }
@@ -67,7 +81,7 @@ public final class UrlSsrfValidator {
 
             return true;
         } catch (MalformedURLException | URISyntaxException e) {
-            LOGGER.error("Invalid URL: {}", urlString, e);
+            LOGGER.error("Invalid URL: {}", sanitizeForLog(urlString), e);
             return false;
         }
     }

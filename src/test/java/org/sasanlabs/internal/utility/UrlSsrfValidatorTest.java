@@ -1,5 +1,6 @@
 package org.sasanlabs.internal.utility;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -60,5 +61,32 @@ class UrlSsrfValidatorTest {
     @Test
     void shouldRejectNullScheme() {
         assertFalse(UrlSsrfValidator.isSafeUrl("://example.com"));
+    }
+
+    @Test
+    void sanitizeForLogShouldStripNewlines() {
+        assertEquals(
+                "http://evil.com_injected-line",
+                UrlSsrfValidator.sanitizeForLog("http://evil.com\ninjected-line"));
+        assertEquals(
+                "http://evil.com_injected-line",
+                UrlSsrfValidator.sanitizeForLog("http://evil.com\r\ninjected-line"));
+    }
+
+    @Test
+    void sanitizeForLogShouldStripTabs() {
+        assertEquals("host_value", UrlSsrfValidator.sanitizeForLog("host\tvalue"));
+    }
+
+    @Test
+    void sanitizeForLogShouldHandleNull() {
+        assertEquals("null", UrlSsrfValidator.sanitizeForLog(null));
+    }
+
+    @Test
+    void sanitizeForLogShouldPreserveSafeStrings() {
+        assertEquals(
+                "https://example.com/path?q=1",
+                UrlSsrfValidator.sanitizeForLog("https://example.com/path?q=1"));
     }
 }
