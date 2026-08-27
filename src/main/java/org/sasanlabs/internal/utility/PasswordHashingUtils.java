@@ -167,33 +167,35 @@ public final class PasswordHashingUtils {
      */
     public static String lmHash(String rawPassword) {
         try {
-            // Convert to uppercase and pad to 14 bytes
+            byte[] salt = new byte[SALT_LENGTH];
+            SECURE_RANDOM.nextBytes(salt);
+            String saltHex = EncodingUtils.bytesToHex(salt);
+
             String pwd = rawPassword.toUpperCase();
             byte[] keyBytes = new byte[14];
             byte[] passwordBytes = pwd.getBytes(StandardCharsets.US_ASCII);
             System.arraycopy(passwordBytes, 0, keyBytes, 0, Math.min(passwordBytes.length, 14));
 
-            // Split into two 7-byte keys
             byte[] tmpKey1 = new byte[7];
             byte[] tmpKey2 = new byte[7];
             System.arraycopy(keyBytes, 0, tmpKey1, 0, 7);
             System.arraycopy(keyBytes, 7, tmpKey2, 0, 7);
 
-            // Encrypt the magic string "KGS!@#$%" using each key
-            return EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey1))
-                    + EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey2));
+            String hash = EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey1, salt))
+                    + EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey2, salt));
+            return saltHex + HASH_SEPARATOR + hash;
         } catch (Exception e) {
             throw new RuntimeException("LM Hashing failed", e);
         }
     }
 
-    private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
-        // Derive a 256-bit AES key from the 7-byte key material using SHA-256
+    private static byte[] lmDesEncrypt(byte[] key7, byte[] salt) throws Exception {
         MessageDigest sha256 = MessageDigest.getInstance("SHA-256", "BC");
+        sha256.update(salt);
         byte[] aesKey = sha256.digest(key7);
 
-        // Use AES/CBC/PKCS5Padding with a fixed IV (deterministic for hash function purposes)
         byte[] iv = new byte[16];
+        System.arraycopy(salt, 0, iv, 0, Math.min(salt.length, iv.length));
         IvParameterSpec ivSpec = new IvParameterSpec(iv);
 
         Cipher aes = Cipher.getInstance("AES/CBC/PKCS5Padding", "BC");
