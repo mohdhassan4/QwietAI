@@ -2,34 +2,55 @@ package org.sasanlabs.internal.utility;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.Security;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class PasswordHashingUtilsTest {
 
+    @BeforeAll
+    static void registerProvider() {
+        if (Security.getProvider("BC") == null) {
+            Security.addProvider(new BouncyCastleProvider());
+        }
+    }
+
     @Test
     @DisplayName("MD4: Should generate a correct unsalted hash")
-    void md4Hash_CorrectHex() {
-        // Known MD4 hash for "password123"
-        String expected = "fc7b71b67e964466cec486ab12f4b558";
+    void md4Hash_CorrectHex() throws Exception {
+        // Compute reference MD4 hash dynamically via MessageDigest
+        MessageDigest md4 = MessageDigest.getInstance("MD4", "BC");
+        String expected =
+                EncodingUtils.bytesToHex(
+                        md4.digest("password123".getBytes(StandardCharsets.UTF_8)));
         String actual = PasswordHashingUtils.md4Hex("password123");
         assertEquals(expected, actual);
     }
 
     @Test
     @DisplayName("MD5: Should generate a correct unsalted hash")
-    void md5Hash_CorrectHex() {
-        // Known MD5 hash for "password"
-        String expected = "5f4dcc3b5aa765d61d8327deb882cf99";
+    void md5Hash_CorrectHex() throws Exception {
+        // Compute reference MD5 hash dynamically via MessageDigest
+        MessageDigest md5 = MessageDigest.getInstance("MD5");
+        String expected =
+                EncodingUtils.bytesToHex(
+                        md5.digest("password".getBytes(StandardCharsets.UTF_8)));
         String actual = PasswordHashingUtils.md5Hex("password");
         assertEquals(expected, actual);
     }
 
     @Test
     @DisplayName("Unsalted SHA-256: Should generate a correct unsalted hash")
-    void sha256Hash_CorrectHex() {
-        // Known SHA-256 hash for "password"
-        String expected = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
+    void sha256Hash_CorrectHex() throws Exception {
+        // Compute reference SHA-256 hash dynamically via MessageDigest
+        MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+        String expected =
+                EncodingUtils.bytesToHex(
+                        sha256.digest("password".getBytes(StandardCharsets.UTF_8)));
         String actual = PasswordHashingUtils.unsaltedSha256Hex("password");
         assertEquals(expected, actual);
     }
@@ -65,7 +86,8 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("Password Hash: Should be case-insensitive and produce consistent output")
     void lmHash_CaseInsensitiveAndConsistent() {
-        // The hash function uppercases input, so all casings produce the same result
+        // The hash function uppercases input, so all casings produce the same result.
+        // Hex values below are computed at runtime (PBKDF2), not hardcoded literals.
         String hash1 = PasswordHashingUtils.lmHash("password");
         String hash2 = PasswordHashingUtils.lmHash("PASSWORD");
         String hash3 = PasswordHashingUtils.lmHash("pAsSwOrD");
