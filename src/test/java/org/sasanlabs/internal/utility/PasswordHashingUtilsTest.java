@@ -84,22 +84,29 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
-    @DisplayName("Password Hash: Should be case-insensitive and produce consistent output")
-    void lmHash_CaseInsensitiveAndConsistent() {
-        // The hash function uppercases input, so all casings produce the same result.
-        // Hex values below are computed at runtime (PBKDF2), not hardcoded literals.
-        String hash1 = PasswordHashingUtils.lmHash("password");
-        String hash2 = PasswordHashingUtils.lmHash("PASSWORD");
-        String hash3 = PasswordHashingUtils.lmHash("pAsSwOrD");
+    @DisplayName("Password Hash: Should be case-insensitive and verifiable with random salt")
+    void lmHash_CaseInsensitiveAndVerifiable() {
+        // The hash function uppercases input, so all casings should validate against the same hash.
+        String storedHash = PasswordHashingUtils.lmHash("password");
 
-        assertNotNull(hash1);
-        assertFalse(hash1.isEmpty());
-        // All casings produce the same hash (case-insensitive)
-        assertEquals(hash1, hash2);
-        assertEquals(hash1, hash3);
-        // Output is a 32-character hex string (128 bits)
-        assertEquals(32, hash1.length());
-        assertTrue(hash1.matches("[0-9a-f]+"));
+        assertNotNull(storedHash);
+        assertFalse(storedHash.isEmpty());
+        // Output contains salt:hash separator
+        assertTrue(storedHash.contains(":"));
+
+        // All casings should validate against the stored hash (case-insensitive)
+        assertTrue(PasswordHashingUtils.isValidLmHash("password", storedHash));
+        assertTrue(PasswordHashingUtils.isValidLmHash("PASSWORD", storedHash));
+        assertTrue(PasswordHashingUtils.isValidLmHash("pAsSwOrD", storedHash));
+
+        // Wrong password should not validate
+        assertFalse(PasswordHashingUtils.isValidLmHash("wrongpassword", storedHash));
+
+        // Each call to lmHash produces a different salt, so hashes differ
+        String storedHash2 = PasswordHashingUtils.lmHash("password");
+        assertNotEquals(storedHash, storedHash2);
+        // But both should still validate
+        assertTrue(PasswordHashingUtils.isValidLmHash("password", storedHash2));
     }
 
     @Test
@@ -108,6 +115,42 @@ class PasswordHashingUtilsTest {
         byte[] input = {0, 15, 16, 127, -1}; // 00, 0f, 10, 7f, ff
         String expected = "000f107fff";
         assertEquals(expected, EncodingUtils.bytesToHex(input));
+    }
+
+    @Test
+    @DisplayName("Hex Utility: hexToBytes should be inverse of bytesToHex")
+    void hexToBytes_RoundTrip() {
+        byte[] original = {0, 15, 16, 127, -1};
+        String hex = EncodingUtils.bytesToHex(original);
+        byte[] result = EncodingUtils.hexToBytes(hex);
+        assertArrayEquals(original, result);
+    }
+
+    @Test
+    @DisplayName("Salted MD5: Should produce different hash than unsalted")
+    void md5Hex_SaltedVsUnsalted() {
+        String unsalted = PasswordHashingUtils.md5Hex("password");
+        String salted = PasswordHashingUtils.md5Hex("somesalt", "password");
+        assertNotEquals(unsalted, salted);
+    }
+
+    @Test
+    @DisplayName("Salted SHA-1: Should produce different hash than unsalted")
+    void sha1Hex_SaltedVsUnsalted() {
+        String unsalted = PasswordHashingUtils.sha1Hex("password");
+        String salted = PasswordHashingUtils.sha1Hex("somesalt", "password");
+        assertNotEquals(unsalted, salted);
+    }
+
+    @Test
+    @DisplayName("generateSalt: Should produce 32-char hex strings (16 bytes)")
+    void generateSalt_ProducesValidHex() {
+        String salt = PasswordHashingUtils.generateSalt();
+        assertNotNull(salt);
+        assertEquals(32, salt.length());
+        assertTrue(salt.matches("[0-9a-f]+"));
+        // Two salts should be different
+        assertNotEquals(salt, PasswordHashingUtils.generateSalt());
     }
 
     @Test

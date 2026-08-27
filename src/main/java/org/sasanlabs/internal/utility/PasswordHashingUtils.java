@@ -49,13 +49,36 @@ public final class PasswordHashingUtils {
         return getHashAsHex(rawPassword, HashAlgorithm.MD5);
     }
 
+    public static String md5Hex(String salt, String rawPassword) {
+        return getHashAsHex(salt + rawPassword, HashAlgorithm.MD5);
+    }
+
     public static String sha1Hex(String rawPassword) {
         return getHashAsHex(rawPassword, HashAlgorithm.SHA1);
     }
 
+    public static String sha1Hex(String salt, String rawPassword) {
+        return getHashAsHex(salt + rawPassword, HashAlgorithm.SHA1);
+    }
+
+    /** Generates a random 16-byte salt encoded as a hex string. */
+    public static String generateSalt() {
+        byte[] salt = new byte[16];
+        new SecureRandom().nextBytes(salt);
+        return EncodingUtils.bytesToHex(salt);
+    }
+
     public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
+        return getHashAsHex(rawPassword, hashAlgorithm, (byte[]) null);
+    }
+
+    public static String getHashAsHex(
+            String rawPassword, HashAlgorithm hashAlgorithm, byte[] salt) {
         try {
             MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
+            if (salt != null && salt.length > 0) {
+                messageDigest.update(salt);
+            }
             byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
@@ -104,20 +127,62 @@ public final class PasswordHashingUtils {
     }
 
     /**
-     * Computes a password hash using PBKDF2WithHmacSHA256 with a high work factor. The input is
-     * uppercased for case-insensitive matching (legacy behavior preserved from LM replacement).
+     * Computes a password hash using PBKDF2WithHmacSHA256 with a high work factor and a random
+     * salt. The input is uppercased for case-insensitive matching (legacy behavior preserved from LM
+     * replacement).
      *
      * @param rawPassword password to hash
-     * @return hex-encoded hash
+     * @return saltHex:hashHex encoded string
      */
     public static String lmHash(String rawPassword) {
+        byte[] salt = new byte[16];
+        new SecureRandom().nextBytes(salt);
+        return lmHashWithSalt(rawPassword, salt);
+    }
+
+    /**
+     * Computes a password hash using PBKDF2WithHmacSHA256 with the given salt.
+     *
+     * @param rawPassword password to hash
+     * @param salt the salt bytes to use
+     * @return saltHex:hashHex encoded string
+     */
+    public static String lmHashWithSalt(String rawPassword, byte[] salt) {
         try {
             String pwd = rawPassword.toUpperCase();
-            byte[] salt = "VulnerableApp-PBKDF2-Salt".getBytes(StandardCharsets.UTF_8);
             SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
             PBEKeySpec spec = new PBEKeySpec(pwd.toCharArray(), salt, 600000, 128);
             byte[] hash = factory.generateSecret(spec).getEncoded();
-            return EncodingUtils.bytesToHex(hash);
+            return EncodingUtils.bytesToHex(salt) + HASH_SEPARATOR + EncodingUtils.bytesToHex(hash);
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+            throw new RuntimeException("Password hashing failed", e);
+        }
+    }
+
+    /**
+     * Verifies a raw password against a stored lmHash value (saltHex:hashHex format).
+     *
+     * @param rawPassword the password to verify
+     * @param storedHash the stored saltHex:hashHex string
+     * @return true if the password matches
+     */
+    public static boolean isValidLmHash(String rawPassword, String storedHash) {
+        if (rawPassword == null || storedHash == null) {
+            return false;
+        }
+        String[] parts = storedHash.split(HASH_SEPARATOR, 2);
+        if (parts.length != 2) {
+            return false;
+        }
+        try {
+            byte[] salt = EncodingUtils.hexToBytes(parts[0]);
+            String pwd = rawPassword.toUpperCase();
+            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+            PBEKeySpec spec = new PBEKeySpec(pwd.toCharArray(), salt, 600000, 128);
+            byte[] hash = factory.generateSecret(spec).getEncoded();
+            return MessageDigest.isEqual(
+                    EncodingUtils.bytesToHex(hash).getBytes(StandardCharsets.UTF_8),
+                    parts[1].getBytes(StandardCharsets.UTF_8));
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
             throw new RuntimeException("Password hashing failed", e);
         }
