@@ -45,7 +45,8 @@ public final class SsrfProtectionUtil {
             url = new URL(urlString);
             uri = url.toURI();
         } catch (MalformedURLException | URISyntaxException e) {
-            LOGGER.error("URL validation failed for input", e);
+            LOGGER.error(
+                    "URL validation failed: {}", LogSanitizer.sanitize(e.getMessage()), e);
             return Optional.empty();
         }
 
