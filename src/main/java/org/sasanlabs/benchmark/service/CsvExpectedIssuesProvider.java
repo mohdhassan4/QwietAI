@@ -103,7 +103,16 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
         if (csvPath.startsWith(CLASSPATH_PREFIX)) {
             return parseFromResource(csvPath.substring(CLASSPATH_PREFIX.length()));
         }
-        return parseFromPath(Paths.get(csvPath));
+        Path raw = Paths.get(csvPath);
+        // Reject paths containing directory traversal segments
+        for (int i = 0; i < raw.getNameCount(); i++) {
+            if ("..".equals(raw.getName(i).toString())) {
+                throw new IOException(
+                        "Path traversal detected in benchmark.sast.ground-truth.path: "
+                                + csvPath);
+            }
+        }
+        return parseFromPath(raw.toAbsolutePath().normalize());
     }
 
     private List<ExpectedIssue> parseFromResource(String location) throws IOException {
