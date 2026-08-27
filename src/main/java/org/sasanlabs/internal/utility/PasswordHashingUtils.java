@@ -139,7 +139,9 @@ public final class PasswordHashingUtils {
         // Derive a 16-byte AES key and a 12-byte GCM nonce from the 7-byte input
         // using SHA-256 for deterministic key expansion (replaces weak DES cipher).
         MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
-        byte[] derived = sha256.digest(key7);
+        sha256.update(APPLICATION_SALT);
+        sha256.update(key7);
+        byte[] derived = sha256.digest();
 
         byte[] aesKey = new byte[16];
         byte[] nonce = new byte[12];
