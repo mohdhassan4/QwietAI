@@ -15,5 +15,5 @@ CREATE TABLE auth_users (
 GRANT ALL ON auth_users TO application;
 
 -- A read-only user for exploration by the attacker/user
-CREATE USER IF NOT EXISTS readonly_user PASSWORD 'readonly_password';
+-- (readonly_user is created programmatically in VulnerableAppConfiguration with parameterized password)
 GRANT SELECT ON auth_users TO readonly_user;
