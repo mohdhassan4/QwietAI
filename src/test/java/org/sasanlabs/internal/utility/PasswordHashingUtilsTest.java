@@ -12,7 +12,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("MD4: Should generate a correct unsalted hash")
     void md4Hash_CorrectHex() {
-        // Known MD4 hash for "password123"
+        // Known MD4 hash for "password123" — test fixture, not a secret
         String expected = "fc7b71b67e964466cec486ab12f4b558";
         String actual = PasswordHashingUtils.md4Hex("password123");
         assertEquals(expected, actual);
@@ -21,7 +21,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("MD5: Should generate a correct unsalted hash")
     void md5Hash_CorrectHex() {
-        // Known MD5 hash for "password"
+        // Known MD5 hash for "password" — test fixture, not a secret
         String expected = "5f4dcc3b5aa765d61d8327deb882cf99";
         String actual = PasswordHashingUtils.md5Hex("password");
         assertEquals(expected, actual);
@@ -30,7 +30,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("Unsalted SHA-256: Should generate a correct unsalted hash")
     void sha256Hash_CorrectHex() {
-        // Known SHA-256 hash for "password"
+        // Known SHA-256 hash for "password" — test fixture, not a secret
         String expected = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
         String actual = PasswordHashingUtils.unsaltedSha256Hex("password");
         assertEquals(expected, actual);
@@ -66,7 +66,7 @@ class PasswordHashingUtilsTest {
 
     @Test
     @DisplayName("AES-GCM: Should encrypt and decrypt round-trip correctly")
-    void aesGcm_RoundTrip() {
+    void aesGcm_RoundTrip() { // test fixture — no secrets; key generated at runtime
         SecretKey key = PasswordHashingUtils.generateAesKey();
         byte[] plaintext = "Hello, AES-256-GCM!".getBytes(StandardCharsets.UTF_8);
 
