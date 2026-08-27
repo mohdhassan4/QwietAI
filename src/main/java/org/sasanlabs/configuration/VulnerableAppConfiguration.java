@@ -131,9 +131,12 @@ public class VulnerableAppConfiguration {
             @Value("${spring.datasource.application.password}") String appPassword) {
         ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
         JdbcTemplate adminJdbcTemplate = new JdbcTemplate(adminDataSource);
-        String escapedPassword = appPassword.replace("'", "''");
         adminJdbcTemplate.execute(
-                String.format("CREATE USER application PASSWORD '%s'", escapedPassword));
+                "CREATE USER application PASSWORD ?",
+                (ps) -> {
+                    ps.setString(1, appPassword);
+                    return ps.execute();
+                });
         populator.addScript(new ClassPathResource("scripts/SQLInjection/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/xss/PersistentXSS/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/XXEVulnerability/schema.sql"));
