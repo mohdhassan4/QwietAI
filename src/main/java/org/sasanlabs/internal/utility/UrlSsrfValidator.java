@@ -30,8 +30,20 @@ public final class UrlSsrfValidator {
      * @return true if the URL is safe to fetch, false otherwise
      */
     public static boolean isUrlSafeFromSsrf(String url) {
+        return buildValidatedUrl(url) != null;
+    }
+
+    /**
+     * Validates a URL against SSRF attacks and returns a new URL object constructed from validated
+     * components. This breaks taint propagation from the original user-provided string, ensuring
+     * static analysis tools can verify the URL has been validated before use.
+     *
+     * @param url the URL string to validate
+     * @return a validated URL constructed from safe components, or null if validation fails
+     */
+    public static URL buildValidatedUrl(String url) {
         if (url == null || url.isEmpty()) {
-            return false;
+            return null;
         }
 
         URL parsedUrl;
@@ -39,30 +51,41 @@ public final class UrlSsrfValidator {
             parsedUrl = new URL(url);
             parsedUrl.toURI();
         } catch (MalformedURLException | URISyntaxException e) {
-            return false;
+            return null;
         }
 
         String protocol = parsedUrl.getProtocol();
         if (protocol == null
-                || (!protocol.equalsIgnoreCase("http") && !protocol.equalsIgnoreCase("https"))) {
-            return false;
+                || (!protocol.equalsIgnoreCase("http")
+                        && !protocol.equalsIgnoreCase("https"))) {
+            return null;
         }
 
         String host = parsedUrl.getHost();
         if (host == null || host.isEmpty()) {
-            return false;
+            return null;
         }
 
-        // Strip brackets from IPv6 literal hosts (e.g. [::1] -> ::1)
-        if (host.startsWith("[") && host.endsWith("]")) {
-            host = host.substring(1, host.length() - 1);
+        // Strip brackets from IPv6 literal hosts for resolution (e.g. [::1] -> ::1)
+        String resolvedHost = host;
+        if (resolvedHost.startsWith("[") && resolvedHost.endsWith("]")) {
+            resolvedHost = resolvedHost.substring(1, resolvedHost.length() - 1);
         }
 
         try {
-            InetAddress resolvedAddress = InetAddress.getByName(host);
-            return !isInternalAddress(resolvedAddress);
+            InetAddress resolvedAddress = InetAddress.getByName(resolvedHost);
+            if (isInternalAddress(resolvedAddress)) {
+                return null;
+            }
         } catch (UnknownHostException e) {
-            return false;
+            return null;
+        }
+
+        // Reconstruct URL from validated components to break taint propagation
+        try {
+            return new URL(protocol, host, parsedUrl.getPort(), parsedUrl.getFile());
+        } catch (MalformedURLException e) {
+            return null;
         }
     }
 
