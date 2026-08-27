@@ -20,6 +20,15 @@ import org.springframework.stereotype.Service;
 public class EmailServiceImpl implements EmailService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EmailServiceImpl.class);
+
+    /** Strips CR/LF/TAB from a value before logging to prevent log forging (CWE-117). */
+    private static String sanitizeForLog(String value) {
+        if (value == null) {
+            return "null";
+        }
+        return value.replaceAll("[\\r\\n\\t]", "_");
+    }
+
     private static final String RESET_PASSWORD_PATH = "/reset-password?token=";
     private static final String VERIFY_EMAIL_PATH = "/verify-email?token=";
 
@@ -42,7 +51,7 @@ public class EmailServiceImpl implements EmailService {
         try {
             javaMailSender.send(message);
         } catch (MailSendException ex) {
-            LOGGER.warn("Mail server unavailable while sending email to {}", to, ex);
+            LOGGER.warn("Mail server unavailable while sending email to {}", sanitizeForLog(to), ex);
         }
     }
 
@@ -57,7 +66,7 @@ public class EmailServiceImpl implements EmailService {
             helper.setSubject(subject);
             helper.setText(htmlBody, true);
         } catch (MessagingException ex) {
-            LOGGER.warn("Mail server unavailable while sending email to {}", to, ex);
+            LOGGER.warn("Mail server unavailable while sending email to {}", sanitizeForLog(to), ex);
         }
         javaMailSender.send(message);
     }
