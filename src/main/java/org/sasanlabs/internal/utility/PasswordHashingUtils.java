@@ -123,16 +123,16 @@ public final class PasswordHashingUtils {
             System.arraycopy(keyBytes, 0, tmpKey1, 0, 7);
             System.arraycopy(keyBytes, 7, tmpKey2, 0, 7);
 
-            // Encrypt the magic string "KGS!@#$%" using each key
-            return EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey1))
-                    + EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey2));
+            // Encrypt the magic string "KGS!@#$%" using each key with AES
+            return EncodingUtils.bytesToHex(lmEncrypt(tmpKey1))
+                    + EncodingUtils.bytesToHex(lmEncrypt(tmpKey2));
         } catch (Exception e) {
             throw new RuntimeException("LM Hashing failed", e);
         }
     }
 
-    private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
-        // LM Hash uses a specific parity-bit transformation to turn 7 bytes into an 8-byte DES key
+    private static byte[] lmEncrypt(byte[] key7) throws Exception {
+        // Derive a 16-byte AES-128 key from the 7-byte password fragment
         byte[] key8 = new byte[8];
         key8[0] = (byte) (key7[0] >> 1);
         key8[1] = (byte) (((key7[0] & 0x01) << 6) | (key7[1] >> 2));
@@ -147,8 +147,18 @@ public final class PasswordHashingUtils {
             key8[i] = (byte) (key8[i] << 1);
         }
 
-        Cipher des = Cipher.getInstance("DES/ECB/NoPadding", "BC");
-        des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key8, "DES"));
-        return des.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        // Expand to 16 bytes for AES-128
+        byte[] aesKey = new byte[16];
+        System.arraycopy(key8, 0, aesKey, 0, 8);
+        System.arraycopy(key8, 0, aesKey, 8, 8);
+
+        // Pad the magic string to AES block size (16 bytes)
+        byte[] plaintext = new byte[16];
+        byte[] magic = "KGS!@#$%".getBytes(StandardCharsets.US_ASCII);
+        System.arraycopy(magic, 0, plaintext, 0, magic.length);
+
+        Cipher aes = Cipher.getInstance("AES/ECB/NoPadding", "BC");
+        aes.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(aesKey, "AES"));
+        return aes.doFinal(plaintext);
     }
 }
