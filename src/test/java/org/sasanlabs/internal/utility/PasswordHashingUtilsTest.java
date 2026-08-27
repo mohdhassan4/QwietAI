@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+// Passwords in this test class are not secrets: unit test fixtures for hashing utility testing
 class PasswordHashingUtilsTest {
 
     @Test
