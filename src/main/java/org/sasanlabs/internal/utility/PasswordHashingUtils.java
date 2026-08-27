@@ -189,31 +189,24 @@ public final class PasswordHashingUtils {
     }
 
     private static byte[] lmAesEncrypt(byte[] key7) throws Exception {
-        byte[] salt = new byte[16];
-        new SecureRandom().nextBytes(salt);
+        byte[] domainKey = "VulnApp-LM-AES-Key-v2".getBytes(StandardCharsets.UTF_8);
+        byte[] domainNonce = "VulnApp-LM-AES-Nonce-v2".getBytes(StandardCharsets.UTF_8);
 
-        javax.crypto.SecretKeyFactory skf =
-                javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-        javax.crypto.spec.PBEKeySpec pbeSpec =
-                new javax.crypto.spec.PBEKeySpec(
-                        new String(key7, StandardCharsets.ISO_8859_1).toCharArray(),
-                        salt, 600000, 256);
-        byte[] aesKey = skf.generateSecret(pbeSpec).getEncoded();
+        javax.crypto.Mac hmacKey = javax.crypto.Mac.getInstance("HmacSHA256");
+        hmacKey.init(new SecretKeySpec(domainKey, "HmacSHA256"));
+        byte[] aesKey = hmacKey.doFinal(key7);
 
+        javax.crypto.Mac hmacNonce = javax.crypto.Mac.getInstance("HmacSHA256");
+        hmacNonce.init(new SecretKeySpec(domainNonce, "HmacSHA256"));
+        byte[] nonceSource = hmacNonce.doFinal(key7);
         byte[] nonce = new byte[12];
-        new SecureRandom().nextBytes(nonce);
+        System.arraycopy(nonceSource, 0, nonce, 0, 12);
 
         Cipher aes = Cipher.getInstance("AES/GCM/NoPadding", "BC");
         aes.init(
                 Cipher.ENCRYPT_MODE,
                 new SecretKeySpec(aesKey, "AES"),
                 new GCMParameterSpec(128, nonce));
-        byte[] ciphertext = aes.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
-
-        byte[] result = new byte[salt.length + nonce.length + ciphertext.length];
-        System.arraycopy(salt, 0, result, 0, salt.length);
-        System.arraycopy(nonce, 0, result, salt.length, nonce.length);
-        System.arraycopy(ciphertext, 0, result, salt.length + nonce.length, ciphertext.length);
-        return result;
+        return aes.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
     }
 }
