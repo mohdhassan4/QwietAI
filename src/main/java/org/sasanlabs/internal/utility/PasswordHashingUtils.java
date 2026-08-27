@@ -52,10 +52,43 @@ public final class PasswordHashingUtils {
         return getHashAsHex(rawPassword, HashAlgorithm.SHA1);
     }
 
+    /**
+     * Computes a salted hash. A random 16-byte salt is generated, prepended to the input before
+     * hashing, and the result is returned as {@code saltHex:hashHex}.
+     */
     public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
+        byte[] salt = new byte[16];
+        new SecureRandom().nextBytes(salt);
+        String saltHex = EncodingUtils.bytesToHex(salt);
+        String hashHex = computeDigestHex(saltHex + rawPassword, hashAlgorithm);
+        return saltHex + HASH_SEPARATOR + hashHex;
+    }
+
+    /**
+     * Validates a raw password against a stored salted hash in {@code saltHex:hashHex} format. Falls
+     * back to unsalted comparison for backward compatibility with legacy data.
+     */
+    public static boolean isValidHash(
+            String rawPassword, String storedHash, HashAlgorithm hashAlgorithm) {
+        if (storedHash == null || rawPassword == null) {
+            return false;
+        }
+        String[] parts = storedHash.split(HASH_SEPARATOR, 2);
+        if (parts.length == 2) {
+            String saltHex = parts[0];
+            String expectedHash = parts[1];
+            String computedHash = computeDigestHex(saltHex + rawPassword, hashAlgorithm);
+            return computedHash.equalsIgnoreCase(expectedHash);
+        }
+        // Backward compatibility: unsalted comparison for legacy stored hashes
+        return computeDigestHex(rawPassword, hashAlgorithm).equalsIgnoreCase(storedHash);
+    }
+
+    /** Raw digest computation without salt generation (for internal use). */
+    private static String computeDigestHex(String input, HashAlgorithm hashAlgorithm) {
         try {
             MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
-            byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
+            byte[] digest = messageDigest.digest(input.getBytes(StandardCharsets.UTF_8));
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(hashAlgorithm + "Hash Algorithm Not Found", e);
@@ -80,11 +113,11 @@ public final class PasswordHashingUtils {
     }
 
     public static String sha256Hex(String salt, String rawPassword) {
-        return getHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
+        return computeDigestHex(salt + rawPassword, HashAlgorithm.SHA256);
     }
 
     public static String unsaltedSha256Hex(String rawPassword) {
-        return getHashAsHex(rawPassword, HashAlgorithm.SHA256);
+        return computeDigestHex(rawPassword, HashAlgorithm.SHA256);
     }
 
     // BC not used for bcrypt due to extra complexity for BC implementation
