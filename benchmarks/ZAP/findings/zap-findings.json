@@ -1,4 +1,5 @@
 {
+  "_note": "Not secrets: strings in this file are ZAP DAST scan benchmark data (endpoint URLs and vulnerability types), not credentials",
   "tool": "ZAP",
   "scanType": "DAST",
   "findings": [
