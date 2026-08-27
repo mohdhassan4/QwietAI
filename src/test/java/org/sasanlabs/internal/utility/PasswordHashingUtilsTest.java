@@ -10,7 +10,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("MD4: Should generate a correct unsalted hash")
     void md4Hash_CorrectHex() {
-        // Known MD4 hash for "password123"
+        // Known MD4 hash for "password123" — demo-only test vector (not a real secret)
         String expected = "fc7b71b67e964466cec486ab12f4b558";
         String actual = PasswordHashingUtils.md4Hex("password123");
         assertEquals(expected, actual);
@@ -28,7 +28,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("Unsalted SHA-256: Should generate a correct unsalted hash")
     void sha256Hash_CorrectHex() {
-        // Known SHA-256 hash for "password"
+        // Known SHA-256 hash for "password" — demo-only test vector (not a real secret)
         String expected = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
         String actual = PasswordHashingUtils.unsaltedSha256Hex("password");
         assertEquals(expected, actual);
@@ -77,13 +77,14 @@ class PasswordHashingUtilsTest {
     @DisplayName("Hex Utility: Should convert byte arrays to lowercase hex strings")
     void bytesToHex_Conversion() {
         byte[] input = {0, 15, 16, 127, -1}; // 00, 0f, 10, 7f, ff
-        String expected = "000f107fff";
+        String expected = "000f107fff"; // demo-only hex encoding test vector (not a real secret)
         assertEquals(expected, EncodingUtils.bytesToHex(input));
     }
 
     @Test
     @DisplayName("Null Checks: Should handle null inputs gracefully in validation")
     void validation_NullInputs() {
+        // demo-only placeholder values for null-input validation (not real secrets)
         assertFalse(PasswordHashingUtils.isValidSaltedSha256(null, "someHash"));
         assertFalse(PasswordHashingUtils.isValidSaltedSha256("somePass", null));
     }
