@@ -35,6 +35,14 @@ public class BenchmarkController {
         this.benchmarkResultWriter = benchmarkResultWriter;
     }
 
+    /** Strips CR, LF, and other control characters to prevent log forging. */
+    private static String sanitizeForLog(String input) {
+        if (input == null) {
+            return null;
+        }
+        return input.replaceAll("[\\r\\n\\t\\x00-\\x1F\\x7F]", "_");
+    }
+
     @PostMapping("/scanner/benchmark")
     public ResponseEntity<?> benchmark(@RequestBody ScannerFindings input) throws IOException {
         if (input == null || input.getTool() == null || input.getTool().trim().isEmpty()) {
@@ -53,12 +61,15 @@ public class BenchmarkController {
 
         try {
             Path written = benchmarkResultWriter.write(result);
-            LOGGER.info("Wrote benchmark result for tool '{}' to {}", input.getTool(), written);
+            LOGGER.info(
+                    "Wrote benchmark result for tool '{}' to {}",
+                    sanitizeForLog(input.getTool()),
+                    written);
         } catch (IOException ioe) {
             LOGGER.error(
                     "Failed to persist benchmark result for tool '{}'; returning 500 with result"
                             + " in body",
-                    input.getTool(),
+                    sanitizeForLog(input.getTool()),
                     ioe);
             result.setPersistenceError("Failed to persist benchmark result");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
