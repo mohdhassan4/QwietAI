@@ -57,7 +57,7 @@ public final class SsrfProtectionUtils {
         } catch (MalformedURLException | URISyntaxException e) {
             LOGGER.error(
                     "Provided URL: {} is not valid and following exception occurred",
-                    urlString,
+                    LogSanitizer.sanitize(urlString),
                     e);
             return null;
         }
@@ -65,7 +65,7 @@ public final class SsrfProtectionUtils {
         // Only allow http and https schemes
         String scheme = url.getProtocol().toLowerCase();
         if (!ALLOWED_SCHEMES.contains(scheme)) {
-            LOGGER.warn("SSRF protection: blocked non-HTTP scheme: {}", scheme);
+            LOGGER.warn("SSRF protection: blocked non-HTTP scheme: {}", LogSanitizer.sanitize(scheme));
             return null;
         }
 
@@ -81,12 +81,12 @@ public final class SsrfProtectionUtils {
                 if (isPrivateOrReservedAddress(address)) {
                     LOGGER.warn(
                             "SSRF protection: blocked request to internal/private address: {}",
-                            address.getHostAddress());
+                            LogSanitizer.sanitize(address.getHostAddress()));
                     return null;
                 }
             }
         } catch (UnknownHostException e) {
-            LOGGER.error("SSRF protection: unable to resolve host: {}", host, e);
+            LOGGER.error("SSRF protection: unable to resolve host: {}", LogSanitizer.sanitize(host), e);
             return null;
         }
 
