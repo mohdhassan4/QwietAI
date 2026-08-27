@@ -23,6 +23,27 @@ let currentKey;
 // instead, and only acts if it's still the most recent request.
 let requestToken = 0;
 
+/**
+ * Safely access an own property of obj by key, preventing prototype
+ * pollution via bracket notation with user-controlled keys.
+ */
+function _safeGet(obj, key) {
+  if (obj == null) {
+    return undefined;
+  }
+  if (
+    String(key) === "__proto__" ||
+    String(key) === "constructor" ||
+    String(key) === "prototype"
+  ) {
+    return undefined;
+  }
+  if (!Object.prototype.hasOwnProperty.call(obj, key)) {
+    return undefined;
+  }
+  return obj[key];
+}
+
 function _loadDynamicJSAndCSS(urlToFetchHtmlTemplate, onReady) {
   let dynamicScriptsElement = document.getElementById("dynamicScripts");
   let cssElement = document.createElement("link");
@@ -87,6 +108,18 @@ function _callbackForInnerMasterOnClickEvent(
     if (currentId == id && currentKey == key) {
       return;
     }
+    // Validate bracket-notation keys are own properties to prevent
+    // prototype pollution via user-controlled id/key values.
+    let _safeEndpoint = _safeGet(vulnerableAppEndPointData, id);
+    if (!_safeEndpoint) {
+      return;
+    }
+    let _safeDetailedEntry = _safeEndpoint["Detailed Information"]
+      ? _safeGet(_safeEndpoint["Detailed Information"], key)
+      : undefined;
+    if (!_safeDetailedEntry) {
+      return;
+    }
     currentId = id;
     currentKey = key;
     // Mint a token for this navigation. Every async callback below
@@ -96,8 +129,7 @@ function _callbackForInnerMasterOnClickEvent(
     requestToken += 1;
     const thisRequestToken = requestToken;
     clearSelectedInnerMaster();
-    vulnerabilityLevelSelected =
-      vulnerableAppEndPointData[id]["Detailed Information"][key]["Level"];
+    vulnerabilityLevelSelected = _safeDetailedEntry["Level"];
     this.classList.add("active-item");
     let levelChallengeCards = _getChallengeCardsForLevel(
       vulnerableAppEndPointData,
@@ -106,12 +138,9 @@ function _callbackForInnerMasterOnClickEvent(
     );
     _updateChallengeToggleAvailability(levelChallengeCards);
     _renderDetailMode(vulnerableAppEndPointData);
-    let htmlTemplate =
-      vulnerableAppEndPointData[id]["Detailed Information"][key][
-        "HtmlTemplate"
-      ];
+    let htmlTemplate = _safeDetailedEntry["HtmlTemplate"];
     document.getElementById("vulnerabilityDescription").innerHTML =
-      vulnerableAppEndPointData[id]["Description"];
+      _safeEndpoint["Description"];
     let urlToFetchHtmlTemplate = htmlTemplate
       ? "/VulnerableApp/templates/" + vulnerabilitySelected + "/" + htmlTemplate
       : "error";
