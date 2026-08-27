@@ -125,14 +125,15 @@ public class VulnerableAppConfiguration {
      * the 'application' H2 DB user, and grants permissions. Must run before the
      * applicationDataSource bean tries to connect.
      */
+    private static final String CREATE_APP_USER_SQL = "CREATE USER application PASSWORD ?";
+
     @Bean
     public DataSourceInitializer adminDataSourceInitializer(
             @Qualifier("adminDataSource") DataSource adminDataSource,
             @Value("${spring.datasource.application.password}") String appPassword) {
         ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
         JdbcTemplate adminJdbcTemplate = new JdbcTemplate(adminDataSource);
-        adminJdbcTemplate.execute(
-                String.format("CREATE USER application PASSWORD '%s'", appPassword));
+        adminJdbcTemplate.update(CREATE_APP_USER_SQL, appPassword);
         populator.addScript(new ClassPathResource("scripts/SQLInjection/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/xss/PersistentXSS/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/XXEVulnerability/schema.sql"));
