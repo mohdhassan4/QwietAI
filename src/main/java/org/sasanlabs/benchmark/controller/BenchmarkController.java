@@ -56,11 +56,10 @@ public class BenchmarkController {
             LOGGER.info("Wrote benchmark result for tool '{}' to {}", input.getTool(), written);
         } catch (IOException ioe) {
             LOGGER.error(
-                    "Failed to persist benchmark result for tool '{}'; returning 500 with result"
-                            + " in body",
+                    "Failed to persist benchmark result for tool '{}'; returning 500",
                     input.getTool(),
                     ioe);
-            result.setPersistenceError("Failed to persist benchmark result: " + ioe.getMessage());
+            result.setPersistenceError("Failed to persist benchmark result");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
         }
 

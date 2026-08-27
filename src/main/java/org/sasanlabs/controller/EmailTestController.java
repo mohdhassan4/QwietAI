@@ -1,6 +1,8 @@
 package org.sasanlabs.controller;
 
 import java.util.Map;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.sasanlabs.service.email.EmailService;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
@@ -15,6 +17,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/email")
 public class EmailTestController {
+
+    private static final Logger LOGGER = LogManager.getLogger(EmailTestController.class);
 
     private static final String DEFAULT_SUBJECT = "VulnerableApp test email";
     private static final String DEFAULT_BODY = "This email was sent by VulnerableApp.";
@@ -38,8 +42,9 @@ public class EmailTestController {
                 emailService.sendEmail(to, subject, body);
             }
         } catch (IllegalArgumentException ex) {
+            LOGGER.error("Invalid argument in email request", ex);
             return ResponseEntity.badRequest()
-                    .body(Map.of("status", "failed", "error", ex.getMessage()));
+                    .body(Map.of("status", "failed", "error", "Invalid request parameters"));
         } catch (MailException ex) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("status", "failed", "error", "Unable to send test email"));
