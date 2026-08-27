@@ -15,5 +15,6 @@ CREATE TABLE auth_users (
 GRANT ALL ON auth_users TO application;
 
 -- A read-only user for exploration by the attacker/user
-CREATE USER IF NOT EXISTS readonly_user PASSWORD 'readonly_password';
+-- Password loaded from environment; rotate if deployed outside local dev
+CREATE USER IF NOT EXISTS readonly_user PASSWORD '${READONLY_USER_PASSWORD:changeme}';
 GRANT SELECT ON auth_users TO readonly_user;
