@@ -153,6 +153,54 @@ public class VulnerableAppConfiguration {
         return initializer;
     }
 
+    /**
+     * Inserts bcrypt-hashed authentication users programmatically using passwords loaded from
+     * environment configuration, so that bcrypt hashes are never stored in source files.
+     */
+    @Bean
+    @DependsOn("adminDataSourceInitializer")
+    public Object authBcryptDataInitializer(
+            @Qualifier("adminDataSource") DataSource adminDataSource,
+            @Value("${auth.bcrypt.weak.password}") String weakPassword,
+            @Value("${auth.bcrypt.secure.password}") String securePassword,
+            @Value("${auth.bcrypt.lowcost.password}") String lowcostPassword) {
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(adminDataSource);
+        BCryptPasswordEncoder standardEncoder = new BCryptPasswordEncoder(10);
+        BCryptPasswordEncoder lowCostEncoder = new BCryptPasswordEncoder(4);
+
+        jdbcTemplate.update(
+                "INSERT INTO auth_users VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                8,
+                "admin_weak",
+                standardEncoder.encode(weakPassword),
+                null,
+                "BCRYPT",
+                8,
+                "admin_weak@example.com",
+                "ADMIN");
+        jdbcTemplate.update(
+                "INSERT INTO auth_users VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                9,
+                "admin_secure",
+                standardEncoder.encode(securePassword),
+                null,
+                "BCRYPT",
+                9,
+                "admin_secure@example.com",
+                "ADMIN");
+        jdbcTemplate.update(
+                "INSERT INTO auth_users VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                10,
+                "admin_lowcost",
+                lowCostEncoder.encode(lowcostPassword),
+                null,
+                "BCRYPT_LOW_ITERATION",
+                10,
+                "admin_lowcost@example.com",
+                "ADMIN");
+        return new Object();
+    }
+
     @Bean
     @Lazy
     @ConfigurationProperties("spring.datasource.application")
