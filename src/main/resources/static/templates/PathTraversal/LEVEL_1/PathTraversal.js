@@ -16,17 +16,21 @@ function appendResponseCallback(data) {
     let content = JSON.parse(data.content);
     if (content.length > 0) {
       for (let key in content[0]) {
+        if (!Object.prototype.hasOwnProperty.call(content[0], key)) continue;
         tableInformation =
           tableInformation + '<th id="InfoColumn">' + key + "</th>";
       }
     }
     for (let index in content) {
+      if (!Object.prototype.hasOwnProperty.call(content, index)) continue;
+      let _row = content[index];
       tableInformation = tableInformation + '<tr id="Info">';
-      for (let key in content[index]) {
+      for (let key in _row) {
+        if (!Object.prototype.hasOwnProperty.call(_row, key)) continue;
         tableInformation =
           tableInformation +
           '<td id="InfoColumn">' +
-          content[index][key] +
+          _row[key] +
           "</td>";
       }
       tableInformation = tableInformation + "</tr>";
