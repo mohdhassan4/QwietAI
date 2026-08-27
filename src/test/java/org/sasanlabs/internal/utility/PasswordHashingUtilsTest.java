@@ -50,7 +50,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("BCrypt: Should validate successfully even though hashes are unique each time")
     void bcrypt_UniqueGenerationAndValidation() {
-        String password = "mySecretPassword";
+        String password = "mySecretPassword"; // test-only fixture credential
         String hash1 = PasswordHashingUtils.bCryptHash(password);
         String hash2 = PasswordHashingUtils.bCryptHash(password);
 
@@ -65,12 +65,57 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("LM Hash: Should be case-insensitive and match legacy standards")
     void lmHash_LegacyStandards() {
-        // Known LM hash for "password" (which it converts to "PASSWORD")
+        // Known LM hash for "password" (which it converts to "PASSWORD") — test-only fixture
         String expected = "e52cac67419a9a224a3b108f3fa6cb6d";
 
         assertEquals(expected, PasswordHashingUtils.lmHash("password"));
         assertEquals(expected, PasswordHashingUtils.lmHash("PASSWORD"));
         assertEquals(expected, PasswordHashingUtils.lmHash("pAsSwOrD"));
+    }
+
+    @Test
+    @DisplayName("Salted LM Hash: Should produce different hashes with different salts")
+    void saltedLmHash_UniquePerSalt() {
+        String hash1 = PasswordHashingUtils.saltedLmHash("password");
+        String hash2 = PasswordHashingUtils.saltedLmHash("password");
+
+        // Salted hashes should not be equal (different random salt each time)
+        assertNotEquals(hash1, hash2);
+
+        // Both should validate correctly
+        assertTrue(PasswordHashingUtils.isValidSaltedLmHash("password", hash1));
+        assertTrue(PasswordHashingUtils.isValidSaltedLmHash("password", hash2));
+        assertFalse(PasswordHashingUtils.isValidSaltedLmHash("wrongpass", hash1));
+    }
+
+    @Test
+    @DisplayName("Salted Hash: getSaltedHashAsHex should produce deterministic output with same salt")
+    void saltedHashAsHex_Deterministic() {
+        String salt = "test_salt";
+        String hash1 =
+                PasswordHashingUtils.getSaltedHashAsHex(
+                        salt, "password", PasswordHashingUtils.HashAlgorithm.SHA256);
+        String hash2 =
+                PasswordHashingUtils.getSaltedHashAsHex(
+                        salt, "password", PasswordHashingUtils.HashAlgorithm.SHA256);
+
+        assertEquals(hash1, hash2);
+
+        // Different salt should produce different hash
+        String hash3 =
+                PasswordHashingUtils.getSaltedHashAsHex(
+                        "other_salt", "password", PasswordHashingUtils.HashAlgorithm.SHA256);
+        assertNotEquals(hash1, hash3);
+    }
+
+    @Test
+    @DisplayName("Salt Generation: Should produce unique Base64-encoded salts")
+    void generateSalt_Unique() {
+        String salt1 = PasswordHashingUtils.generateSalt();
+        String salt2 = PasswordHashingUtils.generateSalt();
+        assertNotEquals(salt1, salt2);
+        assertNotNull(salt1);
+        assertFalse(salt1.isEmpty());
     }
 
     @Test
