@@ -60,13 +60,23 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
                     .build();
 
     private final String csvPath;
+    private final Path baseDirPath;
 
     private volatile List<ExpectedIssue> cached;
 
     public CsvExpectedIssuesProvider(
             @Value("${benchmark.sast.ground-truth.path:classpath:scanner/sast/expectedIssues.csv}")
                     String csvPath) {
+        this(csvPath, Paths.get(System.getProperty("user.dir")));
+    }
+
+    /**
+     * Package-private constructor that allows specifying the base directory against which filesystem
+     * paths are validated. Used by tests that write CSV files into a temporary directory.
+     */
+    CsvExpectedIssuesProvider(String csvPath, Path baseDir) {
         this.csvPath = csvPath;
+        this.baseDirPath = baseDir.toAbsolutePath().normalize();
     }
 
     @PostConstruct
@@ -103,7 +113,16 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
         if (csvPath.startsWith(CLASSPATH_PREFIX)) {
             return parseFromResource(csvPath.substring(CLASSPATH_PREFIX.length()));
         }
-        return parseFromPath(Paths.get(csvPath));
+        Path resolved = Paths.get(csvPath).toAbsolutePath().normalize();
+        if (!resolved.startsWith(baseDirPath)) {
+            throw new IOException(
+                    "Path traversal rejected: resolved path '"
+                            + resolved
+                            + "' is outside the allowed base directory '"
+                            + baseDirPath
+                            + "'");
+        }
+        return parseFromPath(resolved);
     }
 
     private List<ExpectedIssue> parseFromResource(String location) throws IOException {
