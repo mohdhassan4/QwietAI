@@ -74,6 +74,51 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
+    @DisplayName("Salted LM Hash: Should produce different hashes with different salts")
+    void saltedLmHash_UniquePerSalt() {
+        String hash1 = PasswordHashingUtils.saltedLmHash("password");
+        String hash2 = PasswordHashingUtils.saltedLmHash("password");
+
+        // Salted hashes should not be equal (different random salt each time)
+        assertNotEquals(hash1, hash2);
+
+        // Both should validate correctly
+        assertTrue(PasswordHashingUtils.isValidSaltedLmHash("password", hash1));
+        assertTrue(PasswordHashingUtils.isValidSaltedLmHash("password", hash2));
+        assertFalse(PasswordHashingUtils.isValidSaltedLmHash("wrongpass", hash1));
+    }
+
+    @Test
+    @DisplayName("Salted Hash: getSaltedHashAsHex should produce deterministic output with same salt")
+    void saltedHashAsHex_Deterministic() {
+        String salt = "test_salt";
+        String hash1 =
+                PasswordHashingUtils.getSaltedHashAsHex(
+                        salt, "password", PasswordHashingUtils.HashAlgorithm.SHA256);
+        String hash2 =
+                PasswordHashingUtils.getSaltedHashAsHex(
+                        salt, "password", PasswordHashingUtils.HashAlgorithm.SHA256);
+
+        assertEquals(hash1, hash2);
+
+        // Different salt should produce different hash
+        String hash3 =
+                PasswordHashingUtils.getSaltedHashAsHex(
+                        "other_salt", "password", PasswordHashingUtils.HashAlgorithm.SHA256);
+        assertNotEquals(hash1, hash3);
+    }
+
+    @Test
+    @DisplayName("Salt Generation: Should produce unique Base64-encoded salts")
+    void generateSalt_Unique() {
+        String salt1 = PasswordHashingUtils.generateSalt();
+        String salt2 = PasswordHashingUtils.generateSalt();
+        assertNotEquals(salt1, salt2);
+        assertNotNull(salt1);
+        assertFalse(salt1.isEmpty());
+    }
+
+    @Test
     @DisplayName("Hex Utility: Should convert byte arrays to lowercase hex strings")
     void bytesToHex_Conversion() {
         byte[] input = {0, 15, 16, 127, -1}; // 00, 0f, 10, 7f, ff

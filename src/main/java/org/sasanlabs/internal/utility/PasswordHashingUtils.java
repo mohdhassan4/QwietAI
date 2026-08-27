@@ -2,6 +2,7 @@ package org.sasanlabs.internal.utility;
 
 import java.nio.charset.StandardCharsets;
 import java.security.*;
+import java.util.Base64;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -64,6 +65,33 @@ public final class PasswordHashingUtils {
         }
     }
 
+    private static final int SALT_LENGTH_BYTES = 16;
+
+    /** Generates a cryptographically secure random salt encoded as Base64. */
+    public static String generateSalt() {
+        byte[] saltBytes = new byte[SALT_LENGTH_BYTES];
+        new SecureRandom().nextBytes(saltBytes);
+        return Base64.getEncoder().encodeToString(saltBytes);
+    }
+
+    /**
+     * Computes a salted hash using MessageDigest.update for the salt bytes followed by the password
+     * bytes.
+     */
+    public static String getSaltedHashAsHex(
+            String salt, String rawPassword, HashAlgorithm hashAlgorithm) {
+        try {
+            MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
+            messageDigest.update(salt.getBytes(StandardCharsets.UTF_8));
+            byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
+            return EncodingUtils.bytesToHex(digest);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(hashAlgorithm + "Hash Algorithm Not Found", e);
+        } catch (NoSuchProviderException e) {
+            throw new RuntimeException("Security Provider Bouncy Castle not found", e);
+        }
+    }
+
     public static boolean isValidSaltedSha256(String rawPassword, String saltedSha256Hash) {
         if (saltedSha256Hash == null || rawPassword == null) {
             return false;
@@ -110,12 +138,28 @@ public final class PasswordHashingUtils {
      * @see <a href="https://en.wikipedia.org/wiki/LAN_Manager">Wikipedia: LAN Manager</a>
      */
     public static String lmHash(String rawPassword) {
+        return lmHash(rawPassword, null);
+    }
+
+    /**
+     * Computes an LM hash with an optional salt. When salt is non-null, the salt bytes are XORed
+     * into the key material before DES encryption, providing rainbow-table resistance.
+     */
+    public static String lmHash(String rawPassword, String salt) {
         try {
             // Convert to uppercase and pad to 14 bytes
             String pwd = rawPassword.toUpperCase();
             byte[] keyBytes = new byte[14];
             byte[] passwordBytes = pwd.getBytes(StandardCharsets.US_ASCII);
             System.arraycopy(passwordBytes, 0, keyBytes, 0, Math.min(passwordBytes.length, 14));
+
+            // Incorporate salt into key material when provided
+            if (salt != null && !salt.isEmpty()) {
+                byte[] saltBytes = salt.getBytes(StandardCharsets.UTF_8);
+                for (int i = 0; i < keyBytes.length; i++) {
+                    keyBytes[i] ^= saltBytes[i % saltBytes.length];
+                }
+            }
 
             // Split into two 7-byte keys
             byte[] tmpKey1 = new byte[7];
@@ -129,6 +173,29 @@ public final class PasswordHashingUtils {
         } catch (Exception e) {
             throw new RuntimeException("LM Hashing failed", e);
         }
+    }
+
+    /**
+     * Computes an LM hash with a random salt and returns the result as "salt:hash". This form is
+     * resistant to rainbow-table attacks.
+     */
+    public static String saltedLmHash(String rawPassword) {
+        String salt = generateSalt();
+        String hash = lmHash(rawPassword, salt);
+        return salt + HASH_SEPARATOR + hash;
+    }
+
+    /** Validates a raw password against a salted LM hash in "salt:hash" format. */
+    public static boolean isValidSaltedLmHash(String rawPassword, String saltedLmHash) {
+        if (saltedLmHash == null || rawPassword == null) {
+            return false;
+        }
+        String[] parts = saltedLmHash.split(HASH_SEPARATOR, 2);
+        if (parts.length != 2) {
+            return false;
+        }
+        String computedHash = lmHash(rawPassword, parts[0]);
+        return computedHash.equalsIgnoreCase(parts[1]);
     }
 
     private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
