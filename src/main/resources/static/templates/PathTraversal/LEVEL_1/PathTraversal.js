@@ -1,3 +1,17 @@
+/**
+ * Safely access an object property by key, preventing prototype pollution
+ * attacks via __proto__, constructor, or prototype traversal.
+ */
+function safeGetPT(obj, key) {
+  if (obj == null) return undefined;
+  var k = String(key);
+  if (k === "__proto__" || k === "constructor" || k === "prototype") {
+    return undefined;
+  }
+  if (!Object.prototype.hasOwnProperty.call(obj, k)) return undefined;
+  return obj[k];
+}
+
 function addingEventListenerToLoadImageButton() {
   document.getElementById("loadButton").addEventListener("click", function () {
     let url = getUrlForVulnerabilityLevel();
@@ -21,12 +35,15 @@ function appendResponseCallback(data) {
       }
     }
     for (let index in content) {
+      if (!Object.prototype.hasOwnProperty.call(content, index)) continue;
       tableInformation = tableInformation + '<tr id="Info">';
-      for (let key in content[index]) {
+      let row = safeGetPT(content, index);
+      for (let key in row) {
+        if (!Object.prototype.hasOwnProperty.call(row, key)) continue;
         tableInformation =
           tableInformation +
           '<td id="InfoColumn">' +
-          content[index][key] +
+          safeGetPT(row, key) +
           "</td>";
       }
       tableInformation = tableInformation + "</tr>";
