@@ -35,7 +35,7 @@ public final class UrlSafetyValidator {
         try {
             url = new URL(urlString);
         } catch (MalformedURLException e) {
-            LOGGER.error("Malformed URL: {}", urlString, e);
+            LOGGER.error("Malformed URL: {}", LogSanitizer.sanitize(urlString), e);
             return false;
         }
 
@@ -60,13 +60,13 @@ public final class UrlSafetyValidator {
                 if (isPrivateOrReserved(address)) {
                     LOGGER.warn(
                             "URL {} resolves to private/reserved address: {}",
-                            urlString,
+                            LogSanitizer.sanitize(urlString),
                             address.getHostAddress());
                     return false;
                 }
             }
         } catch (UnknownHostException e) {
-            LOGGER.error("Cannot resolve host for URL: {}", urlString, e);
+            LOGGER.error("Cannot resolve host for URL: {}", LogSanitizer.sanitize(urlString), e);
             return false;
         }
 
