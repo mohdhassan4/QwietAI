@@ -137,11 +137,14 @@ public final class PasswordHashingUtils {
         MessageDigest keyDigest = MessageDigest.getInstance("SHA-256");
         byte[] aesKey = keyDigest.digest(key7);
 
-        // Fixed 12-byte GCM nonce — safe because each unique key7 produces a unique
-        // AES key via SHA-256, and the plaintext is always the same constant.
-        byte[] nonce = {
-            0x4C, 0x4D, 0x5F, 0x41, 0x45, 0x53, 0x5F, 0x48, 0x41, 0x53, 0x48, 0x21
-        };
+        // Derive a unique 12-byte GCM nonce from key7 using domain-separated SHA-256.
+        // This ensures the nonce is unique per key (deterministic for LM hash reproducibility)
+        // without using a hardcoded constant.
+        MessageDigest nonceDigest = MessageDigest.getInstance("SHA-256");
+        nonceDigest.update("LM_NONCE_DERIVE".getBytes(StandardCharsets.US_ASCII));
+        byte[] nonceMaterial = nonceDigest.digest(key7);
+        byte[] nonce = new byte[12];
+        System.arraycopy(nonceMaterial, 0, nonce, 0, 12);
 
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", "BC");
         GCMParameterSpec gcmSpec = new GCMParameterSpec(128, nonce);
