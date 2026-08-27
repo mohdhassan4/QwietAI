@@ -12,6 +12,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 public final class PasswordHashingUtils {
 
     private static final String HASH_SEPARATOR = ":";
+    private static final int SALT_LENGTH_BYTES = 16;
     private static final int bcryptWorkFactor = 12;
 
     private PasswordHashingUtils() {}
@@ -53,16 +54,70 @@ public final class PasswordHashingUtils {
         return getHashAsHex(rawPassword, HashAlgorithm.SHA1);
     }
 
+    /**
+     * Hashes the given password with a random salt. Returns the result in the format {@code
+     * saltHex:hashHex}.
+     */
     public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
+        byte[] salt = new byte[SALT_LENGTH_BYTES];
+        new SecureRandom().nextBytes(salt);
+        return getHashAsHex(rawPassword, hashAlgorithm, salt);
+    }
+
+    /**
+     * Hashes the given password with the provided salt bytes. Returns the result in the format
+     * {@code saltHex:hashHex}.
+     */
+    public static String getHashAsHex(
+            String rawPassword, HashAlgorithm hashAlgorithm, byte[] salt) {
         try {
-            MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
-            byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
-            return EncodingUtils.bytesToHex(digest);
+            MessageDigest messageDigest =
+                    MessageDigest.getInstance(hashAlgorithm.label(), "BC");
+            messageDigest.update(salt);
+            byte[] digest =
+                    messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
+            return EncodingUtils.bytesToHex(salt)
+                    + HASH_SEPARATOR
+                    + EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(hashAlgorithm + "Hash Algorithm Not Found", e);
+            throw new RuntimeException(hashAlgorithm + " Hash Algorithm Not Found", e);
         } catch (NoSuchProviderException e) {
             throw new RuntimeException("Security Provider Bouncy Castle not found", e);
         }
+    }
+
+    /**
+     * Verifies that the given raw password matches the stored salted hash in {@code
+     * saltHex:hashHex} format.
+     */
+    public static boolean verifyHash(
+            String rawPassword, String storedSaltedHash, HashAlgorithm hashAlgorithm) {
+        if (rawPassword == null || storedSaltedHash == null) {
+            return false;
+        }
+        String[] parts = storedSaltedHash.split(HASH_SEPARATOR, 2);
+        if (parts.length != 2) {
+            return false;
+        }
+        byte[] salt = EncodingUtils.hexToBytes(parts[0]);
+        String computed = getHashAsHex(rawPassword, hashAlgorithm, salt);
+        return MessageDigest.isEqual(
+                computed.getBytes(StandardCharsets.UTF_8),
+                storedSaltedHash.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /**
+     * Hashes the given password using the same salt found in the stored salted hash. Useful for
+     * displaying what a guess hashes to with the same salt as the target.
+     */
+    public static String hashWithSameSalt(
+            String rawPassword, String storedSaltedHash, HashAlgorithm hashAlgorithm) {
+        String[] parts = storedSaltedHash.split(HASH_SEPARATOR, 2);
+        byte[] salt =
+                (parts.length == 2)
+                        ? EncodingUtils.hexToBytes(parts[0])
+                        : new byte[SALT_LENGTH_BYTES];
+        return getHashAsHex(rawPassword, hashAlgorithm, salt);
     }
 
     public static boolean isValidSaltedSha256(String rawPassword, String saltedSha256Hash) {
@@ -77,13 +132,40 @@ public final class PasswordHashingUtils {
         }
 
         String calculatedHash = sha256Hex(saltAndHash[0], rawPassword);
-        return saltAndHash[1].equalsIgnoreCase(calculatedHash);
+        return MessageDigest.isEqual(
+                saltAndHash[1].getBytes(StandardCharsets.UTF_8),
+                calculatedHash.getBytes(StandardCharsets.UTF_8));
     }
 
+    /**
+     * Computes SHA-256 of the password with the given string salt. Returns only the hash hex
+     * (callers manage the salt:hash storage format themselves).
+     */
     public static String sha256Hex(String salt, String rawPassword) {
-        return getHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
+        try {
+            MessageDigest messageDigest =
+                    MessageDigest.getInstance(HashAlgorithm.SHA256.label(), "BC");
+            messageDigest.update(salt.getBytes(StandardCharsets.UTF_8));
+            byte[] digest =
+                    messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
+            return EncodingUtils.bytesToHex(digest);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 Hash Algorithm Not Found", e);
+        } catch (NoSuchProviderException e) {
+            throw new RuntimeException("Security Provider Bouncy Castle not found", e);
+        }
     }
 
+    /** Hashes the given password with a random salt using SHA-256. Returns saltHex:hashHex. */
+    public static String saltedSha256Hex(String rawPassword) {
+        return getHashAsHex(rawPassword, HashAlgorithm.SHA256);
+    }
+
+    /**
+     * @deprecated Use {@link #saltedSha256Hex(String)} instead. This method now produces salted
+     *     output in saltHex:hashHex format.
+     */
+    @Deprecated
     public static String unsaltedSha256Hex(String rawPassword) {
         return getHashAsHex(rawPassword, HashAlgorithm.SHA256);
     }
