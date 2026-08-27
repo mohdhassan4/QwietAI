@@ -1,8 +1,10 @@
+-- Non-production fixture: demo passwords for deliberately vulnerable training exercises (H2 in-memory DB)
 -- Level 1: SQL Injection
 -- Real password: 'not_needed_for_sqli'
 INSERT INTO auth_users VALUES (1, 'admin_sqli', 'not_needed_for_sqli', NULL, 'PLAIN', 1, 'admin_sqli@example.com', 'ADMIN');
 
 -- Level 2: Sensitive Data Logging
+-- Non-production fixture password for training exercise
 -- Real password: 'v9K#2mLp!8zQ'
 INSERT INTO auth_users VALUES (2, 'admin_logs', 'v9K#2mLp!8zQ', NULL, 'PLAIN', 2, 'admin_logs@example.com', 'ADMIN');
 
