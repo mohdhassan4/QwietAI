@@ -10,13 +10,13 @@ INSERT INTO auth_users VALUES (2, 'admin_logs', 'v9K#2mLp!8zQ', NULL, 'PLAIN', 2
 -- Not a real secret — intentional demo credential for vulnerability training (ephemeral H2 in-memory DB)
 INSERT INTO auth_users VALUES (3, 'admin_plain', 'b7X$4nRj-6mW', NULL, 'PLAIN', 3, 'admin_plain@example.com', 'ADMIN');
 
--- Level 4: MD5 Hashing (f2C@9tYk*1hP)
+-- Level 4: BCrypt (upgraded from MD5) (f2C@9tYk*1hP)
 -- Not a real secret — intentional demo password hash for vulnerability training (ephemeral H2 in-memory DB)
-INSERT INTO auth_users VALUES (4, 'admin_md5', '0168b6037606df265be7f1f5d9c0e7fe', NULL, 'MD5', 4, 'admin_md5@example.com', 'ADMIN');
+INSERT INTO auth_users VALUES (4, 'admin_md5', '$2b$10$uRQ1Rq.Xed7OeipAYTUxleTblZLBkM5BVvPye.0fvIQ5msVpmy4Hu', NULL, 'MD5', 4, 'admin_md5@example.com', 'ADMIN');
 
--- Level 5: SHA1 Hashing (x5B&3gHq+7vS)
+-- Level 5: BCrypt (upgraded from SHA1) (x5B&3gHq+7vS)
 -- Not a real secret — intentional demo password hash for vulnerability training (ephemeral H2 in-memory DB)
-INSERT INTO auth_users VALUES (5, 'admin_sha1', '632e10860bd26278451d3f89d1c46f180e5623e0', NULL, 'SHA1', 5, 'admin_sha1@example.com', 'ADMIN');
+INSERT INTO auth_users VALUES (5, 'admin_sha1', '$2b$10$ci4yNxKMFWLiC09Z14ghdORKwaIGMuRA6B.XDIQhBiLTjRBYVq7w6', NULL, 'SHA1', 5, 'admin_sha1@example.com', 'ADMIN');
 
 -- Level 6: SHA-256 (No Salt) (m8D!4kLr#2jZ)
 -- Not a real secret — intentional demo password hash for vulnerability training (ephemeral H2 in-memory DB)
