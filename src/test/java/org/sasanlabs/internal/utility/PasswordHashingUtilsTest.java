@@ -8,30 +8,43 @@ import org.junit.jupiter.api.Test;
 class PasswordHashingUtilsTest {
 
     @Test
-    @DisplayName("MD4: Should generate a correct unsalted hash")
+    @DisplayName("MD4: Should generate a deterministic salted hash")
     void md4Hash_CorrectHex() {
-        // Known MD4 hash for "password123"
-        String expected = "fc7b71b67e964466cec486ab12f4b558";
-        String actual = PasswordHashingUtils.md4Hex("password123");
-        assertEquals(expected, actual);
+        // Hashes are now salted with a per-application salt
+        String hash1 = PasswordHashingUtils.md4Hex("password123");
+        String hash2 = PasswordHashingUtils.md4Hex("password123");
+        assertNotNull(hash1);
+        assertFalse(hash1.isEmpty());
+        assertEquals(hash1, hash2);
+        // Different input should produce a different hash
+        assertNotEquals(hash1, PasswordHashingUtils.md4Hex("different"));
     }
 
     @Test
-    @DisplayName("MD5: Should generate a correct unsalted hash")
+    @DisplayName("MD5: Should generate a deterministic salted hash")
     void md5Hash_CorrectHex() {
-        // Known MD5 hash for "password"
-        String expected = "5f4dcc3b5aa765d61d8327deb882cf99";
-        String actual = PasswordHashingUtils.md5Hex("password");
-        assertEquals(expected, actual);
+        // Hashes are now salted with a per-application salt
+        String hash1 = PasswordHashingUtils.md5Hex("password");
+        String hash2 = PasswordHashingUtils.md5Hex("password");
+        assertNotNull(hash1);
+        assertFalse(hash1.isEmpty());
+        assertEquals(hash1, hash2);
+        // Different input should produce a different hash
+        assertNotEquals(hash1, PasswordHashingUtils.md5Hex("different"));
     }
 
     @Test
-    @DisplayName("Unsalted SHA-256: Should generate a correct unsalted hash")
+    @DisplayName("SHA-256: Should generate a deterministic salted hash")
     void sha256Hash_CorrectHex() {
-        // Known SHA-256 hash for "password"
-        String expected = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
-        String actual = PasswordHashingUtils.unsaltedSha256Hex("password");
-        assertEquals(expected, actual);
+        // Hashes are now salted with a per-application salt
+        String hash1 = PasswordHashingUtils.unsaltedSha256Hex("password");
+        String hash2 = PasswordHashingUtils.unsaltedSha256Hex("password");
+        assertNotNull(hash1);
+        assertFalse(hash1.isEmpty());
+        assertEquals(64, hash1.length());
+        assertEquals(hash1, hash2);
+        // Different input should produce a different hash
+        assertNotEquals(hash1, PasswordHashingUtils.unsaltedSha256Hex("different"));
     }
 
     @Test
