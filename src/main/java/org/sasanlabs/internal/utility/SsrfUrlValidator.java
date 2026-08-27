@@ -2,6 +2,8 @@ package org.sasanlabs.internal.utility;
 
 import java.net.InetAddress;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
 
@@ -23,14 +25,11 @@ public final class SsrfUrlValidator {
      * @throws SecurityException if the URL is unsafe (internal IP, non-http(s) scheme, or invalid)
      */
     public static URL validateUrl(String urlString) {
-        if (!isSafeFromSsrf(urlString)) {
+        URL validated = validateInternal(urlString);
+        if (validated == null) {
             throw new SecurityException("URL blocked by SSRF protection");
         }
-        try {
-            return new URL(urlString);
-        } catch (MalformedURLException e) {
-            throw new SecurityException("Invalid URL: " + e.getMessage(), e);
-        }
+        return validated;
     }
 
     /**
@@ -41,29 +40,45 @@ public final class SsrfUrlValidator {
      * @return true if the URL targets a public external host via http/https, false otherwise
      */
     public static boolean isSafeFromSsrf(String urlString) {
+        return validateInternal(urlString) != null;
+    }
+
+    private static URL validateInternal(String urlString) {
+        URI uri;
         try {
-            URL url = new URL(urlString);
-            String scheme = url.getProtocol().toLowerCase();
-            if (!"http".equals(scheme) && !"https".equals(scheme)) {
-                return false;
-            }
-            String host = url.getHost();
-            if (host == null || host.isEmpty()) {
-                return false;
-            }
-            // Remove brackets from IPv6 literal addresses
-            if (host.startsWith("[") && host.endsWith("]")) {
-                host = host.substring(1, host.length() - 1);
-            }
+            uri = new URI(urlString);
+        } catch (URISyntaxException e) {
+            return null;
+        }
+        String scheme = uri.getScheme();
+        if (scheme == null) {
+            return null;
+        }
+        scheme = scheme.toLowerCase();
+        if (!"http".equals(scheme) && !"https".equals(scheme)) {
+            return null;
+        }
+        String host = uri.getHost();
+        if (host == null || host.isEmpty()) {
+            return null;
+        }
+        if (host.startsWith("[") && host.endsWith("]")) {
+            host = host.substring(1, host.length() - 1);
+        }
+        try {
             InetAddress[] addresses = InetAddress.getAllByName(host);
             for (InetAddress address : addresses) {
                 if (isInternalAddress(address)) {
-                    return false;
+                    return null;
                 }
             }
-            return true;
-        } catch (MalformedURLException | UnknownHostException e) {
-            return false;
+        } catch (UnknownHostException e) {
+            return null;
+        }
+        try {
+            return uri.toURL();
+        } catch (MalformedURLException e) {
+            return null;
         }
     }
 
