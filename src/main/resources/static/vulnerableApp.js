@@ -492,7 +492,7 @@ function _buildSingleChallengeCard(card, index) {
     payloadEl.classList.add("challenge-card-payload", "hide-component");
 
     showPayloadBtn.addEventListener("click", function () {
-      payloadEl.innerHTML = "";
+      payloadEl.textContent = "";
       let desc = document.createElement("p");
       desc.classList.add("challenge-card-payload-description");
       desc.textContent = payload["description"] || "";
