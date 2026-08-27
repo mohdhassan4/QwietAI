@@ -12,6 +12,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 public final class PasswordHashingUtils {
 
     private static final String HASH_SEPARATOR = ":";
+    private static final int SALT_LENGTH = 16;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final int bcryptWorkFactor = 12;
 
     private PasswordHashingUtils() {}
@@ -41,6 +43,13 @@ public final class PasswordHashingUtils {
         }
     }
 
+    /** Generates a cryptographically secure random salt. */
+    public static byte[] generateSalt() {
+        byte[] salt = new byte[SALT_LENGTH];
+        SECURE_RANDOM.nextBytes(salt);
+        return salt;
+    }
+
     public static String md4Hex(String rawPassword) {
         return getHashAsHex(rawPassword, HashAlgorithm.MD4);
     }
@@ -53,10 +62,70 @@ public final class PasswordHashingUtils {
         return getHashAsHex(rawPassword, HashAlgorithm.SHA1);
     }
 
+    /**
+     * Hashes the input with a randomly generated salt. Returns "saltHex:hashHex".
+     *
+     * @param rawPassword the input to hash
+     * @param hashAlgorithm the hash algorithm to use
+     * @return salted hash in the format "saltHex:hashHex"
+     */
     public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
+        byte[] salt = generateSalt();
+        return getHashAsHex(rawPassword, hashAlgorithm, salt);
+    }
+
+    /**
+     * Hashes the input with the provided salt. Returns "saltHex:hashHex".
+     *
+     * @param rawPassword the input to hash
+     * @param hashAlgorithm the hash algorithm to use
+     * @param salt the salt bytes to prepend before hashing
+     * @return salted hash in the format "saltHex:hashHex"
+     */
+    public static String getHashAsHex(
+            String rawPassword, HashAlgorithm hashAlgorithm, byte[] salt) {
+        return EncodingUtils.bytesToHex(salt)
+                + HASH_SEPARATOR
+                + computeDigestHex(rawPassword, hashAlgorithm, salt);
+    }
+
+    /**
+     * Verifies a raw password against a stored salted hash (format "saltHex:hashHex").
+     *
+     * @param rawPassword the password to verify
+     * @param storedSaltedHash the stored hash in "saltHex:hashHex" format
+     * @param hashAlgorithm the hash algorithm that was used
+     * @return true if the password matches
+     */
+    public static boolean verifyHash(
+            String rawPassword, String storedSaltedHash, HashAlgorithm hashAlgorithm) {
+        if (rawPassword == null || storedSaltedHash == null) {
+            return false;
+        }
+        String[] parts = storedSaltedHash.split(HASH_SEPARATOR, 2);
+        if (parts.length != 2) {
+            return false;
+        }
+        byte[] salt = EncodingUtils.hexToBytes(parts[0]);
+        String recomputed = computeDigestHex(rawPassword, hashAlgorithm, salt);
+        return MessageDigest.isEqual(
+                recomputed.getBytes(StandardCharsets.UTF_8),
+                parts[1].getBytes(StandardCharsets.UTF_8));
+    }
+
+    /**
+     * Core digest computation with salt. Returns only the hash hex (no salt prefix).
+     *
+     * <p>Uses MessageDigest.update(salt) followed by digest(input) to properly incorporate the
+     * salt into the hash computation.
+     */
+    private static String computeDigestHex(
+            String rawInput, HashAlgorithm hashAlgorithm, byte[] salt) {
         try {
-            MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
-            byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
+            MessageDigest messageDigest =
+                    MessageDigest.getInstance(hashAlgorithm.label(), "BC");
+            messageDigest.update(salt);
+            byte[] digest = messageDigest.digest(rawInput.getBytes(StandardCharsets.UTF_8));
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(hashAlgorithm + "Hash Algorithm Not Found", e);
@@ -80,11 +149,23 @@ public final class PasswordHashingUtils {
         return saltAndHash[1].equalsIgnoreCase(calculatedHash);
     }
 
+    /**
+     * Computes SHA-256 hash with the given string salt. Returns only the hash hex (caller manages
+     * salt storage separately). The salt bytes are fed into the digest via update() before the
+     * password.
+     */
     public static String sha256Hex(String salt, String rawPassword) {
-        return getHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
+        return computeDigestHex(rawPassword, HashAlgorithm.SHA256,
+                salt.getBytes(StandardCharsets.UTF_8));
     }
 
-    public static String unsaltedSha256Hex(String rawPassword) {
+    /**
+     * Computes a salted SHA-256 hash with a random salt. Returns "saltHex:hashHex".
+     *
+     * @param rawPassword the password to hash
+     * @return salted hash in the format "saltHex:hashHex"
+     */
+    public static String saltedSha256Hex(String rawPassword) {
         return getHashAsHex(rawPassword, HashAlgorithm.SHA256);
     }
 
