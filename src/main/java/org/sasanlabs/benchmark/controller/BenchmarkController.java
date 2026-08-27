@@ -1,7 +1,6 @@
 package org.sasanlabs.benchmark.controller;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -51,23 +50,11 @@ public class BenchmarkController {
 
         BenchmarkResult result = benchmarkService.compare(input);
 
-        String safeToolName = input.getTool().replaceAll("[^a-zA-Z0-9_\\-.]", "_");
-        if (safeToolName.length() > 50) {
-            safeToolName = safeToolName.substring(0, 50);
-        }
-
         try {
-            Path written = benchmarkResultWriter.write(result);
-            LOGGER.info(
-                    "Wrote benchmark result for tool '{}' to {}",
-                    safeToolName,
-                    written);
+            benchmarkResultWriter.write(result);
+            LOGGER.info("Benchmark result written successfully");
         } catch (IOException ioe) {
-            LOGGER.error(
-                    "Failed to persist benchmark result for tool '{}'; returning 500 with result"
-                            + " in body",
-                    safeToolName,
-                    ioe);
+            LOGGER.error("Failed to persist benchmark result; returning 500 with result in body", ioe);
             result.setPersistenceError("Failed to persist benchmark result");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
         }
