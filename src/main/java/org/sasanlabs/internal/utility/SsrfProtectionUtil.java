@@ -2,6 +2,7 @@ package org.sasanlabs.internal.utility;
 
 import java.net.InetAddress;
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
 
@@ -12,6 +13,63 @@ import java.net.UnknownHostException;
 public final class SsrfProtectionUtil {
 
     private SsrfProtectionUtil() {}
+
+    /**
+     * Validates that the given URL string is safe to fetch (non-private, HTTP/HTTPS only) and
+     * returns a validated {@link URL} object. This method breaks the taint chain by returning a new
+     * URL object produced within the validator, ensuring static analysis tools recognise the
+     * sanitisation.
+     *
+     * @param urlString the URL string to validate
+     * @return a validated URL object that is safe for outbound requests
+     * @throws MalformedURLException if the URL is null, blank, malformed, uses a disallowed
+     *     protocol, resolves to a private/reserved address, or has invalid URI syntax
+     */
+    public static URL validateUrl(String urlString) throws MalformedURLException {
+        if (urlString == null || urlString.isBlank()) {
+            throw new MalformedURLException("URL is null or blank");
+        }
+
+        URL url = new URL(urlString);
+
+        // Validate URI syntax
+        try {
+            url.toURI();
+        } catch (URISyntaxException e) {
+            throw new MalformedURLException("Invalid URI syntax: " + e.getMessage());
+        }
+
+        // Only allow http and https protocols
+        String protocol = url.getProtocol();
+        if (!"http".equalsIgnoreCase(protocol) && !"https".equalsIgnoreCase(protocol)) {
+            throw new MalformedURLException("Protocol not allowed: " + protocol);
+        }
+
+        String host = url.getHost();
+        if (host == null || host.isBlank()) {
+            throw new MalformedURLException("Host is missing");
+        }
+
+        // Strip IPv6 brackets if present for resolution
+        String resolveHost = host;
+        if (resolveHost.startsWith("[") && resolveHost.endsWith("]")) {
+            resolveHost = resolveHost.substring(1, resolveHost.length() - 1);
+        }
+
+        try {
+            InetAddress[] addresses = InetAddress.getAllByName(resolveHost);
+            for (InetAddress address : addresses) {
+                if (isPrivateOrReserved(address)) {
+                    throw new MalformedURLException(
+                            "URL resolves to a private/reserved address");
+                }
+            }
+        } catch (UnknownHostException e) {
+            throw new MalformedURLException("Cannot resolve host: " + host);
+        }
+
+        return url;
+    }
 
     /**
      * Checks whether the given URL is safe to fetch, i.e., its host does not resolve to a
