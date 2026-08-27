@@ -42,7 +42,7 @@ public class EmailServiceImpl implements EmailService {
         try {
             javaMailSender.send(message);
         } catch (MailSendException ex) {
-            LOGGER.warn("Mail server unavailable while sending email to {}", to, ex);
+            LOGGER.warn("Mail server unavailable while sending email", ex);
         }
     }
 
@@ -57,7 +57,7 @@ public class EmailServiceImpl implements EmailService {
             helper.setSubject(subject);
             helper.setText(htmlBody, true);
         } catch (MessagingException ex) {
-            LOGGER.warn("Mail server unavailable while sending email to {}", to, ex);
+            LOGGER.warn("Mail server unavailable while sending HTML email", ex);
         }
         javaMailSender.send(message);
     }
@@ -104,7 +104,7 @@ public class EmailServiceImpl implements EmailService {
             InternetAddress internetAddress = new InternetAddress(emailAddress, true);
             internetAddress.validate();
         } catch (AddressException ex) {
-            throw new IllegalArgumentException("Invalid email address: " + emailAddress, ex);
+            throw new IllegalArgumentException("Invalid email address format", ex);
         }
     }
 

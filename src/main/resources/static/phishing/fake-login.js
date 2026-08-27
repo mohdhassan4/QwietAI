@@ -3,12 +3,7 @@ function harvest() {
   var pass = document.getElementById("password").value;
   if (!user && !pass) return;
   // Attacker receives credentials here
-  console.log(
-    "[Phishing] Harvested credentials — username: " +
-      user +
-      ", password: " +
-      pass
-  );
+  console.log("[Phishing] Harvested credentials — submission received");
   document.getElementById("password").value = "";
   document.getElementById("errorMsg").style.display = "block";
 }

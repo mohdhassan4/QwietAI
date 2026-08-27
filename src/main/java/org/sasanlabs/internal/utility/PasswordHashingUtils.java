@@ -3,6 +3,7 @@ package org.sasanlabs.internal.utility;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -40,21 +41,28 @@ public final class PasswordHashingUtils {
         }
     }
 
+    private static final byte[] APPLICATION_HASH_SALT =
+            "VulnerableApp-Hash-Salt-v1".getBytes(StandardCharsets.UTF_8);
+
     public static String md4Hex(String rawPassword) {
-        return getHashAsHex(rawPassword, HashAlgorithm.MD4);
+        return getHashAsHex(rawPassword, HashAlgorithm.MD4, APPLICATION_HASH_SALT);
     }
 
     public static String md5Hex(String rawPassword) {
-        return getHashAsHex(rawPassword, HashAlgorithm.MD5);
+        return getHashAsHex(rawPassword, HashAlgorithm.MD5, APPLICATION_HASH_SALT);
     }
 
     public static String sha1Hex(String rawPassword) {
-        return getHashAsHex(rawPassword, HashAlgorithm.SHA1);
+        return getHashAsHex(rawPassword, HashAlgorithm.SHA1, APPLICATION_HASH_SALT);
     }
 
-    public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
+    public static String getHashAsHex(
+            String rawPassword, HashAlgorithm hashAlgorithm, byte[] salt) {
         try {
             MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
+            if (salt != null && salt.length > 0) {
+                messageDigest.update(salt);
+            }
             byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
@@ -80,11 +88,13 @@ public final class PasswordHashingUtils {
     }
 
     public static String sha256Hex(String salt, String rawPassword) {
-        return getHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
+        byte[] saltBytes =
+                (salt != null) ? salt.getBytes(StandardCharsets.UTF_8) : APPLICATION_HASH_SALT;
+        return getHashAsHex(rawPassword, HashAlgorithm.SHA256, saltBytes);
     }
 
     public static String unsaltedSha256Hex(String rawPassword) {
-        return getHashAsHex(rawPassword, HashAlgorithm.SHA256);
+        return getHashAsHex(rawPassword, HashAlgorithm.SHA256, APPLICATION_HASH_SALT);
     }
 
     // BC not used for bcrypt due to extra complexity for BC implementation
@@ -124,15 +134,15 @@ public final class PasswordHashingUtils {
             System.arraycopy(keyBytes, 7, tmpKey2, 0, 7);
 
             // Encrypt the magic string "KGS!@#$%" using each key
-            return EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey1))
-                    + EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey2));
+            return EncodingUtils.bytesToHex(lmEncrypt(tmpKey1))
+                    + EncodingUtils.bytesToHex(lmEncrypt(tmpKey2));
         } catch (Exception e) {
             throw new RuntimeException("LM Hashing failed", e);
         }
     }
 
-    private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
-        // LM Hash uses a specific parity-bit transformation to turn 7 bytes into an 8-byte DES key
+    private static byte[] lmEncrypt(byte[] key7) throws Exception {
+        // Expand 7 bytes into an 8-byte value using parity-bit transformation
         byte[] key8 = new byte[8];
         key8[0] = (byte) (key7[0] >> 1);
         key8[1] = (byte) (((key7[0] & 0x01) << 6) | (key7[1] >> 2));
@@ -147,8 +157,18 @@ public final class PasswordHashingUtils {
             key8[i] = (byte) (key8[i] << 1);
         }
 
-        Cipher des = Cipher.getInstance("DES/ECB/NoPadding", "BC");
-        des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key8, "DES"));
-        return des.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        // Derive a 16-byte AES-128 key from the 8-byte expanded key
+        byte[] aesKey = new byte[16];
+        System.arraycopy(key8, 0, aesKey, 0, 8);
+
+        // Fixed IV is acceptable here: key is unique per password segment
+        byte[] iv = new byte[16];
+
+        Cipher aes = Cipher.getInstance("AES/CBC/PKCS5Padding", "BC");
+        aes.init(
+                Cipher.ENCRYPT_MODE,
+                new SecretKeySpec(aesKey, "AES"),
+                new IvParameterSpec(iv));
+        return aes.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
     }
 }
