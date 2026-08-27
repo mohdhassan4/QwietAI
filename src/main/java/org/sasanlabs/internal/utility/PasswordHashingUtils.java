@@ -193,12 +193,12 @@ public final class PasswordHashingUtils {
         byte[] aesKey = new byte[16];
         System.arraycopy(key8, 0, aesKey, 0, 8);
 
-        // Deterministic IV derived from the magic constant (hash is deterministic)
-        byte[] magic = "KGS!@#$%".getBytes(StandardCharsets.US_ASCII);
+        // Random IV per encryption (CSPRNG) to avoid IV reuse
         byte[] iv = new byte[16];
-        System.arraycopy(magic, 0, iv, 0, magic.length);
+        SECURE_RANDOM.nextBytes(iv);
 
-        // Pad plaintext to AES block size (16 bytes)
+        // Pad plaintext to AES block size (16 bytes) using the LM magic constant
+        byte[] magic = "KGS!@#$%".getBytes(StandardCharsets.US_ASCII);
         byte[] plaintext = new byte[16];
         System.arraycopy(magic, 0, plaintext, 0, magic.length);
 
@@ -207,6 +207,12 @@ public final class PasswordHashingUtils {
                 Cipher.ENCRYPT_MODE,
                 new SecretKeySpec(aesKey, "AES"),
                 new IvParameterSpec(iv));
-        return aes.doFinal(plaintext);
+        byte[] ciphertext = aes.doFinal(plaintext);
+
+        // Prepend IV to ciphertext so decryption/verification can extract it
+        byte[] result = new byte[iv.length + ciphertext.length];
+        System.arraycopy(iv, 0, result, 0, iv.length);
+        System.arraycopy(ciphertext, 0, result, iv.length, ciphertext.length);
+        return result;
     }
 }

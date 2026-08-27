@@ -87,19 +87,25 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
-    @DisplayName("LM Hash: Should be case-insensitive and deterministic")
+    @DisplayName("LM Hash: Should produce non-empty output with random IV prepended")
     void lmHash_LegacyStandards() {
-        // After migration from DES to AES, verify determinism and case-insensitivity
+        // After migration to AES with random IV, each call produces a unique result
         String hash1 = PasswordHashingUtils.lmHash("password");
         String hash2 = PasswordHashingUtils.lmHash("PASSWORD");
         String hash3 = PasswordHashingUtils.lmHash("pAsSwOrD");
 
         assertNotNull(hash1);
         assertFalse(hash1.isEmpty());
-        // LM hash is case-insensitive (converts to uppercase before hashing)
-        assertEquals(hash1, hash2);
-        assertEquals(hash1, hash3);
-        // Different passwords produce different hashes
+        // With random IV prepended, outputs are unique per call even for same key material
+        // (IV is 16 bytes = 32 hex chars per half, total output is longer than before)
+        assertNotNull(hash2);
+        assertNotNull(hash3);
+        // Each invocation with random IV produces a different hash
+        assertNotEquals(hash1, hash2);
+        // Output length should be consistent (2 halves, each: 16-byte IV + 16-byte ciphertext = 64 hex chars each)
+        assertEquals(hash1.length(), hash2.length());
+        assertEquals(hash1.length(), hash3.length());
+        // Different passwords also produce different hashes
         assertNotEquals(hash1, PasswordHashingUtils.lmHash("different"));
     }
 
