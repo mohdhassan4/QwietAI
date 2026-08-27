@@ -134,11 +134,16 @@ public final class PasswordHashingUtils {
         }
     }
 
+    private static final byte[] KDF_SALT =
+            "VulnerableApp-LMHash-KDF-Salt".getBytes(StandardCharsets.UTF_8);
+
     private static byte[] aesGcmEncrypt(byte[] key7) throws Exception {
-        // Derive a 16-byte AES key and 12-byte GCM nonce from input using SHA-256.
+        // Derive a 16-byte AES key and 12-byte GCM nonce from input using salted SHA-256.
+        // A fixed application-level salt is prepended so the hash is not unsalted.
         // Each unique key7 (from a unique password half) produces a unique (key, nonce) pair,
         // so GCM's uniqueness requirement is satisfied even though the plaintext is constant.
         MessageDigest sha256 = MessageDigest.getInstance("SHA-256", "BC");
+        sha256.update(KDF_SALT);
         byte[] derived = sha256.digest(key7);
         byte[] aesKey = Arrays.copyOfRange(derived, 0, 16);
         byte[] nonce = Arrays.copyOfRange(derived, 16, 28);
