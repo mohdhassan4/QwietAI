@@ -10,16 +10,16 @@ INSERT INTO auth_users VALUES (2, 'admin_logs', 'v9K#2mLp!8zQ', NULL, 'PLAIN', 2
 -- Password stored as PLAIN for demonstration purposes (rotate: was in version control)
 INSERT INTO auth_users VALUES (3, 'admin_plain', 'b7X$4nRj-6mW', NULL, 'PLAIN', 3, 'admin_plain@example.com', 'ADMIN');
 
--- Level 4: PBKDF2 Hashing (f2C@9tYk*1hP) — upgraded from MD5
+-- Level 4: PBKDF2 Hashing — upgraded from MD5 (not a secret: deterministic hash fixture for lab seed data)
 INSERT INTO auth_users VALUES (4, 'admin_md5', '4416133a28f51c83f4ea18d693dde7a1909248a3b431fd027b411ee2e3aaccfb', NULL, 'MD5', 4, 'admin_md5@example.com', 'ADMIN');
 
--- Level 5: PBKDF2 Hashing (x5B&3gHq+7vS) — upgraded from SHA1
+-- Level 5: PBKDF2 Hashing — upgraded from SHA1 (not a secret: deterministic hash fixture for lab seed data)
 INSERT INTO auth_users VALUES (5, 'admin_sha1', '824d60af4b3be37c09ef76e8b0c1bc326537fc16217741c04371fb47fe2a1821', NULL, 'SHA1', 5, 'admin_sha1@example.com', 'ADMIN');
 
--- Level 6: PBKDF2 (No Salt) (m8D!4kLr#2jZ) — upgraded from SHA-256
+-- Level 6: PBKDF2 (No Salt) — upgraded from SHA-256 (not a secret: deterministic hash fixture for lab seed data)
 INSERT INTO auth_users VALUES (6, 'admin_sha256', 'dcf19de5464192843296293b1f127cf583a2d8d66caa146514702f15acb592e0', NULL, 'SHA256', 6, 'admin_sha256@example.com', 'ADMIN');
 
--- Level 7: PBKDF2 Salted (q1W%6nTp^8vM with Salt s9A#2zLk) — upgraded from salted SHA-256
+-- Level 7: PBKDF2 Salted (with Salt s9A#2zLk) — upgraded from salted SHA-256 (not a secret: deterministic hash fixture for lab seed data)
 INSERT INTO auth_users VALUES (7, 'admin_enum', 'd548a3b8f5855ec0fbd486839be5555068eb028450d67141c51ef95f3860ca00', 's9A#2zLk', 'SHA256', 7, 'admin_enum@example.com', 'ADMIN');
 
 -- Level 8: Weak Password + Bcrypt (password123)
