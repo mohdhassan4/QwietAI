@@ -48,6 +48,7 @@ public class VulnerableAppConfiguration {
     private static final String I18N_MESSAGE_FILE_LOCATION = "classpath:i18n/messages";
     private static final String ATTACK_VECTOR_PAYLOAD_PROPERTY_FILES_LOCATION_PATTERN =
             "classpath:/attackvectors/*.properties";
+    private static final String CREATE_APP_USER_SQL = "CREATE USER application PASSWORD ?";
     private static final List<String> MAX_FILE_UPLOAD_SIZE_OVERRIDE_PATHS =
             Arrays.asList(
                     "/" + UnrestrictedFileUpload.CONTROLLER_PATH + "/" + LevelConstants.LEVEL_9);
@@ -137,8 +138,7 @@ public class VulnerableAppConfiguration {
                 (ConnectionCallback<Void>)
                         conn -> {
                             try (PreparedStatement ps =
-                                    conn.prepareStatement(
-                                            "CREATE USER application PASSWORD ?")) {
+                                    conn.prepareStatement(CREATE_APP_USER_SQL)) {
                                 ps.setString(1, appPassword);
                                 ps.execute();
                             }
