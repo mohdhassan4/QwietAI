@@ -134,6 +134,8 @@ class BenchmarkControllerTest {
                 .andExpect(jsonPath("$.coverage").value(50.0))
                 .andExpect(
                         jsonPath("$.persistenceError")
-                                .value(org.hamcrest.Matchers.containsString("disk full")));
+                                .value(
+                                        "Failed to persist benchmark result."
+                                                + " Check server logs for details."));
     }
 }
