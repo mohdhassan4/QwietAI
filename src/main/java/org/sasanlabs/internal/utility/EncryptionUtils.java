@@ -65,10 +65,23 @@ public class EncryptionUtils {
         return EncodingUtils.encodeBase64(reversed);
     }
 
+    private static final String ENCRYPTION_KEY =
+            System.getenv("ENCRYPTION_KEY") != null
+                    ? System.getenv("ENCRYPTION_KEY")
+                    : "default-dev-key";
+
     private static final byte[] salt = new byte[16];
 
     static {
         new SecureRandom().nextBytes(salt);
+    }
+
+    /**
+     * Returns a SecretKey derived from the ENCRYPTION_KEY environment variable. Falls back to a
+     * default development key if the environment variable is not set.
+     */
+    public static SecretKey getKey() throws EncryptionException {
+        return getKeyFromPassword(ENCRYPTION_KEY);
     }
 
     public static SecretKey getKeyFromPassword(String password) throws EncryptionException {
