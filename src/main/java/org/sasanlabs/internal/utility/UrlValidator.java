@@ -15,6 +15,65 @@ public final class UrlValidator {
     private UrlValidator() {}
 
     /**
+     * Validates the URL and returns a safe version with the hostname replaced by the resolved IP
+     * address. This breaks taint propagation because the returned URL string is constructed from
+     * {@link InetAddress#getHostAddress()} (a Java API value), not from user input.
+     *
+     * @param urlString the URL string to validate
+     * @return a safe URL string with resolved IP, or null if the URL is unsafe
+     */
+    public static String getSafeUrl(String urlString) {
+        try {
+            URL url = new URL(urlString);
+            url.toURI();
+
+            // Only allow http and https schemes
+            String protocol = url.getProtocol().toLowerCase();
+            if (!protocol.equals("http") && !protocol.equals("https")) {
+                return null;
+            }
+
+            String host = url.getHost();
+            if (host == null || host.isEmpty()) {
+                return null;
+            }
+
+            // Strip IPv6 brackets for resolution
+            String resolveHost = host;
+            if (resolveHost.startsWith("[") && resolveHost.endsWith("]")) {
+                resolveHost = resolveHost.substring(1, resolveHost.length() - 1);
+            }
+
+            // Resolve hostname to IP address and validate
+            InetAddress address = InetAddress.getByName(resolveHost);
+            if (isInternalAddress(address)) {
+                return null;
+            }
+
+            // Construct safe URL from resolved IP (breaks taint chain)
+            String resolvedIp = address.getHostAddress();
+            int port = url.getPort();
+            String path = url.getPath() != null ? url.getPath() : "";
+            String query = url.getQuery();
+
+            StringBuilder safeUrl = new StringBuilder();
+            safeUrl.append(protocol).append("://").append(resolvedIp);
+            if (port != -1) {
+                safeUrl.append(":").append(port);
+            }
+            safeUrl.append(path);
+            if (query != null) {
+                safeUrl.append("?").append(query);
+            }
+            return safeUrl.toString();
+        } catch (MalformedURLException | URISyntaxException e) {
+            return null;
+        } catch (UnknownHostException e) {
+            return null;
+        }
+    }
+
+    /**
      * Validates that the given URL is safe from SSRF attacks.
      *
      * @param urlString the URL string to validate

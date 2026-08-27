@@ -1,6 +1,8 @@
 package org.sasanlabs.internal.utility;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -62,5 +64,34 @@ class UrlValidatorTest {
         assertFalse(UrlValidator.isSafeUrl("ftp://example.com/file"));
         assertFalse(UrlValidator.isSafeUrl("gopher://example.com/"));
         assertFalse(UrlValidator.isSafeUrl("dict://example.com/"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+            strings = {
+                "http://127.0.0.1/secret",
+                "http://10.0.0.1/internal",
+                "http://169.254.169.254/latest/meta-data",
+                "file:///etc/passwd",
+                "ftp://internal.server/data",
+            })
+    void getSafeUrl_rejectsUnsafeUrls(String url) {
+        assertNull(UrlValidator.getSafeUrl(url));
+    }
+
+    @Test
+    void getSafeUrl_returnsResolvedUrlForPublicHosts() {
+        String result = UrlValidator.getSafeUrl("https://example.com/resource");
+        assertNotNull(result);
+        // The resolved URL should contain the path but use a resolved IP
+        assertTrue(result.contains("/resource"));
+        assertTrue(result.startsWith("https://"));
+    }
+
+    @Test
+    void getSafeUrl_rejectsNullOrInvalid() {
+        assertNull(UrlValidator.getSafeUrl(""));
+        assertNull(UrlValidator.getSafeUrl("not-a-url"));
+        assertNull(UrlValidator.getSafeUrl("://missing-scheme"));
     }
 }
