@@ -15,5 +15,6 @@ CREATE TABLE auth_users (
 GRANT ALL ON auth_users TO application;
 
 -- A read-only user for exploration by the attacker/user
+-- NOTSECRET: placeholder password for local H2 in-memory training database user
 CREATE USER IF NOT EXISTS readonly_user PASSWORD 'readonly_password';
 GRANT SELECT ON auth_users TO readonly_user;
