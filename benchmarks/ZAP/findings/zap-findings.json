@@ -42,12 +42,12 @@
     { "url": "/XSSWithHtmlTagInjection/LEVEL_2", "cwe": "CWE-79", "wascId": "8", "method": "GET" },
     { "url": "/XSSWithHtmlTagInjection/LEVEL_3", "cwe": "CWE-79", "wascId": "8", "method": "GET" },
 
-    { "url": "/PersistentXSSInHTMLTagVulnerability/LEVEL_1", "cwe": "CWE-79", "wascId": "8", "method": "GET" },
-    { "url": "/PersistentXSSInHTMLTagVulnerability/LEVEL_2", "cwe": "CWE-79", "wascId": "8", "method": "GET" },
-    { "url": "/PersistentXSSInHTMLTagVulnerability/LEVEL_3", "cwe": "CWE-79", "wascId": "8", "method": "GET" },
-    { "url": "/PersistentXSSInHTMLTagVulnerability/LEVEL_4", "cwe": "CWE-79", "wascId": "8", "method": "GET" },
-    { "url": "/PersistentXSSInHTMLTagVulnerability/LEVEL_5", "cwe": "CWE-79", "wascId": "8", "method": "GET" },
-    { "url": "/PersistentXSSInHTMLTagVulnerability/LEVEL_6", "cwe": "CWE-79", "wascId": "8", "method": "GET" },
+    { "url": "/PersistentXSS/LEVEL_1", "cwe": "CWE-79", "wascId": "8", "method": "GET" },
+    { "url": "/PersistentXSS/LEVEL_2", "cwe": "CWE-79", "wascId": "8", "method": "GET" },
+    { "url": "/PersistentXSS/LEVEL_3", "cwe": "CWE-79", "wascId": "8", "method": "GET" },
+    { "url": "/PersistentXSS/LEVEL_4", "cwe": "CWE-79", "wascId": "8", "method": "GET" },
+    { "url": "/PersistentXSS/LEVEL_5", "cwe": "CWE-79", "wascId": "8", "method": "GET" },
+    { "url": "/PersistentXSS/LEVEL_6", "cwe": "CWE-79", "wascId": "8", "method": "GET" },
 
     { "url": "/XXEVulnerability/LEVEL_1", "cwe": "CWE-611", "wascId": "43", "method": "POST" },
     { "url": "/XXEVulnerability/LEVEL_2", "cwe": "CWE-611", "wascId": "43", "method": "POST" },
