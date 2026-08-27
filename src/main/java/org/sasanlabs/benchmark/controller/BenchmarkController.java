@@ -57,7 +57,7 @@ public class BenchmarkController {
             LOGGER.info(
                     "Wrote benchmark result for tool '{}' to {}",
                     LogSanitizer.sanitize(input.getTool()),
-                    written);
+                    LogSanitizer.sanitize(written.toString()));
         } catch (IOException ioe) {
             LOGGER.error(
                     "Failed to persist benchmark result for tool '{}'; returning 500 with result"
