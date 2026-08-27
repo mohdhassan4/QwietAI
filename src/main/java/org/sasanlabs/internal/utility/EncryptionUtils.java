@@ -65,16 +65,32 @@ public class EncryptionUtils {
         return EncodingUtils.encodeBase64(reversed);
     }
 
-    private static final byte[] salt = new byte[16];
+    private static final byte[] salt;
 
     static {
-        new SecureRandom().nextBytes(salt);
+        String envSalt = System.getenv("ENCRYPTION_SALT_BASE64");
+        if (envSalt != null && !envSalt.isEmpty()) {
+            salt = java.util.Base64.getDecoder().decode(envSalt);
+        } else {
+            salt = new byte[16];
+            new SecureRandom().nextBytes(salt);
+        }
     }
+
+    private static final int PBKDF2_ITERATIONS =
+            System.getenv("PBKDF2_ITERATIONS") != null
+                    ? Integer.parseInt(System.getenv("PBKDF2_ITERATIONS"))
+                    : 600000;
+
+    private static final int AES_KEY_LENGTH =
+            System.getenv("AES_KEY_LENGTH") != null
+                    ? Integer.parseInt(System.getenv("AES_KEY_LENGTH"))
+                    : 128;
 
     public static SecretKey getKeyFromPassword(String password) throws EncryptionException {
         try {
             SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-            KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 1, 128);
+            KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, PBKDF2_ITERATIONS, AES_KEY_LENGTH);
 
             return new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
