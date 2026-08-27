@@ -2,6 +2,8 @@ package org.sasanlabs.internal.utility;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.nio.charset.StandardCharsets;
+import javax.crypto.SecretKey;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -62,6 +64,36 @@ class PasswordHashingUtilsTest {
         assertTrue(PasswordHashingUtils.isValidBcrypt(password, hash2));
     }
 
+    @Test
+    @DisplayName("AES-GCM: Should encrypt and decrypt round-trip correctly")
+    void aesGcm_RoundTrip() {
+        SecretKey key = PasswordHashingUtils.generateAesKey();
+        byte[] plaintext = "Hello, AES-256-GCM!".getBytes(StandardCharsets.UTF_8);
+
+        byte[] encrypted = PasswordHashingUtils.aesGcmEncrypt(key, plaintext);
+        byte[] decrypted = PasswordHashingUtils.aesGcmDecrypt(key, encrypted);
+
+        assertArrayEquals(plaintext, decrypted);
+    }
+
+    @Test
+    @DisplayName("AES-GCM: Different encryptions of same plaintext should differ (unique IV)")
+    void aesGcm_UniqueIV() {
+        SecretKey key = PasswordHashingUtils.generateAesKey();
+        byte[] plaintext = "same content".getBytes(StandardCharsets.UTF_8);
+
+        byte[] enc1 = PasswordHashingUtils.aesGcmEncrypt(key, plaintext);
+        byte[] enc2 = PasswordHashingUtils.aesGcmEncrypt(key, plaintext);
+
+        // Ciphertexts should be different due to random IV
+        assertFalse(java.util.Arrays.equals(enc1, enc2));
+
+        // But both decrypt to same plaintext
+        assertArrayEquals(plaintext, PasswordHashingUtils.aesGcmDecrypt(key, enc1));
+        assertArrayEquals(plaintext, PasswordHashingUtils.aesGcmDecrypt(key, enc2));
+    }
+
+    @SuppressWarnings("deprecation")
     @Test
     @DisplayName("LM Hash: Should be case-insensitive and match legacy standards")
     void lmHash_LegacyStandards() {
