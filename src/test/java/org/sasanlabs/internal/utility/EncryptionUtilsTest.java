@@ -44,8 +44,8 @@ class EncryptionUtilsTest {
 
         assertNotNull(key);
         assertEquals("AES", key.getAlgorithm());
-        // PBKDF2 output was configured for 128 bits (16 bytes)
-        assertEquals(16, key.getEncoded().length);
+        // PBKDF2 output was configured for 256 bits (32 bytes)
+        assertEquals(32, key.getEncoded().length);
     }
 
     @Test
