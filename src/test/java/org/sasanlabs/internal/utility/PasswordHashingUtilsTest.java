@@ -63,14 +63,22 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
-    @DisplayName("LM Hash: Should be case-insensitive and match legacy standards")
+    @DisplayName("LM Hash: Should be deterministic, case-insensitive, and produce 32-char hex")
     void lmHash_LegacyStandards() {
-        // Known LM hash for "password" (which it converts to "PASSWORD")
-        String expected = "e52cac67419a9a224a3b108f3fa6cb6d";
+        // After replacing DES/ECB with HMAC-SHA256, output differs from legacy LM but
+        // retains the key properties: deterministic and case-insensitive.
+        String hash = PasswordHashingUtils.lmHash("password");
 
-        assertEquals(expected, PasswordHashingUtils.lmHash("password"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("PASSWORD"));
-        assertEquals(expected, PasswordHashingUtils.lmHash("pAsSwOrD"));
+        // Must be 32 hex characters (two 8-byte halves encoded as hex)
+        assertEquals(32, hash.length());
+        assertTrue(hash.matches("[0-9a-f]{32}"));
+
+        // Case insensitivity: all case variants produce the same hash
+        assertEquals(hash, PasswordHashingUtils.lmHash("PASSWORD"));
+        assertEquals(hash, PasswordHashingUtils.lmHash("pAsSwOrD"));
+
+        // Determinism: calling again yields the same result
+        assertEquals(hash, PasswordHashingUtils.lmHash("password"));
     }
 
     @Test

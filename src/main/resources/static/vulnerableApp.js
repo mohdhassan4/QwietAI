@@ -96,6 +96,15 @@ function _callbackForInnerMasterOnClickEvent(
     requestToken += 1;
     const thisRequestToken = requestToken;
     clearSelectedInnerMaster();
+    if (
+      !Object.hasOwn(vulnerableAppEndPointData, id) ||
+      !Object.hasOwn(
+        vulnerableAppEndPointData[id]["Detailed Information"],
+        key
+      )
+    ) {
+      return;
+    }
     vulnerabilityLevelSelected =
       vulnerableAppEndPointData[id]["Detailed Information"][key]["Level"];
     this.classList.add("active-item");
@@ -173,6 +182,9 @@ function _getSvgElementForVariant(isSecure) {
 }
 
 function createColumn(detailedInformationArray, key) {
+  if (!Object.hasOwn(detailedInformationArray, key)) {
+    return null;
+  }
   let detailedInformation = detailedInformationArray[key];
   let isSecure = _isSecureVariant(detailedInformation);
 
@@ -203,15 +215,21 @@ function createColumn(detailedInformationArray, key) {
 }
 
 function appendNewColumn(vulnerableAppEndPointData, id) {
+  if (!Object.hasOwn(vulnerableAppEndPointData, id)) {
+    return;
+  }
   let detailedInformationArray =
     vulnerableAppEndPointData[id]["Detailed Information"];
   let isFirst = true;
 
   for (let key in detailedInformationArray) {
-    if (!detailedInformationArray.hasOwnProperty(key)) {
+    if (!Object.hasOwn(detailedInformationArray, key)) {
       continue;
     }
     let column = createColumn(detailedInformationArray, key);
+    if (!column) {
+      continue;
+    }
     column.addEventListener(
       "click",
       _callbackForInnerMasterOnClickEvent(
@@ -237,6 +255,9 @@ function appendNewColumn(vulnerableAppEndPointData, id) {
  */
 function handleElementAutoSelection(vulnerableAppEndPointData, id = 0) {
   if (!vulnerableAppEndPointData.length) {
+    return;
+  }
+  if (!Object.hasOwn(vulnerableAppEndPointData, id)) {
     return;
   }
 
@@ -387,6 +408,9 @@ function doPostAjaxCall(callBack, url, isJson, data, headers = {}) {
 function generateMasterDetail(vulnerableAppEndPointData) {
   let isFirst = true;
   for (let index in vulnerableAppEndPointData) {
+    if (!Object.hasOwn(vulnerableAppEndPointData, index)) {
+      continue;
+    }
     let column = document.createElement("div");
     if (isFirst) {
       column.className = "master-item  active-item";
@@ -406,33 +430,51 @@ function generateMasterDetail(vulnerableAppEndPointData) {
 
 function _clearHelp() {
   document.getElementById("showHelp").disabled = false;
-  document.getElementById("helpText").innerHTML = "";
+  document.getElementById("helpText").textContent = "";
   document.getElementById("hideHelp").disabled = true;
 }
 
 function _addingEventListenerToShowHideHelpButton(vulnerableAppEndPointData) {
   document.getElementById("showHelp").addEventListener("click", function () {
     document.getElementById("showHelp").disabled = true;
-    let helpText = "<ol>";
-    for (let index in vulnerableAppEndPointData[currentId][
-      "Detailed Information"
-    ][currentKey]["AttackVectors"]) {
-      let attackVector =
-        vulnerableAppEndPointData[currentId]["Detailed Information"][
-          currentKey
-        ]["AttackVectors"][index];
+    var helpContainer = document.getElementById("helpText");
+    helpContainer.textContent = "";
+    var ol = document.createElement("ol");
+    if (
+      !Object.hasOwn(vulnerableAppEndPointData, currentId) ||
+      !Object.hasOwn(
+        vulnerableAppEndPointData[currentId]["Detailed Information"],
+        currentKey
+      )
+    ) {
+      helpContainer.appendChild(ol);
+      document.getElementById("hideHelp").disabled = false;
+      return;
+    }
+    let attackVectors =
+      vulnerableAppEndPointData[currentId]["Detailed Information"][currentKey][
+        "AttackVectors"
+      ];
+    for (let index in attackVectors) {
+      if (!Object.hasOwn(attackVectors, index)) {
+        continue;
+      }
+      let attackVector = attackVectors[index];
       let curlPayload = attackVector["CurlPayload"];
       let description = attackVector["Description"];
-      helpText =
-        helpText +
-        "<li><b>Description about the attack:</b> " +
-        description +
-        "<br/><b>Payload:</b> " +
-        curlPayload +
-        "</li>";
+      var li = document.createElement("li");
+      var descLabel = document.createElement("b");
+      descLabel.textContent = "Description about the attack:";
+      li.appendChild(descLabel);
+      li.appendChild(document.createTextNode(" " + description));
+      li.appendChild(document.createElement("br"));
+      var payloadLabel = document.createElement("b");
+      payloadLabel.textContent = "Payload:";
+      li.appendChild(payloadLabel);
+      li.appendChild(document.createTextNode(" " + curlPayload));
+      ol.appendChild(li);
     }
-    helpText = helpText + "</ol>";
-    document.getElementById("helpText").innerHTML = helpText;
+    helpContainer.appendChild(ol);
     document.getElementById("hideHelp").disabled = false;
   });
 
@@ -574,9 +616,14 @@ function _updateChallengeToggleAvailability(challengeCards) {
 }
 
 function _getChallengeCardsForLevel(vulnerableAppEndPointData, id, key) {
-  let level =
-    vulnerableAppEndPointData[id] &&
-    vulnerableAppEndPointData[id]["Detailed Information"][key];
+  if (!Object.hasOwn(vulnerableAppEndPointData, id)) {
+    return [];
+  }
+  let detailedInfo = vulnerableAppEndPointData[id]["Detailed Information"];
+  if (!Object.hasOwn(detailedInfo, key)) {
+    return [];
+  }
+  let level = detailedInfo[key];
   return (level && level["ChallengeCard"]) || [];
 }
 
