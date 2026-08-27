@@ -90,8 +90,17 @@ public final class PasswordHashingUtils {
         return getHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
     }
 
-    public static String unsaltedSha256Hex(String rawPassword) {
-        return getHashAsHex(rawPassword, HashAlgorithm.SHA256);
+    /**
+     * Generates a salted SHA-256 hash with a random 16-byte salt. Returns the result in
+     * "salt:hash" hex format so the salt can be extracted for verification via {@link
+     * #isValidSaltedSha256(String, String)}.
+     */
+    public static String saltedSha256Hex(String rawPassword) {
+        byte[] saltBytes = new byte[16];
+        new SecureRandom().nextBytes(saltBytes);
+        String salt = EncodingUtils.bytesToHex(saltBytes);
+        String hash = sha256Hex(salt, rawPassword);
+        return salt + HASH_SEPARATOR + hash;
     }
 
     // BC not used for bcrypt due to extra complexity for BC implementation

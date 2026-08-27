@@ -26,12 +26,21 @@ class PasswordHashingUtilsTest {
     }
 
     @Test
-    @DisplayName("Unsalted SHA-256: Should generate a correct unsalted hash")
-    void sha256Hash_CorrectHex() {
-        // Known SHA-256 hash for "password"
-        String expected = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
-        String actual = PasswordHashingUtils.unsaltedSha256Hex("password");
-        assertEquals(expected, actual);
+    @DisplayName("Salted SHA-256: Should generate a salt:hash pair that validates correctly")
+    void saltedSha256Hex_GeneratesValidSaltedHash() {
+        String rawPassword = "password";
+        String saltedHash = PasswordHashingUtils.saltedSha256Hex(rawPassword);
+
+        // Must contain separator between salt and hash
+        assertTrue(saltedHash.contains(":"), "Salted hash must contain ':' separator");
+
+        // Validate that the generated hash verifies correctly
+        assertTrue(PasswordHashingUtils.isValidSaltedSha256(rawPassword, saltedHash));
+        assertFalse(PasswordHashingUtils.isValidSaltedSha256("wrongPassword", saltedHash));
+
+        // Two calls should produce different salts (non-deterministic)
+        String saltedHash2 = PasswordHashingUtils.saltedSha256Hex(rawPassword);
+        assertNotEquals(saltedHash, saltedHash2, "Salted hashes should differ due to random salt");
     }
 
     @Test
