@@ -71,6 +71,9 @@ public final class PasswordHashingUtils {
      */
     public static String getHashAsHex(
             String rawPassword, byte[] salt, HashAlgorithm hashAlgorithm) {
+        if (salt == null || salt.length == 0) {
+            throw new IllegalArgumentException("Salt must not be null or empty");
+        }
         try {
             MessageDigest messageDigest =
                     MessageDigest.getInstance(hashAlgorithm.label(), "BC");
@@ -203,8 +206,9 @@ public final class PasswordHashingUtils {
             key8[i] = (byte) (key8[i] << 1);
         }
 
-        // Derive AES-256 key from key material using SHA-256 (deterministic key derivation)
+        // Derive AES-256 key from key material using salted SHA-256 (deterministic key derivation)
         MessageDigest keyDigest = MessageDigest.getInstance("SHA-256", "BC");
+        keyDigest.update("lm-aes-key-derivation".getBytes(StandardCharsets.UTF_8));
         byte[] aesKeyBytes = keyDigest.digest(key8);
         SecretKeySpec aesKey = new SecretKeySpec(aesKeyBytes, "AES");
 
