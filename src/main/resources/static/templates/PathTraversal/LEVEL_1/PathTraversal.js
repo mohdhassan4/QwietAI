@@ -11,29 +11,35 @@ function addingEventListenerToLoadImageButton() {
 addingEventListenerToLoadImageButton();
 
 function appendResponseCallback(data) {
+  var container = document.getElementById("Information");
   if (data.isValid) {
-    let tableInformation = '<table id="InfoTable">';
+    container.textContent = "";
     let content = JSON.parse(data.content);
+    let table = document.createElement("table");
+    table.id = "InfoTable";
     if (content.length > 0) {
+      let headerRow = document.createElement("tr");
       for (let key in content[0]) {
-        tableInformation =
-          tableInformation + '<th id="InfoColumn">' + key + "</th>";
+        let th = document.createElement("th");
+        th.id = "InfoColumn";
+        th.textContent = key;
+        headerRow.appendChild(th);
       }
+      table.appendChild(headerRow);
     }
     for (let index in content) {
-      tableInformation = tableInformation + '<tr id="Info">';
+      let row = document.createElement("tr");
+      row.id = "Info";
       for (let key in content[index]) {
-        tableInformation =
-          tableInformation +
-          '<td id="InfoColumn">' +
-          content[index][key] +
-          "</td>";
+        let td = document.createElement("td");
+        td.id = "InfoColumn";
+        td.textContent = content[index][key];
+        row.appendChild(td);
       }
-      tableInformation = tableInformation + "</tr>";
+      table.appendChild(row);
     }
-    tableInformation = tableInformation + "</table>";
-    document.getElementById("Information").innerHTML = tableInformation;
+    container.appendChild(table);
   } else {
-    document.getElementById("Information").innerHTML = "Unable to Load Users";
+    container.textContent = "Unable to Load Users";
   }
 }

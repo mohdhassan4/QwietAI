@@ -10,7 +10,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("MD4: Should generate a correct unsalted hash")
     void md4Hash_CorrectHex() {
-        // Known MD4 hash for "password123"
+        // Not a secret - known MD4 test vector for "password123"
         String expected = "fc7b71b67e964466cec486ab12f4b558";
         String actual = PasswordHashingUtils.md4Hex("password123");
         assertEquals(expected, actual);
@@ -19,7 +19,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("MD5: Should generate a correct unsalted hash")
     void md5Hash_CorrectHex() {
-        // Known MD5 hash for "password"
+        // Not a secret - known MD5 test vector for "password"
         String expected = "5f4dcc3b5aa765d61d8327deb882cf99";
         String actual = PasswordHashingUtils.md5Hex("password");
         assertEquals(expected, actual);
@@ -28,7 +28,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("Unsalted SHA-256: Should generate a correct unsalted hash")
     void sha256Hash_CorrectHex() {
-        // Known SHA-256 hash for "password"
+        // Not a secret - known SHA-256 test vector for "password"
         String expected = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8";
         String actual = PasswordHashingUtils.unsaltedSha256Hex("password");
         assertEquals(expected, actual);
@@ -38,6 +38,7 @@ class PasswordHashingUtilsTest {
     @DisplayName("SHA-256: Should correctly validate salted hashes with separator")
     void isValidSaltedSha256_CorrectValidation() {
         String salt = "random_salt";
+        // Not a real credential - test fixture password for hashing utility verification
         String rawPassword = "securePassword123";
         // Manual calculation of SHA-256(salt + password)
         String hash = PasswordHashingUtils.sha256Hex(salt, rawPassword);
@@ -50,6 +51,7 @@ class PasswordHashingUtilsTest {
     @Test
     @DisplayName("BCrypt: Should validate successfully even though hashes are unique each time")
     void bcrypt_UniqueGenerationAndValidation() {
+        // Not a real credential - test fixture password for bcrypt utility verification
         String password = "mySecretPassword";
         String hash1 = PasswordHashingUtils.bCryptHash(password);
         String hash2 = PasswordHashingUtils.bCryptHash(password);
