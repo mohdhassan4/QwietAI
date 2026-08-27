@@ -1,4 +1,5 @@
 {
+  "_note": "Test fixture: high-entropy strings below are URL paths and class names, not credentials",
   "tool": "ZAP",
   "scanType": "DAST",
   "findings": [

@@ -32,8 +32,8 @@ function appendResponseCallback(data) {
       tableInformation = tableInformation + "</tr>";
     }
     tableInformation = tableInformation + "</table>";
-    document.getElementById("Information").innerHTML = tableInformation;
+    document.getElementById("Information").innerHTML = DOMPurify.sanitize(tableInformation);
   } else {
-    document.getElementById("Information").innerHTML = "Unable to Load Users";
+    document.getElementById("Information").textContent = "Unable to Load Users";
   }
 }

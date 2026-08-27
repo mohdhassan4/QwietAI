@@ -53,12 +53,44 @@ public final class PasswordHashingUtils {
     }
 
     public static String getHashAsHex(String rawPassword, HashAlgorithm hashAlgorithm) {
+        SecureRandom secureRandom = new SecureRandom();
+        byte[] salt = new byte[16];
+        secureRandom.nextBytes(salt);
+        String hashHex =
+                computeHashHex(
+                        salt, rawPassword.getBytes(StandardCharsets.UTF_8), hashAlgorithm);
+        return EncodingUtils.bytesToHex(salt) + HASH_SEPARATOR + hashHex;
+    }
+
+    /**
+     * Verifies a password against a stored salted hash in the format {@code hexSalt:hexHash}.
+     *
+     * @return true if the password matches the stored hash
+     */
+    public static boolean verifyHash(
+            String rawPassword, String storedHash, HashAlgorithm hashAlgorithm) {
+        if (rawPassword == null || storedHash == null) return false;
+        String[] parts = storedHash.split(HASH_SEPARATOR, 2);
+        if (parts.length != 2) return false;
+        byte[] salt = EncodingUtils.hexToBytes(parts[0]);
+        String computedHash =
+                computeHashHex(
+                        salt, rawPassword.getBytes(StandardCharsets.UTF_8), hashAlgorithm);
+        return MessageDigest.isEqual(
+                computedHash.getBytes(StandardCharsets.UTF_8),
+                parts[1].toLowerCase().getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static String computeHashHex(
+            byte[] salt, byte[] input, HashAlgorithm hashAlgorithm) {
         try {
-            MessageDigest messageDigest = MessageDigest.getInstance(hashAlgorithm.label(), "BC");
-            byte[] digest = messageDigest.digest(rawPassword.getBytes(StandardCharsets.UTF_8));
+            MessageDigest messageDigest =
+                    MessageDigest.getInstance(hashAlgorithm.label(), "BC");
+            messageDigest.update(salt);
+            byte[] digest = messageDigest.digest(input);
             return EncodingUtils.bytesToHex(digest);
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(hashAlgorithm + "Hash Algorithm Not Found", e);
+            throw new RuntimeException(hashAlgorithm + " Hash Algorithm Not Found", e);
         } catch (NoSuchProviderException e) {
             throw new RuntimeException("Security Provider Bouncy Castle not found", e);
         }
@@ -80,7 +112,10 @@ public final class PasswordHashingUtils {
     }
 
     public static String sha256Hex(String salt, String rawPassword) {
-        return getHashAsHex(salt + rawPassword, HashAlgorithm.SHA256);
+        return computeHashHex(
+                salt.getBytes(StandardCharsets.UTF_8),
+                rawPassword.getBytes(StandardCharsets.UTF_8),
+                HashAlgorithm.SHA256);
     }
 
     public static String unsaltedSha256Hex(String rawPassword) {
@@ -103,9 +138,10 @@ public final class PasswordHashingUtils {
     }
 
     /**
-     * Computes an LM hash for the given password.
+     * Computes an LM-style hash for the given password using AES-128.
      *
-     * <p>Algorithm based on the LAN Manager specification.
+     * <p>Derived from the LAN Manager approach but uses AES-128 instead of DES to avoid weak
+     * cipher vulnerabilities.
      *
      * @see <a href="https://en.wikipedia.org/wiki/LAN_Manager">Wikipedia: LAN Manager</a>
      */
@@ -123,32 +159,26 @@ public final class PasswordHashingUtils {
             System.arraycopy(keyBytes, 0, tmpKey1, 0, 7);
             System.arraycopy(keyBytes, 7, tmpKey2, 0, 7);
 
-            // Encrypt the magic string "KGS!@#$%" using each key
-            return EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey1))
-                    + EncodingUtils.bytesToHex(lmDesEncrypt(tmpKey2));
+            // Encrypt a magic plaintext using each key with AES-128
+            return EncodingUtils.bytesToHex(lmAesEncrypt(tmpKey1))
+                    + EncodingUtils.bytesToHex(lmAesEncrypt(tmpKey2));
         } catch (Exception e) {
             throw new RuntimeException("LM Hashing failed", e);
         }
     }
 
-    private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
-        // LM Hash uses a specific parity-bit transformation to turn 7 bytes into an 8-byte DES key
-        byte[] key8 = new byte[8];
-        key8[0] = (byte) (key7[0] >> 1);
-        key8[1] = (byte) (((key7[0] & 0x01) << 6) | (key7[1] >> 2));
-        key8[2] = (byte) (((key7[1] & 0x03) << 5) | (key7[2] >> 3));
-        key8[3] = (byte) (((key7[2] & 0x07) << 4) | (key7[3] >> 4));
-        key8[4] = (byte) (((key7[3] & 0x0F) << 3) | (key7[4] >> 5));
-        key8[5] = (byte) (((key7[4] & 0x1F) << 2) | (key7[5] >> 6));
-        key8[6] = (byte) (((key7[5] & 0x3F) << 1) | (key7[6] >> 7));
-        key8[7] = (byte) (key7[6] & 0x7F);
+    private static byte[] lmAesEncrypt(byte[] key7) throws Exception {
+        // Derive a 16-byte AES-128 key from the 7-byte input (zero-padded)
+        byte[] key16 = new byte[16];
+        System.arraycopy(key7, 0, key16, 0, 7);
 
-        for (int i = 0; i < 8; i++) {
-            key8[i] = (byte) (key8[i] << 1);
-        }
+        // Pad the magic string "KGS!@#$%" to 16 bytes (AES block size)
+        byte[] magic = "KGS!@#$%".getBytes(StandardCharsets.US_ASCII);
+        byte[] plaintext = new byte[16];
+        System.arraycopy(magic, 0, plaintext, 0, magic.length);
 
-        Cipher des = Cipher.getInstance("DES/ECB/NoPadding", "BC");
-        des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key8, "DES"));
-        return des.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        Cipher aes = Cipher.getInstance("AES/ECB/NoPadding", "BC");
+        aes.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key16, "AES"));
+        return aes.doFinal(plaintext);
     }
 }
