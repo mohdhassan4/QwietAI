@@ -65,22 +65,31 @@ public final class UrlSsrfValidator {
             resolveHost = resolveHost.substring(1, resolveHost.length() - 1);
         }
 
+        InetAddress safeAddress;
         try {
             InetAddress[] addresses = InetAddress.getAllByName(resolveHost);
+            safeAddress = null;
             for (InetAddress address : addresses) {
                 if (isPrivateOrReservedAddress(address)) {
                     LOGGER.warn("Blocked SSRF attempt to internal/private address");
                     return Optional.empty();
                 }
+                if (safeAddress == null) {
+                    safeAddress = address;
+                }
+            }
+            if (safeAddress == null) {
+                return Optional.empty();
             }
         } catch (UnknownHostException e) {
             LOGGER.error("Cannot resolve hostname for URL validation");
             return Optional.empty();
         }
 
-        // Construct a fresh URL from validated components to break taint propagation
+        // Construct URL using the resolved IP address to break taint propagation
         try {
-            URL safeUrl = new URL(scheme, host, url.getPort(), url.getFile());
+            String safeHost = safeAddress.getHostAddress();
+            URL safeUrl = new URL(scheme, safeHost, url.getPort(), url.getFile());
             return Optional.of(safeUrl);
         } catch (MalformedURLException e) {
             return Optional.empty();
