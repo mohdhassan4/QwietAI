@@ -130,7 +130,8 @@ public class VulnerableAppConfiguration {
     @Bean
     public DataSourceInitializer adminDataSourceInitializer(
             @Qualifier("adminDataSource") DataSource adminDataSource,
-            @Value("${spring.datasource.application.password}") String appPassword) {
+            @Value("${spring.datasource.application.password}") String appPassword,
+            @Value("${auth.demo.admin-weak-password}") String adminWeakPassword) {
         ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
         JdbcTemplate adminJdbcTemplate = new JdbcTemplate(adminDataSource);
         adminJdbcTemplate.execute(
@@ -153,7 +154,7 @@ public class VulnerableAppConfiguration {
         DatabasePopulator bcryptPopulator =
                 connection -> {
                     BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
-                    String bcryptHash = encoder.encode("password123");
+                    String bcryptHash = encoder.encode(adminWeakPassword);
                     try (java.sql.PreparedStatement ps =
                             connection.prepareStatement(
                                     "INSERT INTO auth_users VALUES"
