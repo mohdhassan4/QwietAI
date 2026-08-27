@@ -51,6 +51,25 @@ class ControllerExceptionHandlerTest {
     }
 
     @Test
+    void shouldReturnGenericMessage_WhenControllerExceptionHasSpecificStatusCode() {
+        // Arrange - use a specific (non-SYSTEM_ERROR) status code
+        when(messageBundle.getString("SYSTEM_ERROR", null)).thenReturn("An error occurred");
+        ServiceApplicationException serviceApplicationException =
+                new ServiceApplicationException(
+                        ExceptionStatusCodeEnum.INVALID_END_POINT, new RuntimeException("details"));
+
+        // Act
+        ResponseEntity<String> responseEntity =
+                controllerExceptionHandler.handleControllerExceptions(
+                        new ControllerException(serviceApplicationException), webRequest);
+
+        // Assert - response must contain generic message, not the specific exception type
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, responseEntity.getStatusCode());
+        assertEquals("An error occurred", responseEntity.getBody());
+        verify(messageBundle).getString("SYSTEM_ERROR", null);
+    }
+
+    @Test
     void shouldHandleExceptions() {
         // Arrange
         when(messageBundle.getString(any(), any())).thenReturn("IO exception occurred");
