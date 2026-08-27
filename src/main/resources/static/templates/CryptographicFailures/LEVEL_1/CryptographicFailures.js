@@ -5,7 +5,10 @@ function loadChallenge() {
 
 function displayChallenge(data) {
   let challengeDiv = document.getElementById("challenge");
-  challengeDiv.innerHTML = "<strong>" + data.content + "</strong>";
+  challengeDiv.textContent = "";
+  let strong = document.createElement("strong");
+  strong.textContent = data.content;
+  challengeDiv.appendChild(strong);
   if (data.isValid) {
     challengeDiv.className = "challenge-secure";
   } else {
@@ -40,11 +43,14 @@ function addingEventListenerToSubmitButton() {
 
 function appendResponseCallback(data) {
   let resultDiv = document.getElementById("result");
+  resultDiv.textContent = "";
+  let label = document.createElement("strong");
+  label.textContent = "Result:";
+  resultDiv.appendChild(label);
+  resultDiv.appendChild(document.createTextNode(" " + data.content));
   if (data.isValid) {
-    resultDiv.innerHTML = "<strong>Result:</strong> " + data.content;
     resultDiv.className = "result-success";
   } else {
-    resultDiv.innerHTML = "<strong>Result:</strong> " + data.content;
     resultDiv.className = "result-failure";
   }
 }
