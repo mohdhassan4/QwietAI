@@ -13,13 +13,13 @@ INSERT INTO auth_users VALUES (2, 'admin_logs', 'v9K#2mLp!8zQ', NULL, 'PLAIN', 2
 -- demo-only credential for local vulnerable-app testing (not a real secret)
 INSERT INTO auth_users VALUES (3, 'admin_plain', 'b7X$4nRj-6mW', NULL, 'PLAIN', 3, 'admin_plain@example.com', 'ADMIN');
 
--- Level 4: MD5 Hashing (f2C@9tYk*1hP) with salt a3F$8rWx
+-- Level 4: SHA-256 Hashing (f2C@9tYk*1hP) with salt a3F$8rWx
 -- demo-only credential for local vulnerable-app testing (not a real secret)
-INSERT INTO auth_users VALUES (4, 'admin_md5', 'cc893178ad2c296988ec40c086bfb969', 'a3F$8rWx', 'MD5', 4, 'admin_md5@example.com', 'ADMIN');
+INSERT INTO auth_users VALUES (4, 'admin_md5', '117bca15a07f7fb1c4260c8d070fe031eff5266777bed201082e6caac1941cfb', 'a3F$8rWx', 'MD5', 4, 'admin_md5@example.com', 'ADMIN');
 
--- Level 5: SHA1 Hashing (x5B&3gHq+7vS) with salt k7N!2tBv
+-- Level 5: SHA-256 Hashing (x5B&3gHq+7vS) with salt k7N!2tBv
 -- demo-only credential for local vulnerable-app testing (not a real secret)
-INSERT INTO auth_users VALUES (5, 'admin_sha1', 'a0e984d72c481aa9c6ed94d90283258a3574c09a', 'k7N!2tBv', 'SHA1', 5, 'admin_sha1@example.com', 'ADMIN');
+INSERT INTO auth_users VALUES (5, 'admin_sha1', '972b3e680e6cbfff71b01548a561407da97578c9cc0fa6c099db22c2bcb31b28', 'k7N!2tBv', 'SHA1', 5, 'admin_sha1@example.com', 'ADMIN');
 
 -- Level 6: SHA-256 (m8D!4kLr#2jZ) with salt p4H@6cYm
 -- demo-only credential for local vulnerable-app testing (not a real secret)
