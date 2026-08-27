@@ -11,5 +11,7 @@ function addingEventListenerToPingButton() {
 addingEventListenerToPingButton();
 
 function pingUtilityCallback(data) {
-  document.getElementById("pingUtilityResponse").innerHTML = data.content;
+  var el = document.getElementById("pingUtilityResponse");
+  el.style.whiteSpace = "pre-line";
+  el.textContent = data.content;
 }
