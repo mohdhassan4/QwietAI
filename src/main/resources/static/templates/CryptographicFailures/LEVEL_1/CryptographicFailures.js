@@ -44,7 +44,11 @@ function appendResponseCallback(data) {
     resultDiv.innerHTML = "<strong>Result:</strong> " + data.content;
     resultDiv.className = "result-success";
   } else {
-    resultDiv.innerHTML = "<strong>Result:</strong> " + data.content;
+    resultDiv.textContent = "";
+    var labelEl = document.createElement("strong");
+    labelEl.textContent = "Result:";
+    resultDiv.appendChild(labelEl);
+    resultDiv.appendChild(document.createTextNode(" " + data.content));
     resultDiv.className = "result-failure";
   }
 }
