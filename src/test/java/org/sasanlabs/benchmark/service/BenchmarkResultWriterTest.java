@@ -3,6 +3,7 @@ package org.sasanlabs.benchmark.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -85,6 +86,16 @@ class BenchmarkResultWriterTest {
         Path target = writer.write(sampleResult("  Burp Suite 2.14  "));
 
         assertThat(target.getFileName().toString()).isEqualTo("burpsuite214-results.json");
+    }
+
+    @Test
+    void write_rejectsPathTraversal(@TempDir Path tempDir) {
+        BenchmarkResultWriter writer = new BenchmarkResultWriter(MAPPER, tempDir.toString());
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                        () -> writer.write(sampleResult("ZAP"), "../../etc"))
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("Path traversal detected");
     }
 
     @Test
