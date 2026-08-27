@@ -7,6 +7,7 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -27,15 +28,16 @@ public final class UrlSsrfValidator {
     private UrlSsrfValidator() {}
 
     /**
-     * Validates whether the given URL string is safe to fetch (not targeting internal/private
-     * networks). Performs DNS resolution and checks the resolved IP against blocked ranges.
+     * Validates and parses the given URL string, returning a validated URL object that is safe to
+     * fetch (not targeting internal/private networks). The returned URL breaks taint propagation
+     * since it comes from the validator rather than directly from user input.
      *
      * @param urlString the URL to validate
-     * @return true if the URL is safe to request, false otherwise
+     * @return Optional containing the validated URL if safe, empty otherwise
      */
-    public static boolean isSafeUrl(String urlString) {
+    public static Optional<URL> validateAndParseUrl(String urlString) {
         if (urlString == null || urlString.isBlank()) {
-            return false;
+            return Optional.empty();
         }
 
         URL url;
@@ -43,45 +45,59 @@ public final class UrlSsrfValidator {
             url = new URL(urlString);
             url.toURI(); // validate URI syntax as well
         } catch (MalformedURLException | URISyntaxException e) {
-            LOGGER.error("URL is not valid: {}", urlString, e);
-            return false;
+            LOGGER.error("URL is not valid: {}", LogSanitizer.sanitize(urlString), e);
+            return Optional.empty();
         }
 
         // Only allow http and https schemes
         String scheme = url.getProtocol().toLowerCase();
         if (!ALLOWED_SCHEMES.contains(scheme)) {
-            LOGGER.warn("Blocked URL with disallowed scheme: {}", scheme);
-            return false;
+            LOGGER.warn(
+                    "Blocked URL with disallowed scheme: {}",
+                    LogSanitizer.sanitize(scheme));
+            return Optional.empty();
         }
 
         String host = url.getHost();
         if (host == null || host.isBlank()) {
-            return false;
+            return Optional.empty();
         }
 
         // Strip IPv6 brackets if present
-        if (host.startsWith("[") && host.endsWith("]")) {
-            host = host.substring(1, host.length() - 1);
+        String resolveHost = host;
+        if (resolveHost.startsWith("[") && resolveHost.endsWith("]")) {
+            resolveHost = resolveHost.substring(1, resolveHost.length() - 1);
         }
 
         // Resolve hostname to IP addresses and check each one
         try {
-            InetAddress[] addresses = InetAddress.getAllByName(host);
+            InetAddress[] addresses = InetAddress.getAllByName(resolveHost);
             for (InetAddress address : addresses) {
                 if (isPrivateOrReservedAddress(address)) {
                     LOGGER.warn(
                             "Blocked SSRF attempt to internal/private address: {} resolved to {}",
-                            host,
+                            LogSanitizer.sanitize(host),
                             address.getHostAddress());
-                    return false;
+                    return Optional.empty();
                 }
             }
         } catch (UnknownHostException e) {
-            LOGGER.error("Cannot resolve hostname: {}", host, e);
-            return false;
+            LOGGER.error("Cannot resolve hostname: {}", LogSanitizer.sanitize(host), e);
+            return Optional.empty();
         }
 
-        return true;
+        return Optional.of(url);
+    }
+
+    /**
+     * Validates whether the given URL string is safe to fetch (not targeting internal/private
+     * networks). Performs DNS resolution and checks the resolved IP against blocked ranges.
+     *
+     * @param urlString the URL to validate
+     * @return true if the URL is safe to request, false otherwise
+     */
+    public static boolean isSafeUrl(String urlString) {
+        return validateAndParseUrl(urlString).isPresent();
     }
 
     /**

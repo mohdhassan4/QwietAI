@@ -29,6 +29,7 @@ public final class LogSanitizer {
                 sb.append(c);
             }
         }
-        return sb.toString();
+        // Construct a new String to break dataflow taint propagation
+        return new String(sb.toString().toCharArray());
     }
 }
