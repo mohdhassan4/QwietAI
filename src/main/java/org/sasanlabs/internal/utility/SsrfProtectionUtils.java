@@ -32,8 +32,22 @@ public final class SsrfProtectionUtils {
      * @return true if the URL is safe to fetch; false otherwise
      */
     public static boolean isUrlSafe(String urlString) {
+        return sanitizeUrl(urlString) != null;
+    }
+
+    /**
+     * Validates and sanitizes a URL string, returning a reconstructed URL object built from
+     * validated components. This breaks taint propagation from untrusted input by ensuring the
+     * returned URL is constructed from individually validated parts rather than the raw input
+     * string.
+     *
+     * @param urlString the URL string to validate and sanitize
+     * @return a safe, reconstructed URL object; or null if the URL is invalid or targets a
+     *     forbidden destination
+     */
+    public static URL sanitizeUrl(String urlString) {
         if (urlString == null || urlString.isBlank()) {
-            return false;
+            return null;
         }
 
         URL url;
@@ -45,19 +59,19 @@ public final class SsrfProtectionUtils {
                     "Provided URL: {} is not valid and following exception occurred",
                     urlString,
                     e);
-            return false;
+            return null;
         }
 
         // Only allow http and https schemes
         String scheme = url.getProtocol().toLowerCase();
         if (!ALLOWED_SCHEMES.contains(scheme)) {
             LOGGER.warn("SSRF protection: blocked non-HTTP scheme: {}", scheme);
-            return false;
+            return null;
         }
 
         String host = url.getHost();
         if (host == null || host.isBlank()) {
-            return false;
+            return null;
         }
 
         // Resolve the hostname to IP address(es) and validate each
@@ -68,15 +82,21 @@ public final class SsrfProtectionUtils {
                     LOGGER.warn(
                             "SSRF protection: blocked request to internal/private address: {}",
                             address.getHostAddress());
-                    return false;
+                    return null;
                 }
             }
         } catch (UnknownHostException e) {
             LOGGER.error("SSRF protection: unable to resolve host: {}", host, e);
-            return false;
+            return null;
         }
 
-        return true;
+        // Reconstruct URL from validated components to break taint chain from user input
+        try {
+            return new URL(url.getProtocol(), url.getHost(), url.getPort(), url.getFile());
+        } catch (MalformedURLException e) {
+            LOGGER.error("SSRF protection: failed to reconstruct URL from components", e);
+            return null;
+        }
     }
 
     /**
