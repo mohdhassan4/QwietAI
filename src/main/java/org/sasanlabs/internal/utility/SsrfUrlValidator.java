@@ -14,6 +14,26 @@ public final class SsrfUrlValidator {
     private SsrfUrlValidator() {}
 
     /**
+     * Validates the given URL string against SSRF attacks and returns a safe URL object. This
+     * method acts as a sanitizer boundary: the returned URL is guaranteed to target a public
+     * external host via http or https.
+     *
+     * @param urlString the URL string to validate
+     * @return a validated URL object safe from SSRF
+     * @throws SecurityException if the URL is unsafe (internal IP, non-http(s) scheme, or invalid)
+     */
+    public static URL validateUrl(String urlString) {
+        if (!isSafeFromSsrf(urlString)) {
+            throw new SecurityException("URL blocked by SSRF protection");
+        }
+        try {
+            return new URL(urlString);
+        } catch (MalformedURLException e) {
+            throw new SecurityException("Invalid URL: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Validates that the given URL is safe from SSRF attacks by checking scheme and resolved IP
      * addresses.
      *

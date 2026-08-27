@@ -1,7 +1,10 @@
 package org.sasanlabs.internal.utility;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.net.URL;
 import org.junit.jupiter.api.Test;
 
 class SsrfUrlValidatorTest {
@@ -65,5 +68,33 @@ class SsrfUrlValidatorTest {
     @Test
     void rejectsEmptyHost() {
         assertFalse(SsrfUrlValidator.isSafeFromSsrf("http:///path"));
+    }
+
+    @Test
+    void validateUrlThrowsOnInternalAddress() {
+        assertThrows(
+                SecurityException.class,
+                () -> SsrfUrlValidator.validateUrl("http://127.0.0.1/admin"));
+    }
+
+    @Test
+    void validateUrlThrowsOnFileProtocol() {
+        assertThrows(
+                SecurityException.class,
+                () -> SsrfUrlValidator.validateUrl("file:///etc/passwd"));
+    }
+
+    @Test
+    void validateUrlThrowsOnInvalidUrl() {
+        assertThrows(
+                SecurityException.class, () -> SsrfUrlValidator.validateUrl("not-a-url"));
+    }
+
+    @Test
+    void validateUrlReturnsUrlForSafeAddress() {
+        // Uses numeric IP that resolves without DNS and is not internal
+        // 8.8.8.8 is Google's public DNS
+        URL result = SsrfUrlValidator.validateUrl("http://8.8.8.8/path");
+        assertNotNull(result);
     }
 }
