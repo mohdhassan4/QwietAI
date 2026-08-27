@@ -60,9 +60,9 @@ public class BenchmarkController {
                     written);
         } catch (IOException ioe) {
             LOGGER.error(
-                    "Failed to persist benchmark result for tool '{}'; returning 500",
+                    "Failed to persist benchmark result for tool '{}'; returning 500: {}",
                     LogSanitizer.sanitize(input.getTool()),
-                    ioe);
+                    LogSanitizer.sanitize(ioe.getMessage()));
             result.setPersistenceError("Failed to persist benchmark result");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
         }
