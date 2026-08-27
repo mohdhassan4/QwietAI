@@ -1,8 +1,11 @@
 package org.sasanlabs.internal.utility;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.net.URI;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class UrlSsrfValidatorTest {
@@ -72,5 +75,33 @@ class UrlSsrfValidatorTest {
         assertTrue(
                 UrlSsrfValidator.isSafeFromSsrf(
                         "https://gist.githubusercontent.com/raw/abc123"));
+    }
+
+    @Test
+    void getValidatedUriReturnsEmptyForUnsafeUrls() {
+        assertEquals(Optional.empty(), UrlSsrfValidator.getValidatedUri(null));
+        assertEquals(Optional.empty(), UrlSsrfValidator.getValidatedUri(""));
+        assertEquals(Optional.empty(), UrlSsrfValidator.getValidatedUri("file:///etc/passwd"));
+        assertEquals(Optional.empty(), UrlSsrfValidator.getValidatedUri("http://127.0.0.1/"));
+        assertEquals(Optional.empty(), UrlSsrfValidator.getValidatedUri("http://10.0.0.1/"));
+    }
+
+    @Test
+    void getValidatedUriReturnsSanitizedUriForSafeUrls() {
+        Optional<URI> result = UrlSsrfValidator.getValidatedUri("https://example.com/path?q=1");
+        assertTrue(result.isPresent());
+        assertEquals("https", result.get().getScheme());
+        assertEquals("example.com", result.get().getHost());
+        assertEquals("/path", result.get().getPath());
+        assertEquals("q=1", result.get().getQuery());
+    }
+
+    @Test
+    void getValidatedUriPreservesPort() {
+        Optional<URI> result =
+                UrlSsrfValidator.getValidatedUri("https://example.com:8443/api");
+        assertTrue(result.isPresent());
+        assertEquals(8443, result.get().getPort());
+        assertEquals("/api", result.get().getPath());
     }
 }

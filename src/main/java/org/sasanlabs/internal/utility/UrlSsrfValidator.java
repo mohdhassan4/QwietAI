@@ -2,8 +2,11 @@ package org.sasanlabs.internal.utility;
 
 import java.net.InetAddress;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -17,6 +20,35 @@ public final class UrlSsrfValidator {
     private static final transient Logger LOGGER = LogManager.getLogger(UrlSsrfValidator.class);
 
     private UrlSsrfValidator() {}
+
+    /**
+     * Validates that the given URL is safe from SSRF attacks and returns a sanitized URI
+     * constructed from parsed components, breaking data-flow taint from the original input.
+     *
+     * @param urlString the URL string to validate
+     * @return an Optional containing the validated URI if safe, or empty if unsafe
+     */
+    public static Optional<URI> getValidatedUri(String urlString) {
+        if (!isSafeFromSsrf(urlString)) {
+            return Optional.empty();
+        }
+        try {
+            URL parsed = new URL(urlString);
+            URI sanitized =
+                    new URI(
+                            parsed.getProtocol(),
+                            parsed.getUserInfo(),
+                            parsed.getHost(),
+                            parsed.getPort(),
+                            parsed.getPath(),
+                            parsed.getQuery(),
+                            parsed.getRef());
+            return Optional.of(sanitized);
+        } catch (MalformedURLException | URISyntaxException e) {
+            LOGGER.error("Failed to reconstruct validated URI", e);
+            return Optional.empty();
+        }
+    }
 
     /**
      * Validates that the given URL is safe from SSRF attacks.
