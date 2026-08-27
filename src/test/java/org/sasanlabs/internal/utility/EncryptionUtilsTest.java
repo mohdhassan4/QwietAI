@@ -49,41 +49,45 @@ class EncryptionUtilsTest {
     }
 
     @Test
-    @DisplayName("AES Encryption: Should produce consistent ciphertext (ECB Mode Property)")
-    void encrypt_EcbDeterminism() throws EncryptionException {
+    @DisplayName("AES GCM Encryption: Should produce different ciphertext each time (random IV)")
+    void encrypt_GcmNonDeterminism() throws EncryptionException {
         SecretKey key = EncryptionUtils.getKeyFromPassword("fixed-password");
-        String plaintext = "This is a secret message that is exactly 32 bytes";
+        String plaintext = "This is a secret message";
 
         String ciphertext1 = EncryptionUtils.encrypt(plaintext, key);
         String ciphertext2 = EncryptionUtils.encrypt(plaintext, key);
 
-        // In ECB mode, the same plaintext with the same key always produces the same ciphertext
-        assertEquals(ciphertext1, ciphertext2);
+        // GCM uses a random IV so the same plaintext+key produces different ciphertext
+        assertNotEquals(ciphertext1, ciphertext2);
 
-        // Verify it is valid Base64
+        // Verify both are valid Base64
         assertDoesNotThrow(() -> Base64.getDecoder().decode(ciphertext1));
+        assertDoesNotThrow(() -> Base64.getDecoder().decode(ciphertext2));
     }
 
     @Test
-    @DisplayName(
-            "AES Encryption: Identical blocks should produce identical ciphertext blocks (ECB Vulnerability)")
-    void encrypt_EcbPatternLeakage() throws EncryptionException {
-        SecretKey key = EncryptionUtils.getKeyFromPassword("vulnerability-test");
-
-        // Create two identical 16-byte blocks (AES block size)
-        String block = "identical-block-"; // 16 characters
-        String plaintext = block + block;
+    @DisplayName("AES GCM Encryption: Encrypt then decrypt should return original plaintext")
+    void encrypt_decrypt_roundTrip() throws EncryptionException {
+        SecretKey key = EncryptionUtils.getKeyFromPassword("roundtrip-password");
+        String plaintext = "Hello, World! This tests the AES-GCM round-trip.";
 
         String ciphertext = EncryptionUtils.encrypt(plaintext, key);
-        byte[] decoded = Base64.getDecoder().decode(ciphertext);
+        String decrypted = EncryptionUtils.decrypt(ciphertext, key);
 
-        // Split the ciphertext into two 16-byte segments
-        byte[] block1 = new byte[16];
-        byte[] block2 = new byte[16];
-        System.arraycopy(decoded, 0, block1, 0, 16);
-        System.arraycopy(decoded, 16, block2, 0, 16);
+        assertEquals(plaintext, decrypted);
+    }
 
-        // The core vulnerability of ECB: identical input blocks = identical output blocks
-        assertArrayEquals(block1, block2, "ECB mode failed to leak identical blocks");
+    @Test
+    @DisplayName("AES GCM Decryption: Wrong key should throw EncryptionException")
+    void decrypt_wrongKey_throwsException() throws EncryptionException {
+        SecretKey correctKey = EncryptionUtils.getKeyFromPassword("correct-key");
+        SecretKey wrongKey = EncryptionUtils.getKeyFromPassword("wrong-key");
+        String plaintext = "secret data";
+
+        String ciphertext = EncryptionUtils.encrypt(plaintext, correctKey);
+
+        assertThrows(
+                org.sasanlabs.internal.utility.exception.EncryptionException.class,
+                () -> EncryptionUtils.decrypt(ciphertext, wrongKey));
     }
 }
