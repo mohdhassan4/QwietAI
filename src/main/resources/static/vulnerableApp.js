@@ -116,7 +116,7 @@ function _callbackForInnerMasterOnClickEvent(
       if (Object.hasOwn(detInfo, key)) {
         htmlTemplate = detInfo[key]["HtmlTemplate"];
       }
-      document.getElementById("vulnerabilityDescription").innerHTML =
+      document.getElementById("vulnerabilityDescription").textContent =
         vulnerableAppEndPointData[id]["Description"];
     }
     let urlToFetchHtmlTemplate = htmlTemplate
