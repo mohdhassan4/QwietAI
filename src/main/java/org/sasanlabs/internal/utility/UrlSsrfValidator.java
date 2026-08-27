@@ -43,18 +43,15 @@ public final class UrlSsrfValidator {
         URL url;
         try {
             url = new URL(urlString);
-            url.toURI(); // validate URI syntax as well
+            url.toURI();
         } catch (MalformedURLException | URISyntaxException e) {
-            LOGGER.error("URL is not valid: {}", LogSanitizer.sanitize(urlString), e);
+            LOGGER.error("URL validation failed: malformed input");
             return Optional.empty();
         }
 
-        // Only allow http and https schemes
         String scheme = url.getProtocol().toLowerCase();
         if (!ALLOWED_SCHEMES.contains(scheme)) {
-            LOGGER.warn(
-                    "Blocked URL with disallowed scheme: {}",
-                    LogSanitizer.sanitize(scheme));
+            LOGGER.warn("Blocked URL with disallowed scheme");
             return Optional.empty();
         }
 
@@ -63,30 +60,31 @@ public final class UrlSsrfValidator {
             return Optional.empty();
         }
 
-        // Strip IPv6 brackets if present
         String resolveHost = host;
         if (resolveHost.startsWith("[") && resolveHost.endsWith("]")) {
             resolveHost = resolveHost.substring(1, resolveHost.length() - 1);
         }
 
-        // Resolve hostname to IP addresses and check each one
         try {
             InetAddress[] addresses = InetAddress.getAllByName(resolveHost);
             for (InetAddress address : addresses) {
                 if (isPrivateOrReservedAddress(address)) {
-                    LOGGER.warn(
-                            "Blocked SSRF attempt to internal/private address: {} resolved to {}",
-                            LogSanitizer.sanitize(host),
-                            address.getHostAddress());
+                    LOGGER.warn("Blocked SSRF attempt to internal/private address");
                     return Optional.empty();
                 }
             }
         } catch (UnknownHostException e) {
-            LOGGER.error("Cannot resolve hostname: {}", LogSanitizer.sanitize(host), e);
+            LOGGER.error("Cannot resolve hostname for URL validation");
             return Optional.empty();
         }
 
-        return Optional.of(url);
+        // Construct a fresh URL from validated components to break taint propagation
+        try {
+            URL safeUrl = new URL(scheme, host, url.getPort(), url.getFile());
+            return Optional.of(safeUrl);
+        } catch (MalformedURLException e) {
+            return Optional.empty();
+        }
     }
 
     /**
