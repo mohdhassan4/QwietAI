@@ -133,7 +133,11 @@ function _callbackForInnerMasterOnClickEvent(
         if (requestToken !== thisRequestToken) {
           return;
         }
-        detailTitle.innerHTML = responseText;
+        detailTitle.textContent = "";
+        var sanitizedNodes = sanitizeHtmlToNodes(responseText);
+        while (sanitizedNodes.firstChild) {
+          detailTitle.appendChild(sanitizedNodes.firstChild);
+        }
         _loadDynamicJSAndCSS(urlToFetchHtmlTemplate, () => {
           // Re-check: the asset load itself is async, so navigation could
           // have moved on again between the AJAX response and now.
@@ -187,7 +191,7 @@ function createColumn(detailedInformationArray, key) {
   span.classList.add(
     isSecure ? "secure-variant-tooltip-text" : "unsecure-variant-tooltip-text"
   );
-  span.innerHTML = isSecure ? variantTooltip.secure : variantTooltip.unsecure;
+  span.textContent = isSecure ? variantTooltip.secure : variantTooltip.unsecure;
   svgWithTooltip.appendChild(span);
   svgWithTooltip.appendChild(_getSvgElementForVariant(isSecure));
   column.appendChild(svgWithTooltip);
@@ -292,6 +296,64 @@ function clearSelectedInnerMaster() {
 function back() {
   detail.classList.add("hidden-md-down");
   clearSelected();
+}
+
+function escapeHtml(str) {
+  if (str == null) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
+function sanitizeHtml(html) {
+  var doc = new DOMParser().parseFromString(html, "text/html");
+  var scripts = doc.querySelectorAll("script");
+  for (var i = 0; i < scripts.length; i++) {
+    scripts[i].remove();
+  }
+  var allElements = doc.body.querySelectorAll("*");
+  for (var j = 0; j < allElements.length; j++) {
+    var attrs = allElements[j].attributes;
+    for (var k = attrs.length - 1; k >= 0; k--) {
+      if (attrs[k].name.toLowerCase().startsWith("on")) {
+        allElements[j].removeAttribute(attrs[k].name);
+      }
+    }
+  }
+  return doc.body.innerHTML;
+}
+
+function sanitizeHtmlToNodes(html) {
+  var doc = new DOMParser().parseFromString(html, "text/html");
+  var dangerous = doc.querySelectorAll(
+    "script, iframe, object, embed, form, link[rel=import], base, meta"
+  );
+  for (var i = 0; i < dangerous.length; i++) {
+    dangerous[i].remove();
+  }
+  var allElements = doc.body.querySelectorAll("*");
+  for (var j = 0; j < allElements.length; j++) {
+    var el = allElements[j];
+    for (var k = el.attributes.length - 1; k >= 0; k--) {
+      var attrName = el.attributes[k].name.toLowerCase();
+      if (attrName.startsWith("on")) {
+        el.removeAttribute(el.attributes[k].name);
+      } else if (
+        (attrName === "href" || attrName === "src" || attrName === "action") &&
+        /^\s*javascript:/i.test(el.getAttribute(el.attributes[k].name))
+      ) {
+        el.removeAttribute(el.attributes[k].name);
+      }
+    }
+  }
+  var fragment = document.createDocumentFragment();
+  while (doc.body.firstChild) {
+    fragment.appendChild(document.adoptNode(doc.body.firstChild));
+  }
+  return fragment;
 }
 
 function getUrlForVulnerability() {
@@ -426,9 +488,9 @@ function _addingEventListenerToShowHideHelpButton(vulnerableAppEndPointData) {
       helpText =
         helpText +
         "<li><b>Description about the attack:</b> " +
-        description +
+        escapeHtml(description) +
         "<br/><b>Payload:</b> " +
-        curlPayload +
+        escapeHtml(curlPayload) +
         "</li>";
     }
     helpText = helpText + "</ol>";
