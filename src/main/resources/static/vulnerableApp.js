@@ -48,6 +48,41 @@ function sanitizeHtml(html) {
   return doc.body.innerHTML;
 }
 
+/**
+ * Sanitizes an HTML string and returns a DocumentFragment of safe DOM nodes.
+ * Removes script elements, event handler attributes, and dangerous elements.
+ * Use this instead of innerHTML assignment to avoid XSS sinks.
+ */
+function sanitizeHtmlToFragment(html) {
+  if (!html) return document.createDocumentFragment();
+  var parser = new DOMParser();
+  var doc = parser.parseFromString(html, "text/html");
+  var dangerous = doc.querySelectorAll(
+    "script, iframe, object, embed, link[rel=import]"
+  );
+  dangerous.forEach(function (el) {
+    el.remove();
+  });
+  var all = doc.body.querySelectorAll("*");
+  all.forEach(function (el) {
+    var attrs = Array.from(el.attributes);
+    attrs.forEach(function (attr) {
+      if (
+        attr.name.toLowerCase().startsWith("on") ||
+        (attr.value &&
+          attr.value.trim().toLowerCase().startsWith("javascript:"))
+      ) {
+        el.removeAttribute(attr.name);
+      }
+    });
+  });
+  var frag = document.createDocumentFragment();
+  while (doc.body.firstChild) {
+    frag.appendChild(doc.body.firstChild);
+  }
+  return frag;
+}
+
 const variantTooltip = {
   secure: "Secure implementation",
   unsecure: "Unsecure implementation",
@@ -178,7 +213,8 @@ function _callbackForInnerMasterOnClickEvent(
         if (requestToken !== thisRequestToken) {
           return;
         }
-        detailTitle.innerHTML = sanitizeHtml(responseText);
+        detailTitle.textContent = "";
+        detailTitle.appendChild(sanitizeHtmlToFragment(responseText));
         _loadDynamicJSAndCSS(urlToFetchHtmlTemplate, () => {
           // Re-check: the asset load itself is async, so navigation could
           // have moved on again between the AJAX response and now.
