@@ -2,8 +2,6 @@ package org.sasanlabs.internal.utility;
 
 import java.nio.charset.StandardCharsets;
 import java.security.*;
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.PBEKeySpec;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
@@ -151,16 +149,16 @@ public final class PasswordHashingUtils {
         return encoder.matches(rawPassword, bcryptHash);
     }
 
-    private static final byte[] LM_HASH_SALT =
-            "VulnerableApp-LM-Hash-Salt".getBytes(StandardCharsets.UTF_8);
-    private static final int PBKDF2_ITERATIONS = 310000;
-    private static final int LM_HASH_KEY_LENGTH_BITS = 128;
+    private static final javax.crypto.spec.SecretKeySpec LM_HASH_KEY =
+            new javax.crypto.spec.SecretKeySpec(
+                    "VulnerableApp-LM-Hash-Key".getBytes(StandardCharsets.UTF_8), "HmacSHA256");
 
     /**
      * Computes a secure password hash as a replacement for the legacy LM hash.
      *
-     * <p>Uses PBKDF2WithHmacSHA256 with a fixed application salt for deterministic output.
+     * <p>Uses HMAC-SHA256 with an application key for deterministic, keyed output.
      * Maintains case-insensitivity to preserve the original API contract.
+     * Returns 32 hex characters (128-bit truncated output).
      *
      * @see <a href="https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html">OWASP Password Storage</a>
      */
@@ -168,14 +166,14 @@ public final class PasswordHashingUtils {
         try {
             // Maintain case-insensitivity from original LM hash contract
             String pwd = rawPassword.toUpperCase();
-            char[] passwordChars = pwd.toCharArray();
 
-            PBEKeySpec spec =
-                    new PBEKeySpec(
-                            passwordChars, LM_HASH_SALT, PBKDF2_ITERATIONS, LM_HASH_KEY_LENGTH_BITS);
-            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-            byte[] hash = factory.generateSecret(spec).getEncoded();
-            spec.clearPassword();
+            javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
+            mac.init(LM_HASH_KEY);
+            byte[] fullHash = mac.doFinal(pwd.getBytes(StandardCharsets.UTF_8));
+
+            // Truncate to 128 bits (16 bytes) to maintain the 32 hex-character API contract
+            byte[] hash = new byte[16];
+            System.arraycopy(fullHash, 0, hash, 0, 16);
 
             return EncodingUtils.bytesToHex(hash);
         } catch (Exception e) {
