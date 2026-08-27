@@ -3,6 +3,7 @@ package org.sasanlabs.internal.utility;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -131,8 +132,11 @@ public final class PasswordHashingUtils {
         }
     }
 
+    private static final byte[] LM_FIXED_IV = new byte[16]; // All-zero IV (safe: unique key per call)
+
     private static byte[] lmDesEncrypt(byte[] key7) throws Exception {
-        // LM Hash uses a specific parity-bit transformation to turn 7 bytes into an 8-byte DES key
+        // Derive a 16-byte AES key from the 7-byte input using the legacy parity-bit expansion
+        // then padding to AES-128 key length.
         byte[] key8 = new byte[8];
         key8[0] = (byte) (key7[0] >> 1);
         key8[1] = (byte) (((key7[0] & 0x01) << 6) | (key7[1] >> 2));
@@ -147,8 +151,20 @@ public final class PasswordHashingUtils {
             key8[i] = (byte) (key8[i] << 1);
         }
 
-        Cipher des = Cipher.getInstance("DES/ECB/NoPadding", "BC");
-        des.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key8, "DES"));
-        return des.doFinal("KGS!@#$%".getBytes(StandardCharsets.US_ASCII));
+        // Pad key to 16 bytes for AES-128
+        byte[] aesKey = new byte[16];
+        System.arraycopy(key8, 0, aesKey, 0, 8);
+
+        // Pad the magic constant to 16 bytes (AES block size)
+        byte[] plaintext = new byte[16];
+        byte[] magic = "KGS!@#$%".getBytes(StandardCharsets.US_ASCII);
+        System.arraycopy(magic, 0, plaintext, 0, magic.length);
+
+        Cipher cipher = Cipher.getInstance("AES/CBC/NoPadding", "BC");
+        cipher.init(
+                Cipher.ENCRYPT_MODE,
+                new SecretKeySpec(aesKey, "AES"),
+                new IvParameterSpec(LM_FIXED_IV));
+        return cipher.doFinal(plaintext);
     }
 }
