@@ -51,17 +51,13 @@ class EncryptionUtilsTest {
     @Test
     @DisplayName("Key Generation: Should reject null password")
     void getKeyFromPassword_NullPassword() {
-        assertThrows(
-                EncryptionException.class,
-                () -> EncryptionUtils.getKeyFromPassword(null));
+        assertThrows(EncryptionException.class, () -> EncryptionUtils.getKeyFromPassword(null));
     }
 
     @Test
     @DisplayName("Key Generation: Should reject empty password")
     void getKeyFromPassword_EmptyPassword() {
-        assertThrows(
-                EncryptionException.class,
-                () -> EncryptionUtils.getKeyFromPassword(""));
+        assertThrows(EncryptionException.class, () -> EncryptionUtils.getKeyFromPassword(""));
     }
 
     @Test
@@ -69,9 +65,7 @@ class EncryptionUtilsTest {
             "Key Generation: getKeyFromConfiguredPassword should throw when env var is not set")
     void getKeyFromConfiguredPassword_MissingEnvVar() {
         // VULNERABLEAPP_CRYPTO_PASSWORD is not set in test environment
-        assertThrows(
-                EncryptionException.class,
-                EncryptionUtils::getKeyFromConfiguredPassword);
+        assertThrows(EncryptionException.class, EncryptionUtils::getKeyFromConfiguredPassword);
     }
 
     @Test

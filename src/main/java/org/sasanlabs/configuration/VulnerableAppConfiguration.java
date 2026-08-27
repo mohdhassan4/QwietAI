@@ -137,8 +137,7 @@ public class VulnerableAppConfiguration {
                 String.format("CREATE USER application PASSWORD '%s'", appPassword));
         adminJdbcTemplate.execute(
                 String.format(
-                        "CREATE USER IF NOT EXISTS readonly_user PASSWORD '%s'",
-                        readonlyPassword));
+                        "CREATE USER IF NOT EXISTS readonly_user PASSWORD '%s'", readonlyPassword));
         adminJdbcTemplate.execute(
                 String.format(
                         "CREATE USER IF NOT EXISTS cryptographic_failures_user PASSWORD '%s'",

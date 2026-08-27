@@ -75,8 +75,7 @@ public class EncryptionUtils {
 
     public static SecretKey getKeyFromPassword(String password) throws EncryptionException {
         if (password == null || password.isEmpty()) {
-            throw new EncryptionException(
-                    "Password for key derivation must not be null or empty");
+            throw new EncryptionException("Password for key derivation must not be null or empty");
         }
         try {
             SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");

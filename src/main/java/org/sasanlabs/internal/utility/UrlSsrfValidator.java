@@ -44,8 +44,7 @@ public final class UrlSsrfValidator {
 
         String protocol = parsedUrl.getProtocol();
         if (protocol == null
-                || (!protocol.equalsIgnoreCase("http")
-                        && !protocol.equalsIgnoreCase("https"))) {
+                || (!protocol.equalsIgnoreCase("http") && !protocol.equalsIgnoreCase("https"))) {
             return false;
         }
 
