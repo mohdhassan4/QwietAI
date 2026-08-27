@@ -176,6 +176,7 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    environment 'JWT_KEYSTORE_PASSWORD', 'changeIt'
     finalizedBy jacocoTestReport
 }
 
