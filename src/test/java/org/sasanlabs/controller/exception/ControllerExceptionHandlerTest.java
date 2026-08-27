@@ -2,6 +2,8 @@ package org.sasanlabs.controller.exception;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -34,7 +36,7 @@ class ControllerExceptionHandlerTest {
     @Test
     void shouldHandleControllerExceptions() {
         // Arrange
-        when(messageBundle.getString(any(), any())).thenReturn("Exception occurred");
+        when(messageBundle.getString(any(), isNull())).thenReturn("Exception occurred");
         ServiceApplicationException serviceApplicationException =
                 new ServiceApplicationException(
                         ExceptionStatusCodeEnum.SYSTEM_ERROR, new NullPointerException("ex"));
@@ -47,7 +49,8 @@ class ControllerExceptionHandlerTest {
         // Assert
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, responseEntity.getStatusCode());
         assertEquals("Exception occurred", responseEntity.getBody());
-        verify(messageBundle).getString(any(), any());
+        // Verify that null is passed for args (no sensitive exception data leaked)
+        verify(messageBundle).getString(eq("SYSTEM_ERROR"), isNull());
     }
 
     @Test
