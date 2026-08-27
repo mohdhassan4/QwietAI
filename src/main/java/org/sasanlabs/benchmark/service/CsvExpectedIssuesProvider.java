@@ -18,6 +18,7 @@ import org.apache.commons.csv.CSVRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sasanlabs.benchmark.model.ExpectedIssue;
+import org.sasanlabs.internal.utility.LogSanitizer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
@@ -129,7 +130,7 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
                 issues.add(issue);
             }
         }
-        LOGGER.info("Loaded {} expected SAST issues from {}", issues.size(), csvPath);
+        LOGGER.info("Loaded {} expected SAST issues from {}", issues.size(), LogSanitizer.sanitize(String.valueOf(csvPath)));
         return issues;
     }
 
@@ -142,7 +143,7 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
             LOGGER.warn(
                     "Skipping malformed SAST CSV row at line {} of {}: missing required columns",
                     row.getRecordNumber(),
-                    csvPath);
+                    LogSanitizer.sanitize(String.valueOf(csvPath)));
             return null;
         }
         try {
@@ -157,8 +158,8 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
                     "Skipping SAST CSV row at line {} of {}: non-integer line or sources column"
                             + " ({})",
                     row.getRecordNumber(),
-                    csvPath,
-                    nfe.getMessage());
+                    LogSanitizer.sanitize(String.valueOf(csvPath)),
+                    LogSanitizer.sanitize(nfe.getMessage()));
             return null;
         }
     }

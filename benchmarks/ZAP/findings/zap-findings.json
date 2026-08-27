@@ -1,4 +1,5 @@
 {
+  "_note": "Not secrets: high-entropy strings in this file are URL path segments and vulnerability type names used as benchmark test fixture data.",
   "tool": "ZAP",
   "scanType": "DAST",
   "findings": [
