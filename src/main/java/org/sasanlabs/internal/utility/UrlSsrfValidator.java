@@ -33,14 +33,16 @@ public final class UrlSsrfValidator {
         try {
             url = new URL(urlString);
         } catch (MalformedURLException e) {
-            LOGGER.error("URL is malformed: {}", urlString, e);
+            LOGGER.error("URL is malformed: {}", LogSanitizer.sanitizeForLog(urlString), e);
             return false;
         }
 
         // Only allow http and https schemes
         String protocol = url.getProtocol();
         if (!"http".equalsIgnoreCase(protocol) && !"https".equalsIgnoreCase(protocol)) {
-            LOGGER.warn("Blocked URL with disallowed scheme: {}", protocol);
+            LOGGER.warn(
+                    "Blocked URL with disallowed scheme: {}",
+                    LogSanitizer.sanitizeForLog(protocol));
             return false;
         }
 
@@ -61,13 +63,13 @@ public final class UrlSsrfValidator {
                 if (isPrivateOrInternalAddress(address)) {
                     LOGGER.warn(
                             "Blocked URL resolving to private/internal IP: {} -> {}",
-                            host,
+                            LogSanitizer.sanitizeForLog(host),
                             address.getHostAddress());
                     return false;
                 }
             }
         } catch (UnknownHostException e) {
-            LOGGER.error("Cannot resolve host: {}", host, e);
+            LOGGER.error("Cannot resolve host: {}", LogSanitizer.sanitizeForLog(host), e);
             return false;
         }
 
