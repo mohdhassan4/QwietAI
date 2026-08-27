@@ -2,7 +2,6 @@ package org.sasanlabs.configuration;
 
 import com.zaxxer.hikari.HikariDataSource;
 import java.io.IOException;
-import java.sql.PreparedStatement;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -27,8 +26,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
-import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.PreparedStatementCallback;
 import org.springframework.jdbc.datasource.init.DataSourceInitializer;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -134,14 +133,11 @@ public class VulnerableAppConfiguration {
         ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
         JdbcTemplate adminJdbcTemplate = new JdbcTemplate(adminDataSource);
         adminJdbcTemplate.execute(
-                (ConnectionCallback<Void>)
-                        connection -> {
-                            try (PreparedStatement ps =
-                                    connection.prepareStatement(
-                                            "CREATE USER APPLICATION PASSWORD ?")) {
-                                ps.setString(1, appPassword);
-                                ps.execute();
-                            }
+                "CREATE USER IF NOT EXISTS APPLICATION PASSWORD ?",
+                (PreparedStatementCallback<Void>)
+                        ps -> {
+                            ps.setString(1, appPassword);
+                            ps.execute();
                             return null;
                         });
         populator.addScript(new ClassPathResource("scripts/SQLInjection/db/schema.sql"));
