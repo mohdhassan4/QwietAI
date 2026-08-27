@@ -73,8 +73,11 @@ public class EncryptionUtils {
 
     public static SecretKey getKeyFromPassword(String password) throws EncryptionException {
         try {
+            String envPassword = System.getenv("ENCRYPTION_PASSWORD");
+            String effectivePassword =
+                    (envPassword != null && !envPassword.isEmpty()) ? envPassword : password;
             SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-            KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 600000, 256);
+            KeySpec spec = new PBEKeySpec(effectivePassword.toCharArray(), salt, 600000, 256);
 
             return new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
