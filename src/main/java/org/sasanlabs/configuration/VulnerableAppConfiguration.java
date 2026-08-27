@@ -27,6 +27,7 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.PreparedStatementCallback;
 import org.springframework.jdbc.datasource.init.DataSourceInitializer;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -131,9 +132,13 @@ public class VulnerableAppConfiguration {
             @Value("${spring.datasource.application.password}") String appPassword) {
         ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
         JdbcTemplate adminJdbcTemplate = new JdbcTemplate(adminDataSource);
-        String escapedPassword = appPassword.replace("'", "''");
         adminJdbcTemplate.execute(
-                String.format("CREATE USER application PASSWORD '%s'", escapedPassword));
+                "CREATE USER IF NOT EXISTS APPLICATION PASSWORD ?",
+                (PreparedStatementCallback<Void>) ps -> {
+                    ps.setString(1, appPassword);
+                    ps.execute();
+                    return null;
+                });
         populator.addScript(new ClassPathResource("scripts/SQLInjection/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/xss/PersistentXSS/db/schema.sql"));
         populator.addScript(new ClassPathResource("scripts/XXEVulnerability/schema.sql"));
