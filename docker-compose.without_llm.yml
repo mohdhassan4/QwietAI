@@ -17,18 +17,27 @@ services:
         - /benchmarks
         - /contentDispositionUpload
         - /app/resources/static/upload
+      # No privilege escalation through setuid/setgid binaries (CWE-732).
+      security_opt:
+        - no-new-privileges:true
 
     VulnerableApp-jsp:
       image: sasanlabs/owasp-vulnerableapp-jsp:latest
       # read_only is deliberately not set: Tomcat expands the WAR shipped inside the image and
       # compiles the JSPs underneath /usr/local/tomcat, so the directory that holds the
       # application artifact itself has to stay writable.
+      # No privilege escalation through setuid/setgid binaries (CWE-732).
+      security_opt:
+        - no-new-privileges:true
 
     VulnerableApp-php:
       image: sasanlabs/owasp-vulnerableapp-php:latest
       # read_only is deliberately not set: the PHP lessons (file upload in particular) write
       # into the document root that ships inside the image, so the directory that holds the
       # application code itself has to stay writable.
+      # No privilege escalation through setuid/setgid binaries (CWE-732).
+      security_opt:
+        - no-new-privileges:true
 
     mailpit:
       image: axllent/mailpit:v1.30.1
@@ -50,6 +59,9 @@ services:
         - /tmp
       volumes:
         - mailpit_data:/data
+      # No privilege escalation through setuid/setgid binaries (CWE-732).
+      security_opt:
+        - no-new-privileges:true
 
     VulnerableApp-facade:
       depends_on:
@@ -80,6 +92,11 @@ services:
        - ENABLE_VULNERABLEAPP_JSP=true
        - ENABLE_VULNERABLEAPP_PHP=true
        - ENABLE_LLMFORGE=false
+      # No privilege escalation through setuid/setgid binaries (CWE-732). nginx starts as root to
+      # bind port 80 and then drops its workers to the unprivileged nginx user, which needs no new
+      # privileges, so the facade keeps working.
+      security_opt:
+       - no-new-privileges:true
 
 volumes:
   mailpit_data:

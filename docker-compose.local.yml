@@ -17,6 +17,9 @@ services:
         - /benchmarks
         - /contentDispositionUpload
         - /app/resources/static/upload
+      # No privilege escalation through setuid/setgid binaries (CWE-732).
+      security_opt:
+        - no-new-privileges:true
       networks:
         - app_net
 
@@ -40,11 +43,14 @@ services:
         - /tmp
       volumes:
         - mailpit_data:/data
+      # No privilege escalation through setuid/setgid binaries (CWE-732).
+      security_opt:
+        - no-new-privileges:true
       networks:
         app_net:
           aliases:
             - mailpit
-    
+
     VulnerableApp-facade:
       depends_on:
         - VulnerableApp-base
@@ -69,6 +75,11 @@ services:
       environment:
        - NGINX_HOST=foobar.com
        - NGINX_PORT=80
+      # No privilege escalation through setuid/setgid binaries (CWE-732). nginx starts as root to
+      # bind port 80 and then drops its workers to the unprivileged nginx user, which needs no new
+      # privileges, so the facade keeps working.
+      security_opt:
+       - no-new-privileges:true
       networks:
         - app_net
 

@@ -139,6 +139,7 @@ from outside.
 | Internal network | Base container has no internet access |
 | Read-only volume | Nginx templates mounted as read-only |
 | Read-only root filesystem | Both containers run with `read_only: true`; only the paths listed below are writable |
+| No new privileges | Both containers run with `security_opt: ["no-new-privileges:true"]`, so a setuid/setgid binary cannot raise privileges beyond the ones the container started with |
 | H2 console disabled | `public` profile disables the H2 web console |
 | Active profile | Runs `public` only — `unsafe` profile is excluded |
 

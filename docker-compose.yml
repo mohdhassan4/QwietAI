@@ -17,6 +17,9 @@ services:
         - /benchmarks
         - /contentDispositionUpload
         - /app/resources/static/upload
+      # No privilege escalation through setuid/setgid binaries (CWE-732).
+      security_opt:
+        - no-new-privileges:true
       networks:
         - app_net
 
@@ -25,6 +28,9 @@ services:
       # read_only is deliberately not set: Tomcat expands the WAR shipped inside the image and
       # compiles the JSPs underneath /usr/local/tomcat, so the directory that holds the
       # application artifact itself has to stay writable.
+      # No privilege escalation through setuid/setgid binaries (CWE-732).
+      security_opt:
+        - no-new-privileges:true
       networks:
         - app_net
 
@@ -33,6 +39,9 @@ services:
       # read_only is deliberately not set: the PHP lessons (file upload in particular) write
       # into the document root that ships inside the image, so the directory that holds the
       # application code itself has to stay writable.
+      # No privilege escalation through setuid/setgid binaries (CWE-732).
+      security_opt:
+        - no-new-privileges:true
       networks:
         - app_net
 
@@ -47,6 +56,9 @@ services:
        - /tmp
       volumes:
        - ollama_data:/root/.ollama
+      # No privilege escalation through setuid/setgid binaries (CWE-732).
+      security_opt:
+       - no-new-privileges:true
       healthcheck:
         test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
         interval: 10s
@@ -81,6 +93,9 @@ services:
        - /tmp
       volumes:
        - ollama_data:/root/.ollama
+      # No privilege escalation through setuid/setgid binaries (CWE-732).
+      security_opt:
+       - no-new-privileges:true
       restart: "no"
       networks:
         - app_net
@@ -102,6 +117,9 @@ services:
        - OLLAMA_MODEL=${OLLAMA_MODEL:-phi3:mini}
        - OLLAMA_EMBED_MODEL=${OLLAMA_EMBED_MODEL:-nomic-embed-text}
        - FACADE_ROUTE_PREFIX=/llmforge
+      # No privilege escalation through setuid/setgid binaries (CWE-732).
+      security_opt:
+       - no-new-privileges:true
       networks:
         app_net:
           aliases:
@@ -127,11 +145,14 @@ services:
         - /tmp
       volumes:
         - mailpit_data:/data
+      # No privilege escalation through setuid/setgid binaries (CWE-732).
+      security_opt:
+        - no-new-privileges:true
       networks:
         app_net:
           aliases:
             - mailpit
-    
+
     VulnerableApp-facade:
       depends_on:
         - VulnerableApp-base
@@ -162,6 +183,11 @@ services:
        - ENABLE_VULNERABLEAPP_JSP=true
        - ENABLE_VULNERABLEAPP_PHP=true
        - ENABLE_LLMFORGE=true
+      # No privilege escalation through setuid/setgid binaries (CWE-732). nginx starts as root to
+      # bind port 80 and then drops its workers to the unprivileged nginx user, which needs no new
+      # privileges, so the facade keeps working.
+      security_opt:
+       - no-new-privileges:true
       networks:
         - app_net
 

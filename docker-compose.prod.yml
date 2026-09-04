@@ -21,6 +21,9 @@ services:
       - /benchmarks
       - /contentDispositionUpload
       - /app/resources/static/upload
+    # No privilege escalation through setuid/setgid binaries (CWE-732).
+    security_opt:
+      - no-new-privileges:true
     environment:
       - DB_ADMIN_USERNAME=${DB_ADMIN_USERNAME}
       - DB_ADMIN_PASSWORD=${DB_ADMIN_PASSWORD}
@@ -61,6 +64,11 @@ services:
       - ENABLE_VULNERABLEAPP_JSP=true
       - ENABLE_VULNERABLEAPP_PHP=true
       - ENABLE_LLMFORGE=true
+    # No privilege escalation through setuid/setgid binaries (CWE-732). nginx starts as root to
+    # bind port 80 and then drops its workers to the unprivileged nginx user, which needs no new
+    # privileges, so the facade keeps working.
+    security_opt:
+      - no-new-privileges:true
     networks:
       - internal
       - edge
