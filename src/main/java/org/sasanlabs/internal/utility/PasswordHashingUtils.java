@@ -72,11 +72,29 @@ public final class PasswordHashingUtils {
         String[] saltAndHash = saltedSha256Hash.split(HASH_SEPARATOR, 2);
         if (saltAndHash.length != 2) {
             // Backward compatibility for old plaintext test data.
-            return saltedSha256Hash.equals(rawPassword);
+            return constantTimeEquals(saltedSha256Hash, rawPassword);
         }
 
         String calculatedHash = sha256Hex(saltAndHash[0], rawPassword);
         return saltAndHash[1].equalsIgnoreCase(calculatedHash);
+    }
+
+    /**
+     * Compares two strings in constant time to avoid leaking secrets through timing side channels.
+     *
+     * <p>Note: it does not hide length differences; that is an accepted, documented limitation.
+     *
+     * @param expected the expected value, usually the stored secret
+     * @param actual the value supplied by the caller
+     * @return {@code true} if both values are non-null and equal, {@code false} otherwise
+     */
+    public static boolean constantTimeEquals(String expected, String actual) {
+        if (expected == null || actual == null) {
+            return false;
+        }
+        byte[] expectedBytes = expected.getBytes(StandardCharsets.UTF_8);
+        byte[] actualBytes = actual.getBytes(StandardCharsets.UTF_8);
+        return MessageDigest.isEqual(expectedBytes, actualBytes);
     }
 
     public static String sha256Hex(String salt, String rawPassword) {
