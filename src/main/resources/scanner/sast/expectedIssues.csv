@@ -119,10 +119,6 @@ CWE-330,Predictable Session Id,src/main/java/org/sasanlabs/service/vulnerability
 CWE-330,Obscured Predictable Session Id,src/main/java/org/sasanlabs/service/vulnerability/sessionManagement/SessionManagementService.java,130,1
 CWE-613,Missing Logout Invalidation,src/main/java/org/sasanlabs/service/vulnerability/sessionManagement/SessionManagementService.java,276,1
 CWE-307,No Login Rate Limiting,src/main/java/org/sasanlabs/service/vulnerability/sessionManagement/SessionManagementService.java,177,1
-CWE-918,SSRF,src/main/java/org/sasanlabs/service/vulnerability/ssrf/SSRFVulnerability.java,91,1
-CWE-918,SSRF,src/main/java/org/sasanlabs/service/vulnerability/ssrf/SSRFVulnerability.java,105,1
-CWE-918,SSRF,src/main/java/org/sasanlabs/service/vulnerability/ssrf/SSRFVulnerability.java,121,1
-CWE-918,SSRF,src/main/java/org/sasanlabs/service/vulnerability/ssrf/SSRFVulnerability.java,138,1
 CWE-79,Persistent XSS,src/main/java/org/sasanlabs/service/vulnerability/xss/persistent/PersistentXSSInHTMLTagVulnerability.java,91,1
 CWE-79,Persistent XSS,src/main/java/org/sasanlabs/service/vulnerability/xss/persistent/PersistentXSSInHTMLTagVulnerability.java,104,1
 CWE-79,Persistent XSS,src/main/java/org/sasanlabs/service/vulnerability/xss/persistent/PersistentXSSInHTMLTagVulnerability.java,122,1
