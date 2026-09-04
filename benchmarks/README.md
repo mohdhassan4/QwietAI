@@ -273,8 +273,9 @@ scan type) overwrites the previous report.
 
 If the file write fails (disk full, permissions, etc.), the endpoint returns
 **HTTP 500** with the same response body as a successful run, plus an extra
-`persistenceError` string describing the failure. Callers still get the
-computed metrics; the non-2xx status is the signal that the on-disk artifact
+`persistenceError` string (`Failed to persist benchmark result`). The underlying
+cause is logged server side rather than returned to the caller. Callers still get
+the computed metrics; the non-2xx status is the signal that the on-disk artifact
 was *not* created.
 
 ## Known Limitations

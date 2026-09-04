@@ -26,6 +26,9 @@ public class BenchmarkController {
 
     private static final Logger LOGGER = LogManager.getLogger(BenchmarkController.class);
 
+    /** Client facing message for a failed report write; details stay in the server logs. */
+    private static final String PERSISTENCE_FAILURE_MESSAGE = "Failed to persist benchmark result";
+
     private final BenchmarkService benchmarkService;
     private final BenchmarkResultWriter benchmarkResultWriter;
 
@@ -60,7 +63,9 @@ public class BenchmarkController {
                             + " in body",
                     input.getTool(),
                     ioe);
-            result.setPersistenceError("Failed to persist benchmark result: " + ioe.getMessage());
+            // Only a stable, generic message is returned to the client; the underlying
+            // IOException (paths, permissions, disk state) is available in the server logs above.
+            result.setPersistenceError(PERSISTENCE_FAILURE_MESSAGE);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
         }
 

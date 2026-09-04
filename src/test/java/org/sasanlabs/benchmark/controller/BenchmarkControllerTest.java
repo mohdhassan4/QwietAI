@@ -132,8 +132,9 @@ class BenchmarkControllerTest {
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.tool").value("ZAP"))
                 .andExpect(jsonPath("$.coverage").value(50.0))
+                // The IOException detail ("disk full") must stay in the server logs only.
                 .andExpect(
                         jsonPath("$.persistenceError")
-                                .value(org.hamcrest.Matchers.containsString("disk full")));
+                                .value("Failed to persist benchmark result"));
     }
 }
