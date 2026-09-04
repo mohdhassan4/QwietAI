@@ -2,16 +2,37 @@ version: "3.9"
 services:
     VulnerableApp-base:
       image: sasanlabs/owasp-vulnerableapp:latest
+      # Immutable container filesystem (CWE-732). Every path the application writes to at
+      # runtime is backed by a tmpfs below:
+      #   /tmp                           JVM temp files, embedded Tomcat work directory and the
+      #                                  Files.createTempDirectory fallback of the file upload lesson
+      #   /logs                          log4j2 rolling file appender (./logs/server.log)
+      #   /benchmarks                    benchmark.output.dir written by /scanner/benchmark
+      #   /contentDispositionUpload      upload directory created on startup by the file upload lesson
+      #   /app/resources/static/upload   upload directory served back as /VulnerableApp/upload
+      read_only: true
+      tmpfs:
+        - /tmp
+        - /logs
+        - /benchmarks
+        - /contentDispositionUpload
+        - /app/resources/static/upload
       networks:
         - app_net
-      
+
     VulnerableApp-jsp:
       image: sasanlabs/owasp-vulnerableapp-jsp:latest
+      # read_only is deliberately not set: Tomcat expands the WAR shipped inside the image and
+      # compiles the JSPs underneath /usr/local/tomcat, so the directory that holds the
+      # application artifact itself has to stay writable.
       networks:
         - app_net
- 
+
     VulnerableApp-php:
       image: sasanlabs/owasp-vulnerableapp-php:latest
+      # read_only is deliberately not set: the PHP lessons (file upload in particular) write
+      # into the document root that ships inside the image, so the directory that holds the
+      # application code itself has to stay writable.
       networks:
         - app_net
 
@@ -19,6 +40,11 @@ services:
       image: ollama/ollama:latest
       ports:
        - "11434:11434"
+      # Immutable container filesystem (CWE-732): models, manifests and the node key live in
+      # the ollama_data volume, /tmp is the only other path the server writes to.
+      read_only: true
+      tmpfs:
+       - /tmp
       volumes:
        - ollama_data:/root/.ollama
       healthcheck:
@@ -48,6 +74,11 @@ services:
           set -eu
           ollama pull "${OLLAMA_MODEL:-phi3:mini}"
           ollama pull "${OLLAMA_EMBED_MODEL:-nomic-embed-text}"
+      # Immutable container filesystem (CWE-732): the pulled models are written to the shared
+      # ollama_data volume, /tmp covers the client's scratch files.
+      read_only: true
+      tmpfs:
+       - /tmp
       volumes:
        - ollama_data:/root/.ollama
       restart: "no"
@@ -56,6 +87,9 @@ services:
 
     llmforge:
       image: sasanlabs/llmforge:latest
+      # read_only is deliberately not set: the writable paths of this image (model/tokenizer
+      # caches and any local state the service keeps) are not documented anywhere in this
+      # repository, and an incomplete guess would crash-loop the whole LLM stack.
       depends_on:
         ollama:
           condition: service_healthy
@@ -86,6 +120,11 @@ services:
         - MP_SMTP_AUTH_ACCEPT_ANY=1
         - MP_SMTP_AUTH_ALLOW_INSECURE=1
         - MP_WEBROOT=/mailpit
+      # Immutable container filesystem (CWE-732): the message store stays in the mailpit_data
+      # volume, /tmp covers the SQLite scratch files.
+      read_only: true
+      tmpfs:
+        - /tmp
       volumes:
         - mailpit_data:/data
       networks:
@@ -101,8 +140,20 @@ services:
         - llmforge
         - mailpit
       image: sasanlabs/owasp-vulnerableapp-facade:latest
+      # Immutable container filesystem (CWE-732). nginx still needs to write its pid file and
+      # its proxy/client body buffers, and the entrypoint renders /etc/nginx/templates into
+      # /etc/nginx/conf.d on every start. conf.d therefore uses a named volume rather than a
+      # tmpfs: a volume is seeded with the configuration that ships in the image and stays
+      # writable, so both the rendered and the built-in configuration survive. Refresh it after
+      # pulling a newer facade image:
+      #   docker compose down && docker volume rm <compose-project>_facade_nginx_conf
+      read_only: true
+      tmpfs:
+       - /var/cache/nginx
+       - /var/run
       volumes:
        - ./templates:/etc/nginx/templates
+       - facade_nginx_conf:/etc/nginx/conf.d
       ports:
        - "80:80"
       environment:
@@ -122,3 +173,6 @@ networks:
 volumes:
   ollama_data:
   mailpit_data:
+  # Writable copy of the facade's /etc/nginx/conf.d, needed because that container now runs
+  # with a read-only root filesystem.
+  facade_nginx_conf:

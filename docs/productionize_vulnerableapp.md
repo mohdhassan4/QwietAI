@@ -138,6 +138,7 @@ from outside.
 | Random credentials | New username and password generated on every start |
 | Internal network | Base container has no internet access |
 | Read-only volume | Nginx templates mounted as read-only |
+| Read-only root filesystem | Both containers run with `read_only: true`; only the paths listed below are writable |
 | H2 console disabled | `public` profile disables the H2 web console |
 | Active profile | Runs `public` only — `unsafe` profile is excluded |
 
@@ -153,6 +154,35 @@ Lock down inbound access as tightly as possible:
 | 22 | Your IP only | SSH |
 
 Avoid opening port 80 to `0.0.0.0/0` unless absolutely necessary.
+
+---
+
+## Writable Paths of the Read-only Containers
+
+Both containers run with an immutable root filesystem, so everything they write at runtime is
+declared explicitly in `docker-compose.prod.yml`:
+
+| Container | Path | Backed by | Why it has to be writable |
+|---|---|---|---|
+| `VulnerableApp-base` | `/tmp` | tmpfs | JVM temp files, embedded Tomcat work directory, temp directories created by the file upload lesson |
+| `VulnerableApp-base` | `/logs` | tmpfs | log4j2 rolling file appender (`./logs/server.log`) |
+| `VulnerableApp-base` | `/benchmarks` | tmpfs | `benchmark.output.dir`, written by `/scanner/benchmark` |
+| `VulnerableApp-base` | `/contentDispositionUpload`, `/app/resources/static/upload` | tmpfs | upload directories created on start-up by the file upload lesson |
+| `VulnerableApp-facade` | `/var/cache/nginx`, `/var/run` | tmpfs | Nginx proxy/client body buffers and pid file |
+| `VulnerableApp-facade` | `/etc/nginx/conf.d` | `facade_nginx_conf` volume | the entrypoint renders `/etc/nginx/templates` here on every start |
+
+All tmpfs content is discarded when a container stops, which is intentional: the H2 database is
+in-memory, so there is nothing to persist.
+
+`/etc/nginx/conf.d` uses a named volume instead of a tmpfs so that the configuration shipped in
+the facade image survives (a volume is seeded from the image, a tmpfs would hide it). Because a
+volume is only seeded once, remove it after pulling a newer facade image so the new configuration
+is used:
+
+```bash
+docker compose -f docker-compose.prod.yml down
+docker volume rm <compose-project>_facade_nginx_conf
+```
 
 ---
 

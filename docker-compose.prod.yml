@@ -6,6 +6,21 @@ services:
     networks:
       - internal
     restart: unless-stopped
+    # Immutable container filesystem (CWE-732). Every path the application writes to at
+    # runtime is backed by a tmpfs below:
+    #   /tmp                           JVM temp files, embedded Tomcat work directory and the
+    #                                  Files.createTempDirectory fallback of the file upload lesson
+    #   /logs                          log4j2 rolling file appender (./logs/server.log)
+    #   /benchmarks                    benchmark.output.dir written by /scanner/benchmark
+    #   /contentDispositionUpload      upload directory created on startup by the file upload lesson
+    #   /app/resources/static/upload   upload directory served back as /VulnerableApp/upload
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /logs
+      - /benchmarks
+      - /contentDispositionUpload
+      - /app/resources/static/upload
     environment:
       - DB_ADMIN_USERNAME=${DB_ADMIN_USERNAME}
       - DB_ADMIN_PASSWORD=${DB_ADMIN_PASSWORD}
@@ -24,8 +39,20 @@ services:
       - VulnerableApp-base
     image: sasanlabs/owasp-vulnerableapp-facade:latest
     restart: unless-stopped
+    # Immutable container filesystem (CWE-732). nginx still needs to write its pid file and
+    # its proxy/client body buffers, and the entrypoint renders /etc/nginx/templates into
+    # /etc/nginx/conf.d on every start. conf.d therefore uses a named volume rather than a
+    # tmpfs: a volume is seeded with the configuration that ships in the image and stays
+    # writable, so both the rendered and the built-in configuration survive. Refresh it after
+    # pulling a newer facade image:
+    #   docker compose -f docker-compose.prod.yml down && docker volume rm <compose-project>_facade_nginx_conf
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
     volumes:
       - ./templates:/etc/nginx/templates:ro
+      - facade_nginx_conf:/etc/nginx/conf.d
     ports:
       - "0.0.0.0:80:80"
     environment:
@@ -44,3 +71,8 @@ networks:
     internal: true   # base has no internet access
   edge:
     driver: bridge   # facade can reach outside
+
+volumes:
+  # Writable copy of the facade's /etc/nginx/conf.d, needed because that container now runs
+  # with a read-only root filesystem.
+  facade_nginx_conf:
