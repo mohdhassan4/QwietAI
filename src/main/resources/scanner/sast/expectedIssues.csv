@@ -134,13 +134,5 @@ CWE-79,Persistent XSS,src/main/java/org/sasanlabs/service/vulnerability/xss/pers
 CWE-79,Persistent XSS,src/main/java/org/sasanlabs/service/vulnerability/xss/persistent/PersistentXSSInHTMLTagVulnerability.java,143,1
 CWE-79,Persistent XSS,src/main/java/org/sasanlabs/service/vulnerability/xss/persistent/PersistentXSSInHTMLTagVulnerability.java,165,1
 CWE-79,Persistent XSS,src/main/java/org/sasanlabs/service/vulnerability/xss/persistent/PersistentXSSInHTMLTagVulnerability.java,188,1
-CWE-79,Reflected XSS,src/main/java/org/sasanlabs/service/vulnerability/xss/reflected/XSSInImgTagAttribute.java,46,1
-CWE-79,Reflected XSS,src/main/java/org/sasanlabs/service/vulnerability/xss/reflected/XSSInImgTagAttribute.java,61,1
-CWE-79,Reflected XSS,src/main/java/org/sasanlabs/service/vulnerability/xss/reflected/XSSInImgTagAttribute.java,77,1
-CWE-79,Reflected XSS,src/main/java/org/sasanlabs/service/vulnerability/xss/reflected/XSSInImgTagAttribute.java,97,1
-CWE-79,Reflected XSS,src/main/java/org/sasanlabs/service/vulnerability/xss/reflected/XSSInImgTagAttribute.java,120,1
-CWE-79,Reflected XSS,src/main/java/org/sasanlabs/service/vulnerability/xss/reflected/XSSWithHtmlTagInjection.java,32,1
-CWE-79,Reflected XSS,src/main/java/org/sasanlabs/service/vulnerability/xss/reflected/XSSWithHtmlTagInjection.java,50,1
-CWE-79,Reflected XSS,src/main/java/org/sasanlabs/service/vulnerability/xss/reflected/XSSWithHtmlTagInjection.java,73,1
 CWE-611,Xxe,src/main/java/org/sasanlabs/service/vulnerability/xxe/XXEVulnerability.java,64,1
 CWE-611,Xxe,src/main/java/org/sasanlabs/service/vulnerability/xxe/XXEVulnerability.java,137,1
