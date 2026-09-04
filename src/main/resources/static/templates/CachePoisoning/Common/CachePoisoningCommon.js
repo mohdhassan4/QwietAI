@@ -47,8 +47,13 @@ export function getHeadersWithForwardedHost(inputId = "forwardedHostInput") {
 }
 
 export function setDemoUserCookie(value) {
+  // demo_user tells the server which demo profile to render, so it is marked
+  // Secure whenever the page itself is served over HTTPS. The browser then
+  // refuses to replay it over cleartext HTTP, where it could be read or
+  // altered in transit.
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
   if (value) {
-    document.cookie = `demo_user=${value}; path=/; SameSite=Lax`;
+    document.cookie = `demo_user=${value}; path=/; SameSite=Lax${secure}`;
   } else {
     document.cookie =
       "demo_user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
