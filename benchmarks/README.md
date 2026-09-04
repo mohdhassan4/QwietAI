@@ -251,11 +251,11 @@ For SAST runs, items look like:
 
 | Property | Default | Purpose |
 |---|---|---|
-| `benchmark.output.dir` | `benchmarks` | Directory the JSON report is written to. |
+| `benchmark.output.dir` | `benchmarks` | Directory the JSON report is written to. Paths containing `..` segments are rejected. |
 | `benchmark.dast.ground-truth.url` | `http://localhost:${server.port:9090}${server.servlet.context-path:/VulnerableApp}/scanner/dast` | URL the DAST comparator fetches ground truth from. Override when running behind VulnerableApp-facade so coverage spans every backing app. |
 | `benchmark.dast.ground-truth.connect-timeout-ms` | `5000` | Connect timeout (ms) for the ground-truth fetch. Fail-fast bound so a stalled endpoint can't tie up Tomcat request threads. |
 | `benchmark.dast.ground-truth.read-timeout-ms` | `10000` | Read timeout (ms) for the ground-truth fetch. |
-| `benchmark.sast.ground-truth.path` | `classpath:scanner/sast/expectedIssues.csv` | CSV the SAST comparator loads expected issues from, and `/scanner/sast` serves. Drop the `classpath:` prefix to read a file from disk instead. |
+| `benchmark.sast.ground-truth.path` | `classpath:scanner/sast/expectedIssues.csv` | CSV the SAST comparator loads expected issues from, and `/scanner/sast` serves. Drop the `classpath:` prefix to read a file from disk instead; such a path may be absolute or relative to the working directory, must point at a regular file, and is rejected if it contains `..` segments. |
 
 The default DAST URL is a self-call against the running app, which means
 benchmarking works out of the box in standalone mode. In a facade-composed
@@ -269,7 +269,9 @@ By default, `benchmarks/<sanitised-tool>-results.json` relative to the working
 directory of the running VulnerableApp process. The directory is configurable
 via `benchmark.output.dir`. Filenames are lowercased and stripped of anything
 outside `[a-z0-9_-]`. Re-running the endpoint for the same tool (regardless of
-scan type) overwrites the previous report.
+scan type) overwrites the previous report. The configured directory is
+canonicalised and `..` segments are refused, so the report always lands inside
+the directory the property names.
 
 If the file write fails (disk full, permissions, etc.), the endpoint returns
 **HTTP 500** with the same response body as a successful run, plus an extra

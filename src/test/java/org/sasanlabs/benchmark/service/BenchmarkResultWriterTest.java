@@ -1,8 +1,10 @@
 package org.sasanlabs.benchmark.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -85,6 +87,41 @@ class BenchmarkResultWriterTest {
         Path target = writer.write(sampleResult("  Burp Suite 2.14  "));
 
         assertThat(target.getFileName().toString()).isEqualTo("burpsuite214-results.json");
+    }
+
+    /** A '..' segment in the configured directory is refused instead of being followed. */
+    @Test
+    void write_withParentTraversalInDir_isRejected(@TempDir Path tempDir) throws Exception {
+        Path outside = tempDir.resolve("outside");
+        Files.createDirectories(tempDir.resolve("inside"));
+        String traversing = tempDir.resolve("inside").resolve("..").resolve("outside").toString();
+        BenchmarkResultWriter writer = new BenchmarkResultWriter(MAPPER, traversing);
+
+        assertThatThrownBy(() -> writer.write(sampleResult("ZAP")))
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("'..'");
+        assertThat(Files.exists(outside)).isFalse();
+    }
+
+    /** The same rejection applies to a directory passed straight to the two argument overload. */
+    @Test
+    void write_withParentTraversalInOverrideDir_isRejected(@TempDir Path tempDir) throws Exception {
+        BenchmarkResultWriter writer = new BenchmarkResultWriter(MAPPER, tempDir.toString());
+        String traversing = tempDir.resolve("..").resolve("escaped").toString();
+
+        assertThatThrownBy(() -> writer.write(sampleResult("ZAP"), traversing))
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("'..'");
+    }
+
+    /** A blank directory is refused too, rather than resolving against the working directory. */
+    @Test
+    void write_withBlankDir_isRejected() {
+        BenchmarkResultWriter writer = new BenchmarkResultWriter(MAPPER, "   ");
+
+        assertThatThrownBy(() -> writer.write(sampleResult("ZAP")))
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("must not be null or blank");
     }
 
     @Test

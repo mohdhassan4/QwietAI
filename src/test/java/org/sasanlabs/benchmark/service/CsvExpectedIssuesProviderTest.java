@@ -158,6 +158,28 @@ class CsvExpectedIssuesProviderTest {
                 .isInstanceOf(IOException.class);
     }
 
+    /** A '..' segment in the configured path is refused instead of being followed. */
+    @Test
+    void parentTraversalInPath_isRejected(@TempDir Path tempDir) throws Exception {
+        Path csv = tempDir.resolve("expected.csv");
+        write(csv, HEADER + "CWE-89,SQL Injection,src/main/java/Foo.java,56,1\n");
+        String traversing =
+                tempDir.resolve("nested").resolve("..").resolve("expected.csv").toString();
+        CsvExpectedIssuesProvider provider = new CsvExpectedIssuesProvider(traversing);
+
+        assertThatThrownBy(provider::getExpectedIssues)
+                .isInstanceOf(IOException.class)
+                .hasMessageContaining("'..'");
+    }
+
+    /** A directory is refused rather than being handed to the CSV parser. */
+    @Test
+    void directoryInsteadOfFile_throwsIOException(@TempDir Path tempDir) {
+        CsvExpectedIssuesProvider provider = new CsvExpectedIssuesProvider(tempDir.toString());
+
+        assertThatThrownBy(provider::getExpectedIssues).isInstanceOf(IOException.class);
+    }
+
     @Test
     void classpathPrefix_readsFromTheClasspath() throws Exception {
         List<ExpectedIssue> issues =

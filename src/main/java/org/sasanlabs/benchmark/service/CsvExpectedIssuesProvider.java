@@ -6,8 +6,8 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -18,6 +18,7 @@ import org.apache.commons.csv.CSVRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.sasanlabs.benchmark.model.ExpectedIssue;
+import org.sasanlabs.internal.utility.SafePathUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
@@ -103,7 +104,32 @@ public class CsvExpectedIssuesProvider implements IExpectedIssuesProvider {
         if (csvPath.startsWith(CLASSPATH_PREFIX)) {
             return parseFromResource(csvPath.substring(CLASSPATH_PREFIX.length()));
         }
-        return parseFromPath(Paths.get(csvPath));
+        return parseFromPath(groundTruthPath());
+    }
+
+    /**
+     * Canonicalises the configured CSV path and refuses {@code ".."} segments (CWE-22).
+     *
+     * <p>The property is documented as absolute or relative to the working directory, so the check
+     * is a traversal rejection rather than a fixed base directory, and it also insists on a regular
+     * file so a directory or device node cannot be handed to the parser.
+     */
+    private Path groundTruthPath() throws IOException {
+        Path path;
+        try {
+            path = SafePathUtils.canonicalizeConfiguredPath(csvPath);
+        } catch (IllegalArgumentException unsafe) {
+            throw new IOException(
+                    "Refusing to read the SAST ground truth from '"
+                            + csvPath
+                            + "': "
+                            + unsafe.getMessage(),
+                    unsafe);
+        }
+        if (!Files.isRegularFile(path)) {
+            throw new NoSuchFileException(path.toString());
+        }
+        return path;
     }
 
     private List<ExpectedIssue> parseFromResource(String location) throws IOException {

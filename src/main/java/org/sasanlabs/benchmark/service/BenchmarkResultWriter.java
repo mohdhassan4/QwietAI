@@ -5,10 +5,10 @@ import java.io.IOException;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Locale;
 import org.sasanlabs.benchmark.model.BenchmarkResult;
+import org.sasanlabs.internal.utility.SafePathUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -35,10 +35,10 @@ public class BenchmarkResultWriter {
     }
 
     public Path write(BenchmarkResult result, String benchmarksDir) throws IOException {
-        Path dir = Paths.get(benchmarksDir);
+        Path dir = safeBenchmarksDir(benchmarksDir);
         Files.createDirectories(dir);
         String fileName = sanitizeToolName(result.getTool()) + "-results.json";
-        Path target = dir.resolve(fileName);
+        Path target = safeTargetWithin(dir, fileName);
         Path temp = Files.createTempFile(dir, fileName + ".", ".tmp");
         try {
             objectMapper.writerWithDefaultPrettyPrinter().writeValue(temp.toFile(), result);
@@ -48,6 +48,32 @@ public class BenchmarkResultWriter {
             throw ioe;
         }
         return target;
+    }
+
+    /**
+     * Canonicalises the configured output directory and refuses {@code ".."} segments (CWE-22).
+     *
+     * <p>Surfaced as an {@link IOException} so callers keep their existing persistence handling.
+     */
+    private static Path safeBenchmarksDir(String benchmarksDir) throws IOException {
+        try {
+            return SafePathUtils.canonicalizeConfiguredPath(benchmarksDir);
+        } catch (IllegalArgumentException unsafe) {
+            throw new IOException(
+                    "Refusing to write benchmark results outside the configured directory: "
+                            + unsafe.getMessage(),
+                    unsafe);
+        }
+    }
+
+    /** Keeps the report file inside the benchmarks directory it was resolved against. */
+    private static Path safeTargetWithin(Path dir, String fileName) throws IOException {
+        try {
+            return SafePathUtils.requireWithin(dir, dir.resolve(fileName));
+        } catch (IllegalArgumentException unsafe) {
+            throw new IOException(
+                    "Refusing to write the benchmark report: " + unsafe.getMessage(), unsafe);
+        }
     }
 
     private static void moveAtomicallyOrReplace(Path source, Path target) throws IOException {
