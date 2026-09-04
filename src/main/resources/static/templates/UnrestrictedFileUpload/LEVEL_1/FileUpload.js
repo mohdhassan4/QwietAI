@@ -11,7 +11,8 @@ function addingEventListenerToUploadImage() {
 addingEventListenerToUploadImage();
 
 function uploadImage(data) {
-  document.getElementById("uploaded_file_info").innerHTML = data.isValid
+  // The response echoes the uploaded file name, so it is rendered as text.
+  document.getElementById("uploaded_file_info").textContent = data.isValid
     ? "File uploaded at location:" + data.content
     : data.content;
 }

@@ -23,6 +23,121 @@ let currentKey;
 // instead, and only acts if it's still the most recent request.
 let requestToken = 0;
 
+// Elements/attributes that may survive when rendering markup which is not a
+// constant (vulnerability descriptions and level responses built by the
+// server) but still has to look like formatted content. Anything else -
+// script/img/svg/object tags, inline event handlers, unsafe URL schemes - is
+// dropped instead of becoming live DOM in this page.
+const SAFE_HTML_ELEMENTS = {
+  A: ["href", "target", "rel", "class"],
+  B: ["class"],
+  BR: [],
+  CODE: ["class"],
+  DIV: ["class"],
+  EM: ["class"],
+  H3: ["class"],
+  H4: ["class"],
+  HR: [],
+  I: ["class"],
+  IFRAME: ["src", "class"],
+  LI: ["class"],
+  OL: ["class"],
+  P: ["class"],
+  PRE: ["class"],
+  SECTION: ["class"],
+  SPAN: ["class"],
+  STRONG: ["class"],
+  U: ["class"],
+  UL: ["class"],
+};
+
+// http(s), mailto, fragment and relative URLs only, so href/src can never
+// carry a javascript:/data: payload.
+const SAFE_URL_PATTERN = /^(?:https?:\/\/|mailto:|[\w.,~%+-]*(?:[/?#]|$))/i;
+
+function _isSafeUrlValue(value) {
+  return SAFE_URL_PATTERN.test(String(value).trim());
+}
+
+/**
+ * Convert a node parsed out of non-constant markup into a node that is safe
+ * to attach to this document. Elements that are not allowlisted are replaced
+ * by their text, so their content is still visible but inert.
+ */
+function _toSafeHtmlNode(node) {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return document.createTextNode(node.nodeValue);
+  }
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return null;
+  }
+  let allowedAttributes = SAFE_HTML_ELEMENTS[node.tagName];
+  if (!allowedAttributes) {
+    return document.createTextNode(node.textContent);
+  }
+  let safeElement = document.createElement(node.tagName.toLowerCase());
+  for (let attribute of allowedAttributes) {
+    let value = node.getAttribute(attribute);
+    if (value === null) {
+      continue;
+    }
+    if (
+      (attribute === "href" || attribute === "src") &&
+      !_isSafeUrlValue(value)
+    ) {
+      continue;
+    }
+    safeElement.setAttribute(attribute, value);
+  }
+  if (safeElement.tagName === "A" && safeElement.target === "_blank") {
+    safeElement.setAttribute("rel", "noopener noreferrer");
+  }
+  for (let child of node.childNodes) {
+    let safeChild = _toSafeHtmlNode(child);
+    if (safeChild) {
+      safeElement.appendChild(safeChild);
+    }
+  }
+  return safeElement;
+}
+
+/**
+ * Render formatted markup that is not a constant into `target` without ever
+ * assigning it as HTML: it is parsed into an inert DOMParser document (no
+ * script runs and no resource is fetched there) and only the allowlisted
+ * elements/attributes are re-created inside this document.
+ * @param {Element} target - element whose content is replaced
+ * @param {string} markup - markup coming from the server
+ */
+function renderSafeHtml(target, markup) {
+  target.textContent = "";
+  let parsedBody = new DOMParser().parseFromString(
+    markup == null ? "" : String(markup),
+    "text/html"
+  ).body;
+  for (let child of parsedBody.childNodes) {
+    let safeChild = _toSafeHtmlNode(child);
+    if (safeChild) {
+      target.appendChild(safeChild);
+    }
+  }
+}
+
+/**
+ * Append a "<b>label</b> value" pair to `parent`, with `value` added as text
+ * so it can never introduce markup.
+ * @param {Element} parent - element the pair is appended to
+ * @param {string} label - constant label
+ * @param {string} value - dynamic value, rendered as text
+ */
+function _appendLabelledText(parent, label, value) {
+  let labelElement = document.createElement("b");
+  labelElement.textContent = label;
+  parent.appendChild(labelElement);
+  let text = value == null ? "" : String(value);
+  parent.appendChild(document.createTextNode(" " + text));
+}
+
 function _loadDynamicJSAndCSS(urlToFetchHtmlTemplate, onReady) {
   let dynamicScriptsElement = document.getElementById("dynamicScripts");
   let cssElement = document.createElement("link");
@@ -110,8 +225,10 @@ function _callbackForInnerMasterOnClickEvent(
       vulnerableAppEndPointData[id]["Detailed Information"][key][
         "HtmlTemplate"
       ];
-    document.getElementById("vulnerabilityDescription").innerHTML =
-      vulnerableAppEndPointData[id]["Description"];
+    renderSafeHtml(
+      document.getElementById("vulnerabilityDescription"),
+      vulnerableAppEndPointData[id]["Description"]
+    );
     let urlToFetchHtmlTemplate = htmlTemplate
       ? "/VulnerableApp/templates/" + vulnerabilitySelected + "/" + htmlTemplate
       : "error";
@@ -187,7 +304,7 @@ function createColumn(detailedInformationArray, key) {
   span.classList.add(
     isSecure ? "secure-variant-tooltip-text" : "unsecure-variant-tooltip-text"
   );
-  span.innerHTML = isSecure ? variantTooltip.secure : variantTooltip.unsecure;
+  span.textContent = isSecure ? variantTooltip.secure : variantTooltip.unsecure;
   svgWithTooltip.appendChild(span);
   svgWithTooltip.appendChild(_getSvgElementForVariant(isSecure));
   column.appendChild(svgWithTooltip);
@@ -241,13 +358,13 @@ function handleElementAutoSelection(vulnerableAppEndPointData, id = 0) {
   }
 
   if (id === 0) {
-    detailTitle.innerHTML = vulnerableAppEndPointData[id]["Description"];
+    renderSafeHtml(detailTitle, vulnerableAppEndPointData[id]["Description"]);
   } else {
     innerMaster.innerHTML = "";
   }
 
   vulnerabilitySelected = vulnerableAppEndPointData[id]["Name"];
-  detailTitle.innerHTML = vulnerableAppEndPointData[id]["Description"];
+  renderSafeHtml(detailTitle, vulnerableAppEndPointData[id]["Description"]);
   appendNewColumn(vulnerableAppEndPointData, id);
 }
 
@@ -413,7 +530,10 @@ function _clearHelp() {
 function _addingEventListenerToShowHideHelpButton(vulnerableAppEndPointData) {
   document.getElementById("showHelp").addEventListener("click", function () {
     document.getElementById("showHelp").disabled = true;
-    let helpText = "<ol>";
+    // Attack vector descriptions and payloads are built as DOM nodes with the
+    // dynamic parts added as text: payloads legitimately contain markup like
+    // <script>alert(1)</script> and must be shown, never executed here.
+    let helpList = document.createElement("ol");
     for (let index in vulnerableAppEndPointData[currentId][
       "Detailed Information"
     ][currentKey]["AttackVectors"]) {
@@ -423,16 +543,19 @@ function _addingEventListenerToShowHideHelpButton(vulnerableAppEndPointData) {
         ]["AttackVectors"][index];
       let curlPayload = attackVector["CurlPayload"];
       let description = attackVector["Description"];
-      helpText =
-        helpText +
-        "<li><b>Description about the attack:</b> " +
-        description +
-        "<br/><b>Payload:</b> " +
-        curlPayload +
-        "</li>";
+      let helpItem = document.createElement("li");
+      _appendLabelledText(
+        helpItem,
+        "Description about the attack:",
+        description
+      );
+      helpItem.appendChild(document.createElement("br"));
+      _appendLabelledText(helpItem, "Payload:", curlPayload);
+      helpList.appendChild(helpItem);
     }
-    helpText = helpText + "</ol>";
-    document.getElementById("helpText").innerHTML = helpText;
+    let helpTextElement = document.getElementById("helpText");
+    helpTextElement.textContent = "";
+    helpTextElement.appendChild(helpList);
     document.getElementById("hideHelp").disabled = false;
   });
 

@@ -57,7 +57,14 @@ export function setDemoUserCookie(value) {
 
 export function fetchDataCallback(data, request) {
   updateDiagnostics(request);
-  document.getElementById("cachePoisoningResponse").innerHTML = data.content;
+  // The level response is formatted markup that reflects the banner and the
+  // forwarded host, so it goes through renderSafeHtml (vulnerableApp.js): it
+  // is parsed in an inert document and only allowlisted formatting elements
+  // and safe http(s)/relative urls are re-created here.
+  renderSafeHtml(
+    document.getElementById("cachePoisoningResponse"),
+    data.content
+  );
 }
 
 function updateDiagnostics(request) {

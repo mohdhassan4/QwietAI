@@ -3,9 +3,26 @@ function loadChallenge() {
   doGetAjaxCall(displayChallenge, url, true);
 }
 
+// Renders "<strong>label</strong> value" style output with the server
+// provided value added as text, so it can never introduce markup.
+function renderAsBoldText(target, content) {
+  target.textContent = "";
+  let boldText = document.createElement("strong");
+  boldText.textContent = content;
+  target.appendChild(boldText);
+}
+
+function renderLabelledResult(target, label, content) {
+  target.textContent = "";
+  let labelElement = document.createElement("strong");
+  labelElement.textContent = label;
+  target.appendChild(labelElement);
+  target.appendChild(document.createTextNode(" " + content));
+}
+
 function displayChallenge(data) {
   let challengeDiv = document.getElementById("challenge");
-  challengeDiv.innerHTML = "<strong>" + data.content + "</strong>";
+  renderAsBoldText(challengeDiv, data.content);
   if (data.isValid) {
     challengeDiv.className = "challenge-secure";
   } else {
@@ -41,10 +58,10 @@ function addingEventListenerToSubmitButton() {
 function appendResponseCallback(data) {
   let resultDiv = document.getElementById("result");
   if (data.isValid) {
-    resultDiv.innerHTML = "<strong>Result:</strong> " + data.content;
+    renderLabelledResult(resultDiv, "Result:", data.content);
     resultDiv.className = "result-success";
   } else {
-    resultDiv.innerHTML = "<strong>Result:</strong> " + data.content;
+    renderLabelledResult(resultDiv, "Result:", data.content);
     resultDiv.className = "result-failure";
   }
 }
