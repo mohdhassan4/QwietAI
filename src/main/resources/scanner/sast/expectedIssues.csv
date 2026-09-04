@@ -1,5 +1,4 @@
 CWE,Vulnerability Type,File,Line,Number of Sources
-CWE-89,SQL Injection,src/main/java/org/sasanlabs/service/vulnerability/authentication/AuthenticationVulnerability.java,40,1
 CWE-256,Plaintext Password Storage,src/main/java/org/sasanlabs/service/vulnerability/authentication/AuthenticationVulnerability.java,76,1
 CWE-256,Plaintext Password Storage,src/main/java/org/sasanlabs/service/vulnerability/authentication/AuthenticationVulnerability.java,112,1
 CWE-916,Weak Password Hashing,src/main/java/org/sasanlabs/service/vulnerability/authentication/AuthenticationVulnerability.java,150,1
@@ -125,14 +124,6 @@ CWE-330,Predictable Session Id,src/main/java/org/sasanlabs/service/vulnerability
 CWE-330,Obscured Predictable Session Id,src/main/java/org/sasanlabs/service/vulnerability/sessionManagement/SessionManagementService.java,130,1
 CWE-613,Missing Logout Invalidation,src/main/java/org/sasanlabs/service/vulnerability/sessionManagement/SessionManagementService.java,276,1
 CWE-307,No Login Rate Limiting,src/main/java/org/sasanlabs/service/vulnerability/sessionManagement/SessionManagementService.java,177,1
-CWE-89,SQL Injection,src/main/java/org/sasanlabs/service/vulnerability/sqlInjection/BlindSQLInjectionVulnerability.java,47,1
-CWE-89,SQL Injection,src/main/java/org/sasanlabs/service/vulnerability/sqlInjection/BlindSQLInjectionVulnerability.java,103,1
-CWE-89,SQL Injection,src/main/java/org/sasanlabs/service/vulnerability/sqlInjection/ErrorBasedSQLInjectionVulnerability.java,53,1
-CWE-89,SQL Injection,src/main/java/org/sasanlabs/service/vulnerability/sqlInjection/ErrorBasedSQLInjectionVulnerability.java,97,1
-CWE-89,SQL Injection,src/main/java/org/sasanlabs/service/vulnerability/sqlInjection/ErrorBasedSQLInjectionVulnerability.java,143,1
-CWE-89,SQL Injection,src/main/java/org/sasanlabs/service/vulnerability/sqlInjection/ErrorBasedSQLInjectionVulnerability.java,194,1
-CWE-89,SQL Injection,src/main/java/org/sasanlabs/service/vulnerability/sqlInjection/UnionBasedSQLInjectionVulnerability.java,58,1
-CWE-89,SQL Injection,src/main/java/org/sasanlabs/service/vulnerability/sqlInjection/UnionBasedSQLInjectionVulnerability.java,72,1
 CWE-918,SSRF,src/main/java/org/sasanlabs/service/vulnerability/ssrf/SSRFVulnerability.java,91,1
 CWE-918,SSRF,src/main/java/org/sasanlabs/service/vulnerability/ssrf/SSRFVulnerability.java,105,1
 CWE-918,SSRF,src/main/java/org/sasanlabs/service/vulnerability/ssrf/SSRFVulnerability.java,121,1
