@@ -425,6 +425,46 @@ function getCurrentVulnerabilityLevel() {
   return vulnerabilityLevelSelected;
 }
 
+// Request failures are surfaced as a dismissable in-page banner instead of a
+// blocking alert(): alert() freezes every interaction until it is
+// acknowledged, cannot be styled and is unusable for automated drivers. The
+// message is attached with textContent, so it is always rendered as text and
+// can never be parsed as markup.
+const NOTIFICATION_TIMEOUT_IN_MS = 6000;
+
+function _getNotificationContainer() {
+  let container = document.querySelector(".app-notifications");
+  if (!container) {
+    container = document.createElement("div");
+    container.classList.add("app-notifications");
+    container.setAttribute("role", "status");
+    container.setAttribute("aria-live", "polite");
+    document.body.appendChild(container);
+  }
+  return container;
+}
+
+function showNotification(message) {
+  let notification = document.createElement("div");
+  notification.classList.add("app-notification");
+  notification.textContent = message;
+
+  let dismissButton = document.createElement("button");
+  dismissButton.type = "button";
+  dismissButton.classList.add("app-notification-dismiss");
+  dismissButton.setAttribute("aria-label", "Dismiss notification");
+  dismissButton.textContent = "×";
+  dismissButton.addEventListener("click", function () {
+    notification.remove();
+  });
+  notification.appendChild(dismissButton);
+
+  _getNotificationContainer().appendChild(notification);
+  window.setTimeout(function () {
+    notification.remove();
+  }, NOTIFICATION_TIMEOUT_IN_MS);
+}
+
 function genericResponseHandler(xmlHttpRequest, callBack, isJson, onError) {
   if (xmlHttpRequest.readyState == XMLHttpRequest.DONE) {
     // XMLHttpRequest.DONE == 4
@@ -439,12 +479,14 @@ function genericResponseHandler(xmlHttpRequest, callBack, isJson, onError) {
         callBack(xmlHttpRequest.responseText, xmlHttpRequest);
       }
     } else if (xmlHttpRequest.status == 400) {
-      alert("There was an error 400");
+      showNotification("There was an error 400");
       if (typeof onError === "function") {
         onError(xmlHttpRequest);
       }
     } else {
-      alert("something else other than 200/401/403/404 was returned");
+      showNotification(
+        "something else other than 200/401/403/404 was returned"
+      );
       if (typeof onError === "function") {
         onError(xmlHttpRequest);
       }
