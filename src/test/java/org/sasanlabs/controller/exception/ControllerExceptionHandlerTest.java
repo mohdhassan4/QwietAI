@@ -1,6 +1,7 @@
 package org.sasanlabs.controller.exception;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -8,6 +9,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.sasanlabs.internal.utility.MessageBundle;
@@ -47,7 +49,14 @@ class ControllerExceptionHandlerTest {
         // Assert
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, responseEntity.getStatusCode());
         assertEquals("Exception occurred", responseEntity.getBody());
-        verify(messageBundle).getString(any(), any());
+        ArgumentCaptor<Object[]> argsCaptor = ArgumentCaptor.forClass(Object[].class);
+        verify(messageBundle).getString(any(), argsCaptor.capture());
+        // Exception derived arguments must never be formatted into the client facing message.
+        for (Object arg : argsCaptor.getValue()) {
+            assertFalse(
+                    arg instanceof Throwable,
+                    "Exception detail leaked into the client facing error message");
+        }
     }
 
     @Test

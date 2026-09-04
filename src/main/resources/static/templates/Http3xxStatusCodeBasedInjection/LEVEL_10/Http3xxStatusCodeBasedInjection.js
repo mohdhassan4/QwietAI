@@ -1,3 +1,12 @@
+function createModalElement(tagName, className, text) {
+  var element = document.createElement(tagName);
+  element.className = className;
+  if (text) {
+    element.textContent = text;
+  }
+  return element;
+}
+
 function updatePlaceholderDiv() {
   var endpointUrl =
     getUrlForVulnerabilityLevel() +
@@ -32,19 +41,38 @@ function updatePlaceholderDiv() {
     boxSizing: "border-box",
   });
 
-  overlay.innerHTML =
-    '<div class="redirect-modal-card">' +
-    '<div class="redirect-modal-icon-wrap">' +
-    '<span class="redirect-modal-icon">&#9888;</span>' +
-    "</div>" +
-    '<h2 class="redirect-modal-title">You are leaving VulnerableApp</h2>' +
-    '<p class="redirect-modal-subtitle">You are about to be redirected to an external site. Please review the destination before continuing.</p>' +
-    '<div class="redirect-url-box"><span class="redirect-dest-url"></span></div>' +
-    '<div class="redirect-modal-actions">' +
-    '<button class="btn-redirect-close">Close</button>' +
-    '<button class="btn-redirect-continue">Continue</button>' +
-    "</div>" +
-    "</div>";
+  // The interstitial is built with DOM APIs rather than assigned as markup,
+  // so no string ever reaches this element as HTML.
+  var card = createModalElement("div", "redirect-modal-card");
+
+  var iconWrap = createModalElement("div", "redirect-modal-icon-wrap");
+  iconWrap.appendChild(createModalElement("span", "redirect-modal-icon", "⚠"));
+  card.appendChild(iconWrap);
+
+  var title = createModalElement("h2", "redirect-modal-title");
+  title.textContent = "You are leaving VulnerableApp";
+  card.appendChild(title);
+
+  var subtitle = createModalElement("p", "redirect-modal-subtitle");
+  subtitle.textContent =
+    "You are about to be redirected to an external site. " +
+    "Please review the destination before continuing.";
+  card.appendChild(subtitle);
+
+  var urlBox = createModalElement("div", "redirect-url-box");
+  urlBox.appendChild(createModalElement("span", "redirect-dest-url"));
+  card.appendChild(urlBox);
+
+  var actions = createModalElement("div", "redirect-modal-actions");
+  var closeButton = createModalElement("button", "btn-redirect-close");
+  closeButton.textContent = "Close";
+  var continueButton = createModalElement("button", "btn-redirect-continue");
+  continueButton.textContent = "Continue";
+  actions.appendChild(closeButton);
+  actions.appendChild(continueButton);
+  card.appendChild(actions);
+
+  overlay.appendChild(card);
 
   document.body.appendChild(overlay);
 

@@ -47,17 +47,32 @@ export function getHeadersWithForwardedHost(inputId = "forwardedHostInput") {
 }
 
 export function setDemoUserCookie(value) {
+  // SameSite=Strict: the cookie is only ever read back by same-origin requests
+  // this page makes itself, so it never needs to travel with cross-site
+  // requests. Secure is added whenever the page is actually served over https;
+  // it is left off on plain http (the default local/docker setup) because a
+  // Secure cookie would be dropped there and the level would stop working.
+  const secureAttribute =
+    window.location.protocol === "https:" ? "; Secure" : "";
+  const attributes = `path=/; SameSite=Strict${secureAttribute}`;
+  const expiredInThePast = "expires=Thu, 01 Jan 1970 00:00:00 GMT";
   if (value) {
-    document.cookie = `demo_user=${value}; path=/; SameSite=Lax`;
+    document.cookie = `demo_user=${value}; ${attributes}`;
   } else {
-    document.cookie =
-      "demo_user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    document.cookie = `demo_user=; ${attributes}; ${expiredInThePast}`;
   }
 }
 
 export function fetchDataCallback(data, request) {
   updateDiagnostics(request);
-  document.getElementById("cachePoisoningResponse").innerHTML = data.content;
+  // The level response is formatted markup that reflects the banner and the
+  // forwarded host, so it goes through renderSafeHtml (vulnerableApp.js): it
+  // is parsed in an inert document and only allowlisted formatting elements
+  // and safe http(s)/relative urls are re-created here.
+  renderSafeHtml(
+    document.getElementById("cachePoisoningResponse"),
+    data.content
+  );
 }
 
 function updateDiagnostics(request) {

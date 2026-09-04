@@ -59,7 +59,8 @@ class EmailTestControllerTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertEquals("failed", response.getBody().get("status"));
-        assertEquals("Invalid email address: invalid-address", response.getBody().get("error"));
+        // The exception detail (the rejected address) must not be echoed back to the client.
+        assertEquals("Invalid email request parameters", response.getBody().get("error"));
     }
 
     @Test

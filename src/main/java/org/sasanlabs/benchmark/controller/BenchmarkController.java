@@ -9,6 +9,7 @@ import org.sasanlabs.benchmark.model.BenchmarkResult;
 import org.sasanlabs.benchmark.model.ScannerFindings;
 import org.sasanlabs.benchmark.service.BenchmarkResultWriter;
 import org.sasanlabs.benchmark.service.BenchmarkService;
+import org.sasanlabs.internal.utility.LogSanitizationUtils;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +26,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class BenchmarkController {
 
     private static final Logger LOGGER = LogManager.getLogger(BenchmarkController.class);
+
+    /** Client facing message for a failed report write; details stay in the server logs. */
+    private static final String PERSISTENCE_FAILURE_MESSAGE = "Failed to persist benchmark result";
 
     private final BenchmarkService benchmarkService;
     private final BenchmarkResultWriter benchmarkResultWriter;
@@ -51,16 +55,21 @@ public class BenchmarkController {
 
         BenchmarkResult result = benchmarkService.compare(input);
 
+        // the tool name comes from the request body, hence it is neutralized before being logged
+        String sanitizedTool = LogSanitizationUtils.sanitize(input.getTool());
+
         try {
             Path written = benchmarkResultWriter.write(result);
-            LOGGER.info("Wrote benchmark result for tool '{}' to {}", input.getTool(), written);
+            LOGGER.info("Wrote benchmark result for tool '{}' to {}", sanitizedTool, written);
         } catch (IOException ioe) {
             LOGGER.error(
                     "Failed to persist benchmark result for tool '{}'; returning 500 with result"
                             + " in body",
-                    input.getTool(),
+                    sanitizedTool,
                     ioe);
-            result.setPersistenceError("Failed to persist benchmark result: " + ioe.getMessage());
+            // Only a stable, generic message is returned to the client; the underlying
+            // IOException (paths, permissions, disk state) is available in the server logs above.
+            result.setPersistenceError(PERSISTENCE_FAILURE_MESSAGE);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
         }
 

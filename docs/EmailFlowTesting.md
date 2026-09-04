@@ -34,7 +34,7 @@ The shared application properties define the default SMTP host and credentials b
 - `spring.mail.host=${SMTP_HOST:mailpit}`
 - `spring.mail.port=${SMTP_PORT:1025}`
 - `spring.mail.username=${SMTP_USERNAME:smtp_hacker}`
-- `spring.mail.password=${SMTP_PASSWORD:smtp_password}`
+- `spring.mail.password=${SMTP_PASSWORD:}` (no password is committed; Mailpit accepts unauthenticated SMTP)
 - `vulnerableapp.email.from=${EMAIL_FROM:no-reply@vulnerableapp.local}`
 - `vulnerableapp.email.base-url=${APP_BASE_URL:http://localhost}`
 

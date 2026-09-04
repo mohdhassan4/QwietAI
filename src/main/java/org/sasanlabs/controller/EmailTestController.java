@@ -1,6 +1,8 @@
 package org.sasanlabs.controller;
 
 import java.util.Map;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.sasanlabs.service.email.EmailService;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
@@ -16,8 +18,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/email")
 public class EmailTestController {
 
+    private static final Logger LOGGER = LogManager.getLogger(EmailTestController.class);
+
     private static final String DEFAULT_SUBJECT = "VulnerableApp test email";
     private static final String DEFAULT_BODY = "This email was sent by VulnerableApp.";
+
+    /** Stable client facing message; validation details stay in the server logs. */
+    private static final String INVALID_REQUEST_MESSAGE = "Invalid email request parameters";
 
     private final EmailService emailService;
 
@@ -38,9 +45,12 @@ public class EmailTestController {
                 emailService.sendEmail(to, subject, body);
             }
         } catch (IllegalArgumentException ex) {
+            // The exception detail (rejected address, failing field) is logged server side only.
+            LOGGER.warn("Rejected test email request because of invalid request parameters", ex);
             return ResponseEntity.badRequest()
-                    .body(Map.of("status", "failed", "error", ex.getMessage()));
+                    .body(Map.of("status", "failed", "error", INVALID_REQUEST_MESSAGE));
         } catch (MailException ex) {
+            LOGGER.error("Unable to send test email", ex);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("status", "failed", "error", "Unable to send test email"));
         }

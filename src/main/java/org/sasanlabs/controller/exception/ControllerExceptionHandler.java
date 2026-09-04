@@ -24,6 +24,9 @@ public class ControllerExceptionHandler extends ResponseEntityExceptionHandler {
     private static final transient Logger LOGGER =
             LogManager.getLogger(ControllerExceptionHandler.class);
 
+    /** Placeholder substituted for exception derived message arguments. */
+    private static final String OMITTED_DETAIL = "[detail omitted]";
+
     public ControllerExceptionHandler(MessageBundle messageBundle) {
         this.messageBundle = messageBundle;
     }
@@ -33,7 +36,8 @@ public class ControllerExceptionHandler extends ResponseEntityExceptionHandler {
             ControllerException ex, WebRequest request) {
         LOGGER.error("Controller Exception Occurred :-", ex);
         return new ResponseEntity<String>(
-                ex.getExceptionStatusCode().getMessage(ex.getArgs(), messageBundle),
+                ex.getExceptionStatusCode()
+                        .getMessage(withoutExceptionDetails(ex.getArgs()), messageBundle),
                 HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
@@ -43,5 +47,22 @@ public class ControllerExceptionHandler extends ResponseEntityExceptionHandler {
         return new ResponseEntity<String>(
                 ExceptionStatusCodeEnum.SYSTEM_ERROR.getMessage(null, messageBundle),
                 HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    /**
+     * Replaces every exception derived message argument with a fixed placeholder so that exception
+     * messages, types and stack traces are never formatted into the client facing error body. The
+     * full exception is logged instead. The response envelope and the remaining message arguments
+     * are left untouched.
+     */
+    private Object[] withoutExceptionDetails(Object[] args) {
+        if (args == null) {
+            return null;
+        }
+        Object[] safeArgs = new Object[args.length];
+        for (int index = 0; index < args.length; index++) {
+            safeArgs[index] = args[index] instanceof Throwable ? OMITTED_DETAIL : args[index];
+        }
+        return safeArgs;
     }
 }

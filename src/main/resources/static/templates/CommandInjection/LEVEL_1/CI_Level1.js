@@ -11,5 +11,6 @@ function addingEventListenerToPingButton() {
 addingEventListenerToPingButton();
 
 function pingUtilityCallback(data) {
-  document.getElementById("pingUtilityResponse").innerHTML = data.content;
+  // Command output is data, not markup, so it is rendered as text.
+  document.getElementById("pingUtilityResponse").textContent = data.content;
 }

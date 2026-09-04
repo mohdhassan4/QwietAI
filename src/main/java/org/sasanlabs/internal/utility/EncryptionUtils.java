@@ -67,6 +67,16 @@ public class EncryptionUtils {
 
     private static final byte[] salt = new byte[16];
 
+    /**
+     * Work factor used when deriving a key from a password. A single iteration provides no
+     * meaningful computational effort, so the OWASP Password Storage recommendation for
+     * PBKDF2-HMAC-SHA256 is used instead.
+     */
+    private static final int PBKDF2_ITERATIONS = 600_000;
+
+    /** Derived key size in bits (AES-128). */
+    private static final int KEY_LENGTH = 128;
+
     static {
         new SecureRandom().nextBytes(salt);
     }
@@ -74,7 +84,8 @@ public class EncryptionUtils {
     public static SecretKey getKeyFromPassword(String password) throws EncryptionException {
         try {
             SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-            KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 1, 128);
+            KeySpec spec =
+                    new PBEKeySpec(password.toCharArray(), salt, PBKDF2_ITERATIONS, KEY_LENGTH);
 
             return new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
