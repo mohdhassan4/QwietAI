@@ -10,6 +10,9 @@ import org.sasanlabs.internal.utility.exception.EncryptionException;
 
 class EncryptionUtilsTest {
 
+    /** Length of the AES-GCM nonce that {@code EncryptionUtils} prepends to every ciphertext. */
+    private static final int GCM_NONCE_LENGTH = 12;
+
     @Test
     @DisplayName("Caesar Cipher: Should shift characters by 3 and wrap around the alphabet")
     void caesarCipher_CorrectShift() throws EncryptionException {
@@ -49,26 +52,27 @@ class EncryptionUtilsTest {
     }
 
     @Test
-    @DisplayName("AES Encryption: Should produce consistent ciphertext (ECB Mode Property)")
-    void encrypt_EcbDeterminism() throws EncryptionException {
+    @DisplayName("AES-GCM Encryption: A fresh nonce should make every ciphertext unique")
+    void encrypt_UsesFreshNoncePerInvocation() throws EncryptionException {
         SecretKey key = EncryptionUtils.getKeyFromPassword("fixed-password");
         String plaintext = "This is a secret message that is exactly 32 bytes";
 
         String ciphertext1 = EncryptionUtils.encrypt(plaintext, key);
         String ciphertext2 = EncryptionUtils.encrypt(plaintext, key);
 
-        // In ECB mode, the same plaintext with the same key always produces the same ciphertext
-        assertEquals(ciphertext1, ciphertext2);
+        // A randomized nonce means the same plaintext and key never repeat a ciphertext
+        assertNotEquals(ciphertext1, ciphertext2);
 
-        // Verify it is valid Base64
+        // Verify it is valid Base64 and that both ciphertexts still recover the plaintext
         assertDoesNotThrow(() -> Base64.getDecoder().decode(ciphertext1));
+        assertEquals(plaintext, EncryptionUtils.decrypt(ciphertext1, key));
+        assertEquals(plaintext, EncryptionUtils.decrypt(ciphertext2, key));
     }
 
     @Test
-    @DisplayName(
-            "AES Encryption: Identical blocks should produce identical ciphertext blocks (ECB Vulnerability)")
-    void encrypt_EcbPatternLeakage() throws EncryptionException {
-        SecretKey key = EncryptionUtils.getKeyFromPassword("vulnerability-test");
+    @DisplayName("AES-GCM Encryption: Identical plaintext blocks must not leak")
+    void encrypt_DoesNotLeakIdenticalBlocks() throws EncryptionException {
+        SecretKey key = EncryptionUtils.getKeyFromPassword("no-pattern-leakage");
 
         // Create two identical 16-byte blocks (AES block size)
         String block = "identical-block-"; // 16 characters
@@ -77,13 +81,49 @@ class EncryptionUtilsTest {
         String ciphertext = EncryptionUtils.encrypt(plaintext, key);
         byte[] decoded = Base64.getDecoder().decode(ciphertext);
 
-        // Split the ciphertext into two 16-byte segments
+        // Layout is: 12-byte GCM nonce || ciphertext || 16-byte authentication tag
         byte[] block1 = new byte[16];
         byte[] block2 = new byte[16];
-        System.arraycopy(decoded, 0, block1, 0, 16);
-        System.arraycopy(decoded, 16, block2, 0, 16);
+        System.arraycopy(decoded, GCM_NONCE_LENGTH, block1, 0, 16);
+        System.arraycopy(decoded, GCM_NONCE_LENGTH + 16, block2, 0, 16);
 
-        // The core vulnerability of ECB: identical input blocks = identical output blocks
-        assertArrayEquals(block1, block2, "ECB mode failed to leak identical blocks");
+        // Unlike ECB, identical input blocks must not produce identical output blocks
+        assertNotEquals(
+                EncodingUtils.bytesToHex(block1),
+                EncodingUtils.bytesToHex(block2),
+                "Identical plaintext blocks leaked into identical ciphertext blocks");
+    }
+
+    @Test
+    @DisplayName("AES-GCM Decryption: Round trip should recover the original plaintext")
+    void decrypt_RoundTrip() throws EncryptionException {
+        SecretKey key = EncryptionUtils.getKeyFromPassword("round-trip");
+        String plaintext = "correct horse battery staple";
+
+        assertEquals(
+                plaintext, EncryptionUtils.decrypt(EncryptionUtils.encrypt(plaintext, key), key));
+    }
+
+    @Test
+    @DisplayName("AES-GCM Decryption: A wrong key should fail the authentication tag check")
+    void decrypt_WrongKeyIsRejected() throws EncryptionException {
+        SecretKey key = EncryptionUtils.getKeyFromPassword("right-key");
+        SecretKey other = EncryptionUtils.getKeyFromPassword("wrong-key");
+        String ciphertext = EncryptionUtils.encrypt("secret", key);
+
+        assertThrows(EncryptionException.class, () -> EncryptionUtils.decrypt(ciphertext, other));
+    }
+
+    @Test
+    @DisplayName("AES-GCM Decryption: A tampered ciphertext should be rejected")
+    void decrypt_TamperedCiphertextIsRejected() throws EncryptionException {
+        SecretKey key = EncryptionUtils.getKeyFromPassword("integrity");
+        byte[] decoded = Base64.getDecoder().decode(EncryptionUtils.encrypt("transfer 10", key));
+
+        // Flip a single bit in the ciphertext body
+        decoded[GCM_NONCE_LENGTH] ^= 0x01;
+        String tampered = Base64.getEncoder().encodeToString(decoded);
+
+        assertThrows(EncryptionException.class, () -> EncryptionUtils.decrypt(tampered, key));
     }
 }

@@ -1,17 +1,20 @@
 package org.sasanlabs.internal.utility;
 
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
+import java.util.Base64;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.sasanlabs.internal.utility.exception.EncryptionException;
@@ -82,22 +85,97 @@ public class EncryptionUtils {
         }
     }
 
+    /** AES-GCM transformation: an authenticated (AEAD) construction. */
+    private static final String AES_GCM_TRANSFORMATION = "AES/GCM/NoPadding";
+
+    /** Standard AES-GCM nonce length in bytes. A fresh nonce is generated for every encryption. */
+    private static final int GCM_IV_LENGTH_BYTES = 12;
+
+    /** AES-GCM authentication tag length in bits. */
+    private static final int GCM_TAG_LENGTH_BITS = 128;
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
+    /**
+     * Encrypts the given plaintext using AES in GCM mode. GCM provides both confidentiality and
+     * integrity. A fresh random nonce is generated per invocation and prepended to the ciphertext,
+     * so identical plaintexts never produce identical output and no block patterns leak.
+     *
+     * @param plaintext text to encrypt
+     * @param key AES key to encrypt with
+     * @return Base64 encoded {@code nonce || ciphertext || tag}
+     */
     public static String encrypt(String plaintext, SecretKey key) throws EncryptionException {
         try {
-            // VULNERABILITY NOTE: ECB mode does not use an IV and reveals patterns (CWE-327)
-            Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
-            cipher.init(Cipher.ENCRYPT_MODE, key);
+            byte[] iv = new byte[GCM_IV_LENGTH_BYTES];
+            SECURE_RANDOM.nextBytes(iv);
+
+            Cipher cipher = Cipher.getInstance(AES_GCM_TRANSFORMATION);
+            cipher.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv));
 
             byte[] encrypted = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
-            return java.util.Base64.getEncoder().encodeToString(encrypted);
+
+            byte[] ivAndCiphertext = new byte[iv.length + encrypted.length];
+            System.arraycopy(iv, 0, ivAndCiphertext, 0, iv.length);
+            System.arraycopy(encrypted, 0, ivAndCiphertext, iv.length, encrypted.length);
+
+            return Base64.getEncoder().encodeToString(ivAndCiphertext);
 
         } catch (NoSuchPaddingException | NoSuchAlgorithmException e) {
             throw new EncryptionException("AES configuration not found ", e);
-        } catch (InvalidKeyException e) {
+        } catch (InvalidKeyException | InvalidAlgorithmParameterException e) {
             throw new EncryptionException("The provided key is invalid for AES encryption", e);
         } catch (IllegalBlockSizeException | BadPaddingException e) {
             throw new EncryptionException(
                     "AES encryption failed due to block size or padding issues", e);
+        }
+    }
+
+    /**
+     * Decrypts a value produced by {@link #encrypt(String, SecretKey)}. The GCM authentication tag
+     * is verified during decryption, so a wrong key or a tampered ciphertext is rejected with an
+     * {@link EncryptionException} rather than returning garbage plaintext.
+     *
+     * @param base64IvAndCiphertext Base64 encoded {@code nonce || ciphertext || tag}
+     * @param key AES key to decrypt with
+     * @return the recovered plaintext
+     */
+    public static String decrypt(String base64IvAndCiphertext, SecretKey key)
+            throws EncryptionException {
+        if (base64IvAndCiphertext == null) {
+            throw new EncryptionException("Ciphertext cannot be null ");
+        }
+        byte[] ivAndCiphertext;
+        try {
+            ivAndCiphertext = Base64.getDecoder().decode(base64IvAndCiphertext);
+        } catch (IllegalArgumentException e) {
+            throw new EncryptionException("Ciphertext is not valid Base64 ", e);
+        }
+        if (ivAndCiphertext.length <= GCM_IV_LENGTH_BYTES) {
+            throw new EncryptionException("Ciphertext is too short to contain a GCM nonce ");
+        }
+        try {
+            GCMParameterSpec gcmSpec =
+                    new GCMParameterSpec(
+                            GCM_TAG_LENGTH_BITS, ivAndCiphertext, 0, GCM_IV_LENGTH_BYTES);
+
+            Cipher cipher = Cipher.getInstance(AES_GCM_TRANSFORMATION);
+            cipher.init(Cipher.DECRYPT_MODE, key, gcmSpec);
+
+            byte[] decrypted =
+                    cipher.doFinal(
+                            ivAndCiphertext,
+                            GCM_IV_LENGTH_BYTES,
+                            ivAndCiphertext.length - GCM_IV_LENGTH_BYTES);
+            return new String(decrypted, StandardCharsets.UTF_8);
+
+        } catch (NoSuchPaddingException | NoSuchAlgorithmException e) {
+            throw new EncryptionException("AES configuration not found ", e);
+        } catch (InvalidKeyException | InvalidAlgorithmParameterException e) {
+            throw new EncryptionException("The provided key is invalid for AES decryption", e);
+        } catch (IllegalBlockSizeException | BadPaddingException e) {
+            // BadPaddingException covers AEADBadTagException: wrong key or tampered ciphertext.
+            throw new EncryptionException("AES decryption failed: authentication tag mismatch", e);
         }
     }
 }
